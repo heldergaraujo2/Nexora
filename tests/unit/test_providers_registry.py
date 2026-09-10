@@ -21,3 +21,17 @@ def test_registry_remover():
     repo.registrar("a", lambda: 1)
     repo.remover("A")
     assert repo.disponiveis() == []
+
+
+def test_registry_disponiveis_ordenados():
+    repo = RegistryProviders()
+    repo.registrar("zeta", lambda: 1)
+    repo.registrar("alfa", lambda: 2)
+    assert repo.disponiveis() == ["alfa", "zeta"]
+
+
+def test_registry_registrar_substitui_mesmo_nome():
+    repo = RegistryProviders()
+    repo.registrar("groq", lambda: 1)
+    repo.registrar("GROQ", lambda: 2)
+    assert repo.obter("groq")() == 2

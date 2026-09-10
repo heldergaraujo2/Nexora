@@ -4,10 +4,11 @@
 
 ## Estado Atual
 
-- **Versão:** v0.1.0 ( Fase 1 completa e pushada;Fase 2 em NEXT_COMMAND.md)
-- **Fase atual:** Fase 1 — Fundação(**CONCLUÍDA**: núcleo do agente em `src/nexora/` com 30 testes unitários passando;commit `e73a266` pushado para `origin/main`)
-- **Fase anterior:** Fase 0.5 — Decisão e Design ( concluída: 11 ADRs,8 contratos JSON Schema,design doc,canal construidor-analista) — e Fase  0( esqueleto e memória)
-- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase  2 — Providers & Conectores: contrato tipado, FakeProvider,+ Provider Groq com stdlib, testes sem rede) após aprovação explícita do analista/coordenador.
+- **Versão:** v0.2.0( Fase 2 completa e pushada;Fase 3 em NEXT_COMMAND.md)
+- **Fase atual:** Fase 2 — Providers & Conectores(**CONCLUÍDA**: contrato tipado,registry dinamico,FakeProvider auditavel e ProviderGroq com stdlib;43 testes unitários passando)
+- **Fase anterior:** Fase  1 — Fundação( concluída: núcleo do agente,30 testes)(, Fase 0.5( ADRs/contratos/design, e Fase  0( esqueleto)
+- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase  3 — Orquestração de Agente: loop objetivo→planeja→executa→verifica, roteamento de providers,integração ao ciclo) após aprovação explícita do analista/coordenador.
+
 
 ## Como ler 宣 este repositório
 

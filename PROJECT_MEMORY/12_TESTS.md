@@ -34,3 +34,12 @@ Não avançar para a próxima fase sem testes passando.
 - **Data:** 2026-09-10
 - **Escopo:** Suite completa `python3 -m pytest tests/ -q`
 - **Resultado:** 30 passed, 0 failed ( comando `python -m nexora` tambem validado)
+
+
+| Fase 2 ( providers) | test_providers_groq.py/test_providers_fake.py/registry ampliado | 43 passed em tests/( 2026-09-10)
+
+## Ultimo Teste
+
+- **Data:** 2026-09-10
+- **Escopo:** Suite completa `python3 -m pytest tests/ -q`
+- **Resultado:** 43 passed,0 failed} ( 30 base +  13 providers)

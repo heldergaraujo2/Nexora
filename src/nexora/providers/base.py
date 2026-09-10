@@ -7,6 +7,12 @@ from typing import Any, AsyncIterator
 class ProviderError(Exception):
     """Erro padronizado do provider."""
 
+class ProviderIndisponivel(ProviderError):
+    """Provider nao respondeu ou esta fora do ar."""
+
+class ProviderSemCredencial(ProviderError):
+    """Credencial de acesso ausente ou invalida."""
+
 class ProviderCapability:
     """Capacidades declaradas do provider."""
     def __init__(self, *, tool_calling: bool = False, streaming: bool = False, max_context_tokens: int = 0) -> None:
@@ -41,3 +47,14 @@ class Provider(ABC):
     def stream(self, prompt: str, **kwargs: Any) -> AsyncIterator[StreamChunk]:
         raise NotImplementedError("stream opcional")
         yield StreamChunk()  # pragma: no cover
+
+    def saudavel(self) -> bool:
+        """Verifica se o provider esta disponivel."""
+        try:
+            self.generate("[saudavel]")
+            return True
+        except ProviderError:
+            return False
+
+    def fechar(self) -> None:
+        """Libera recursos do provider (no-op por padrao)."""

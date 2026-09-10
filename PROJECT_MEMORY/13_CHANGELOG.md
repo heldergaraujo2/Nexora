@@ -43,3 +43,14 @@
 - Config: `config/loaders.py` ( JSON + ambiente com prefixo NEXORA_(
 - Runtime: `runtime/logs.py`, `runtime/memoria.py`, `runtime/verificacao.py`, `runtime/sandbox.py` ( logs estruturados, memoria episodica/semantica, verificacao de saida, sandbox com allowlist(
 - 30 testes unitarios passando em `tests/unit/` ( commit pushado para origin/main(
+
+
+## 2026-09-10 — Fase 2 concluida — Providers & Conectores
+
+- `providers/base.py`: contrato tipado estendido( generate/stream/saudavel/fechar;excecoes ProviderSemCredencial e ProviderIndisponivel)
+- `providers/registry.py`: registry dinamico inalterado( 100% testes verdes)
+- `providers/fake.py`: estado auditavel( chamadas registradas;fechar/limpar)
+- `providers/groq.py` NOVO: Provider Groq com stdlib( urllib.request;GROQ_API_KEY;NEXORA_GROQ_MODEL default llama-3.3-70b-versatile; erros HTTP mapeados para ProviderSemCredencial/ProviderIndisponivel)
+- `providers/__init__.py`: exporta ProviderGroq/FakeProvider/excecoes tipadas}
+- Testes: 13 novos filtros em tests/unit/test_providers_groq.py,test_providers_fake.py e ampliacao do registry)
+- Suite completa: 43 passed,0 failed}

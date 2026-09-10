@@ -2,11 +2,12 @@
 
 ## Fase Atual
 
-**Fase 1 — Fundação** — **CONCLUÍDA e PUSHADA**: núcleo do agente implementado em `src/nexora/` com **30 testes unitários passando** e commit `e73a266` pushado para `origin/main`.
+**Fase 2 — Providers & Conectores** — **CONCLUÍDA e PUSHADA**: contrato tipado( base.py), registry dinamico, FakeProvider auditavel e ProviderGroq com stdlib( GROQ_API_KEY,NEXORA_GROQ_MODEL,erros tipados(.
 
-**Status:** Fase 1 CONCLUÍDA. Próxima: **Fase  2 — Providers & Conectores** ( integração Groq real e abstração de providers além do FakeProvider), aguardando aprovação do analista e comando em `NEXT_COMMAND.md`.
+**Status:** Fase 2 CONCLUÍDA. Próxima: **Fase  3 — Orquestração de Agente**（ aguardando comando do analista em NEXT_COMMAND.md.
 
-**Histórico:** Fase 0 + 0.5 ( Decisão e Design, ADRs, contratos, design doc) concluídas; Fase  1 ( Fundação) concluída.
+**Histórico:** Fase 0/0.5/1/2 concluídas;43 testes unitários passando( 30 base +  13 providers.
+
 
 ## Concluído nesta fase
 

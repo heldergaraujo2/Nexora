@@ -64,3 +64,22 @@
 - [ ] Implementar Provider Groq( API real com stdlib, sem dependencia pip;erros tipados( ProviderSemCredencial, ProviderIndisponivel)
 - [ ] FakeProvider deterministico com estado auditavel
 - [ ] Testes: test_providers_groq.py + ampliar test_providers_registry.py
+
+
+## Concluido na Fase 2 ( Providers & Conectores,2026-09-10:
+
+- [x] Contrato tipado em providers/base.py( generate/stream/saudavel/fechar,excecoes ProviderSemCredencial/ProviderIndisponivel]
+- [x] ProviderGroq implementado( stdlib urllib.request,GROQ_API_KEY,NEXORA_GROQ_MODEL default llama-3.3-70b-versatile,erros HTTP tipados)
+
+- [x] FakeProvider com estado auditavel( chamadas registradas;fechar limpa historico)
+
+- [x] RegistryProviders 100% verdes e ampliado( disponiveis ordenados/substituicao deleta nome)
+
+- [x] 13 novos testes( test_providers_groq.py/test_providers_fake.py/registry ampliado) — suite completa 43 passed,0 failed} 返回
+
+## Proxima — Fase 3 ( Orquestracao de Agente, aguardando comando do analista:
+
+- [ ] Receber aprovacao/comando para a Fase  3 em NEXT_COMMAND.md
+- [ ] Definir loop de orquestracao( agente que recebe objetivo,planeja,executa,verifica)
+- [ ] Integrar providers ao ciclo de execucao( roteamento de modelo por tarefa/objetivo)
+- [ ] Definir contratos de evento/sandbox/verificacao para o fluxo completo

@@ -54,3 +54,11 @@
 > As decisoes P1-P11 foram formalizadas como ADRs em docs/adr/ ( ADR-001..011,) com data, contexto e consequencias. Registro aqui marcado como concluido. Indice em docs/adr/README.md.
  
 P1=ADR-001,P2=ADR-002,P3=ADR-003,P4=ADR-004,P5=ADR-005,P6=ADR-006,P7=ADR-007,P8=ADR-008,P9=ADR-009,P10=ADR-010,P11=ADR-011
+
+
+## Decisoes executivas das Fases 1 e 2 ( 2026-09-10:
+
+- **Fase 1( Fundacao))**: nucleo do agente com Objetivo/Plano/Ciclo,registries de providers/ferramentas,config loaders,runtime(logs/memoria/verificacao/sandbox) — 30 testes基
+- **Fase 2( Providers & Conectores))**: provider tipado( base.py)+ ProviderGroq( stdlib)+ FakeProvider auditavel + registry ampliado — 43 testes基
+- **Sem dependencias pip nas Fases 1/2**( verify/isolamento;stdlib apenas)
+- **Proxima:** Fase 3 — Orquestracao de Agente( loop objetivo→planeja→executa→verifica,roteamento de providers,integracao ao ciclo) — aguardando comando do analista( NEXT_COMMAND.md)
