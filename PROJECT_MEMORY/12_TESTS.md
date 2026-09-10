@@ -11,35 +11,20 @@
 
 | Teste | Escopo | Resultado |
 |--------|--------|-----------|
-| Verificação de integridade dos arquivos PROJECT_MEMORY | Ausência de caracteres corrompidos(zero-width spaces,,lixo binário,chineses) | Aprovado( 00–15 + README + NEXT_COMMAND)
-| Verificação de consistência de numeração | Referências cruzadas entre arquivos e nomes canônicos | Aprovado( nenhuma referência antiga restante)
+| Fase 1 (unit) | core+providers+tools+config+runtime | 30 passed (`python3 -m pytest tests/ -q`, 2026-09-10) |
+| Fase 2 (unit) | providers tipados+registry+groq | 43 passed ( 2026-09-10) |
+| Fase 3 (unit) | orquestração(roteador, orquestrador, CLI)+ suite completa | 51 passed em 0.26s( 2026-09-10) |
 
 
 
 ## Último Teste
 
-- **Data:**620 2026-09-10
-- **Escopo:** Verificação byte-a-byte dos arquivos 00–15 do PROJECT_MEMORY + README + NEXT_COMMAND
-- **Resultado:** Zero-width spaces encontrados e corrigidos;reverificação pendente após correção.
+- **Data:** 2026-09-10
+- **Escopo:** Suíte completa após Fase 3（ CLIs `info` e `executar` validados manualmente com `sucesso=True etapas=1`
+- **Resultado:** 51 passed, 0 falhas；CLI `nexora executar "teste rapido" --provider fake` → `sucesso=True etapas=1`.
 
 
 
 ## Regra
 
 Não avançar para a próxima fase sem testes passando.
-| Testes unitarios da Fase 1 ( pytest) | core+providers+tools+config+runtime | 30 passed em tests/unit ( 2026-09-10)
-
-## Ultimo Teste
-
-- **Data:** 2026-09-10
-- **Escopo:** Suite completa `python3 -m pytest tests/ -q`
-- **Resultado:** 30 passed, 0 failed ( comando `python -m nexora` tambem validado)
-
-
-| Fase 2 ( providers) | test_providers_groq.py/test_providers_fake.py/registry ampliado | 43 passed em tests/( 2026-09-10)
-
-## Ultimo Teste
-
-- **Data:** 2026-09-10
-- **Escopo:** Suite completa `python3 -m pytest tests/ -q`
-- **Resultado:** 43 passed,0 failed} ( 30 base +  13 providers)

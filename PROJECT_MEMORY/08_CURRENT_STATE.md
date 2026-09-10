@@ -2,33 +2,24 @@
 
 ## Fase Atual
 
-**Fase 2 — Providers & Conectores** — **CONCLUÍDA e PUSHADA**: contrato tipado( base.py), registry dinamico, FakeProvider auditavel e ProviderGroq com stdlib( GROQ_API_KEY,NEXORA_GROQ_MODEL,erros tipados(.
+**Fase 3 — Orquestração de Agente** — **CONCLUÍDA e PUSHADA**: loop Objetivo->Plano->Executor(provider roteado)->Verificador->Resultado com histórico e eventos; Roteador de providers (palavras-chave, alias, default); CLI `nexora executar "<objetivo>"` funcional; 51 testes unitários passando.
 
-**Status:** Fase 2 CONCLUÍDA. Próxima: **Fase  3 — Orquestração de Agente**（ aguardando comando do analista em NEXT_COMMAND.md.
+**Status:** Fase 3 CONCLUÍDA. Próxima: **Fase 4 — Provider System/roteamento avançado** (ver `10_MODULES.md`), aguardando execução do comando em `NEXT_COMMAND.md`.
 
-**Histórico:** Fase 0/0.5/1/2 concluídas;43 testes unitários passando( 30 base +  13 providers.
+**Histórico:** Fase 0/0.5/1/2/3 concluídas; 51 testes unitários passando (30 base + 13 providers + 5 orquestração + 3 ajustes).
+
 
 
 ## Concluído nesta fase
 
-- [x] Estrutura de diretórios( src/,tests/,docs/,PROJECT_MEMORY/)
-- [x] Arquivos de memória em numeração canônica única( integração da Capability Discovery + infraestrutura)
-- [x] 00/01 fundidos(nossa base + agente)
-- [x]  README,e .gitignore criados
-- [x] Propostas A–E aprovadas pelo criador
-- [x] P1–P11 recomendados pelo coordenador( provisóriosç
+- [x] `src/nexora/orquestracao/roteador.py` — mapeia objetivo->provider, alias e default
+- [x] `src/nexora/orquestracao/orquestrador.py` — Orquestrador com ciclo completo e métricas
+- [x] CLI `nexora executar` com `--provider` alias; `nexora info`; `--version`
+- [x] Testes de orquestração:roteador, orquestrador( com tmp_path,e CLI(subprocess com PYTHONPATH)
+- [x] 51 testes verdes (`python3 -m pytest tests/ -q`)
+
 
 ## Pendente
 
-- [ ] Executar Fase 0.5(Decisão e Design:ADRs,contratos,estrutura proposta…
-- [ ] Ratificar P1–P11 com o criador
-- [ ] Fase  1(Fundação)— implementação( aguardando aprovação explícita por etapa## Fase Atual (atualizado apos conclusao da Fase 0.5:
- 
-**Fase 0.5 — Decisão e Design** — **CONCLUÍDA**: 11 ADRs (ADR-001..011) criados e aprovados em docs/adr/;8 contratos JSON Schema criados e validados em docs/contracts/;design doc em docs/design/repositorio.md;canal construidor-analyiso testado (HELLO)。
- 
-**Status:** Fase 0.5 CONCLUÍDA e pronta para push. Proxima: Fase 1 — Fundacao ( implementacao,) aguardando aprovacao explicita do criador/analista.
- 
-**Pendente:**
-- [x] Fase 0.5 executada (ADRs,contratos,design,canal,validação JSON,sanitização)
-- [ ] Ratificar P1-P11 formalmente ( ja formalizados nos ADRs;confirmação do criador pendente)
-- [ ] Aprovacao explicita para Fase 1 — Fundacao
+- [ ] Fase 4 — Provider System: roteamento avançado, fallback, health-check, seleção por capacidade（ ver NEXT_COMMAND.md e 10_MODULES.md)
+- [ ] Fases 5–14 + WORKSPACE COMPLETO（ conforme 10_MODULES.md e aprovação em lote do analista）
