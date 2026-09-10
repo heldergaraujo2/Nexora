@@ -4,6 +4,8 @@
 
  Nenhum código de produção foi criado. Nada foi commitado.
 
+> **NOTA DE INTEGRAÇÃO(2026-09-10,coordenador):** Este documento foi integrado ao fluxo canônico do repositório como `05_DISCOVERY_HANDOFF.md`( na numeração unificada 00–15);o handoff principal do projeto agora é `15_HANDOFF.md`,e o comando ativo está em `NEXT_COMMAND.md`. As afirmações de "zero commits/sem remoto" abaixo referem-se ao momento da descoberta— hoje o repositório está commitado e no GitHub( https://github.com/heldergaraujo2/Nexora ))
+
 
 
 ## 1. Estado atual
