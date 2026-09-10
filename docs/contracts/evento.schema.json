@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/evento.schema.json",
+  "title": "Evento",
+  "description": "Evento de primeira classe da NEXORA( tudo e evento:carimbo,origem,tipo,dados,correlacao ). Padrao append-only;imutavel. Ver ADR-005 e 04_ARCHITECTURE_REQUIREMENTS.md.",
+  "type": "object",
+  "required": ["id", "tipo", "origem", "carimbo"],
+  "properties": {
+    "id": {"type": "string", "description": "UUID do evento"},
+    "tipo": {"type": "string", "description": "Tipo canonico( ex: objetivo.recebido, plano.aprovado, acao.executada, verificacao.concluida, custo.registrado )"},
+    "origem": {"type": "object", "properties": {"agente": {"type": "string"}, "conversation_id": {"type": "string"}, "ferramenta": {"type": "string"}, "provedor": {"type": "string"}}},
+    "carimbo": {"type": "string", "format": "date-time"},
+    "dados": {"type": "object", "description": "Payload livre estruturado do evento"},
+    "correlacao": {"type": "object", "properties": {"objetivo_id": {"type": "string"}, "plano_id": {"type": "string"}, "parent_id": {"type": "string"}, "trace_id": {"type": "string"}}},
+    "nivel": {"enum": ["debug", "info", "aviso", "erro", "critico"]},
+    "versao": {"type": "string", "description": "Versao do schema de evento( atual: 1.0 )"}
+  },
+  "additionalProperties": false}

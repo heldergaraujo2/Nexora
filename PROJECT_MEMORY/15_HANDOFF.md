@@ -64,3 +64,9 @@ Implementação do esqueleto de módulos:core runtime,configuração,logging,err
 - Legalidade,transparência,autorização,rastreabilidade,e auditoria
 - Ações sensíveis exigem autorização explícita do criador(Prop. D aprovada))
 - NEXORA nunca deve afirmar que um produto possui capacidade que ele não possui(Regra de Veracidade)
+## Atualizacao — Fase 0.5 CONCLUIDA (2026-09-10):
+ 
+- **Estado:** Fase 0.5 — Decisao e Design — CONCLUIDA. 11 ADRs (ADR-001..011) em docs/adr/;8 contratos JSON Schema validados em docs/contracts/;design doc em docs/design/repositorio.md;canal construidor-analyiso testado (HELLO)。
+- **Versao:** v0.0.3 (Fase 0.5 completa;S0 preparada)
+- **Ponto de continuacao:** executar commit e push da Fase 0.5;entao validar aprovacao explicita para Fase  1 — Fundacao ( implementacao dos modulos em src/nexora/)
+- **Artefatos entregues:** NEXT_COMMAND.md,PROJECT_MEMORY/ 00-15,docs/adr/ (11 ADRs+,readme),docs/contracts/ (8 schemas+,readme),docs/design/repositorio.md,CANAL_CONSTRUTOR.md

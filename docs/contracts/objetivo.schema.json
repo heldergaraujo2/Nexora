@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/objetivo.schema.json",
+  "title": "Objetivo",
+  "description": "Contrato de entrada da NEXORA em linguagem natural estruturada.",
+  "type": "object",
+  "required": ["id", "intencao", "escopo", "criterios_sucesso"],
+  "properties": {
+    "id": {"type": "string"},
+    "versao": {"type": "string"},
+    "intencao": {"type": "string"},
+    "escopo": {"type": "object", "properties": {"dominio": {"type": "string"}, "repositorio": {"type": "string"}, "paths_permitidos": {"type": "array", "items": {"type": "string"}}, "paths_negados": {"type": "array", "items": {"type": "string"}}}},
+    "restricoes": {"type": "array", "items": {"type": "string"}},
+    "criterios_sucesso": {"type": "array", "items": {"type": "object", "required": ["descricao", "verificavel"], "properties": {"descricao": {"type": "string"}, "verificavel": {"type": "boolean"}, "como_verificar": {"type": "string"}}}},
+    "autonomia": {"type": "object", "properties": {"nivel": {"enum": ["supervisionado", "por_acao", "delegado", "autonomo"]}, "aprovacao_necessaria_para": {"type": "array", "items": {"type": "string"}}}},
+    "orcamento": {"type": "object", "properties": {"custo_maximo_usd": {"type": "number"}, "iteracoes_maximas": {"type": "integer"}, "tempo_maximo_segundos": {"type": "integer"}}},
+    "origem": {"type": "object", "properties": {"conversation_id": {"type": "string"}, "usuario": {"type": "string"}, "comando_fonte": {"type": "string"}}},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false
+}

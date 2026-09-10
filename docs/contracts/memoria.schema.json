@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/memoria.schema.json",
+  "title": "Memoria",
+  "description": "Contrato de memoria da NEXORA: curto e longo prazo,provenance,versionamento,governanca. Persistencia inicial em JSON versionado pelo git( ver ADR-004,e 04_ARCHITECTURE_REQUIREMENTS.md。",
+  "type": "object",
+  "required": ["id", "dominio", "tipo", "conteudo", "provenance"],
+  "properties": {
+    "id": {"type": "string"},
+    "dominio": {"enum": ["semantico", "episodico", "procedural", "decisional", "relacional"]},
+    "tipo": {"enum": ["curto_prazo", "longo_prazo"]},
+    "conteudo": {"type": "object", "description": "Estrutura livre do conhecimento( ex: resumo,entrada estruturada,referencias )"},
+    "provenance": {"type": "object", "required": ["origem", "quando"], "properties": {"origem": {"type": "string", "description": "De onde veio a informacao( agente,evento,usuario,arquivo )"}, "quando": {"type": "string", "format": "date-time"}, "evento_id": {"type": "string"}}},
+    "confianca": {"type": "number", "minimum": 0, "maximum": 1},
+    "versionamento": {"type": "object", "properties": {"versao": {"type": "string"}, "anterior_id": {"type": "string"}, "alterado_em": {"type": "string", "format": "date-time"}}},
+    "governanca": {"type": "object", "properties": {"visibilidade": {"enum": ["privada", "projeto", "publica"]}, "retencao": {"type": "string"}, "expiracao": {"type": "string", "format": "date-time"}}},
+    "tags": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/delegacao.schema.json",
+  "title": "Delegacao",
+  "description": "Contrato de delegacao da NEXORA: especialidade,entregavel,verificacao,autonomia. Homo multi-agente sera usada na Fase  4.5 do roadmap,mas o contrato ja fica definido. Ver ADR-010 e 04_ARCHITECTURE_REQUIREMENTS.md.",
+  "type": "object",
+  "required": ["id", "agente", "tarefa", "entregavel", "verificacao"],
+  "properties": {
+    "id": {"type": "string"},
+    "agente": {"type": "object", "properties": {"nome": {"type": "string"}, "especialidade": {"type": "string"}, "nivel_confianca": {"type": "number", "minimum": 0, "maximum": 1}}},
+    "tarefa": {"type": "string", "description": "Descricao da tarefa delegada"},
+    "escopo_autonomia": {"enum": ["supervisionado", "por_acao", "delegado", "autonomo"]},
+    "entregavel": {"type": "object", "properties": {"tipo": {"enum": ["arquivos", "relatorio", "comando", "dados", "decisao"]}, "caminho": {"type": "string"}, "descricao": {"type": "string"}}},
+    "verificacao": {"type": "object", "properties": {"metodo": {"enum": ["testes", "inspecao_humana", "revisao_cruzada", "metricas", "comparacao"]}, "criterios": {"type": "array", "items": {"type": "string"}}, "experiencia_necessaria": {"type": "boolean"}}},
+    "prazo": {"type": "string", "format": "date-time"},
+    "orcamento_maximo": {"type": "number"},
+    "status": {"enum": ["pendente", "em_execucao", "entregue", "verificado", "rejeitado"]}
+  },
+  "additionalProperties": false}

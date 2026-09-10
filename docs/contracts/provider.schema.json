@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/provider.schema.json",
+  "title": "Provider de IA",
+  "description": "Interface tipada de um Provider de IA da NEXORA( generate,stream,tools,capabilities,errors ). Model-agnostico: o nucleo nao depende de um unico provedor. Ver ADR-006 e 04_ARCHITECTURE_REQUIREMENTS.md.",
+  "type": "object",
+  "required": ["tipo", "modelo", "nome"],
+  "properties": {
+    "tipo": {"enum": ["audio", "chat", "embeddings", "imagem", "tool_calling"]},
+    "modelo": {"type": "string"},
+    "nome": {"type": "string"},
+    "habilidades": {
+      "type": "array",
+      "items": {"enum": ["generate", "stream", "tool_calling", "vision", "embeddings_resposta", "json_mode"]}
+    },
+    "provider_tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nome": {"type": "string"},
+          "descricao": {"type": "string"},
+          "parametros_schema": {"type": "object", "$ref": "https://nexora.dev/schemas/tool.schema.json"}}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "max_tokens_saida": {"type": "integer"},
+        "suporta_tool_calling": {"type": "boolean"},
+        "suporta_streaming": {"type": "boolean"},
+        "suporta_embeddings": {"type": "boolean"},
+        "suporta_json_mode": {"type": "boolean"},
+        "limites": {"type": "object", "properties": {"tpm": {"type": "integer"}, "rpm": {"type": "integer"}}}}
+    },
+    "params": {"type": "object", "properties": {"temperatura": {"type": "number"}, "top_p": {"type": "number"}, "max_tokens": {"type": "integer"}}},
+    "erros": {"type": "object", "properties": {"timeout": {"type": "string"}, "rate_limit": {"type": "string"}, "indisponibilidade": {"type": "string"}, "autenticacao": {"type": "string"}}}
+  },
+  "additionalProperties": false}

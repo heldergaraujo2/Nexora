@@ -49,3 +49,8 @@
 - Não avançar grandes etapas ignorando falhas conhecidas(Protocolo de Desenvolvimento,14_AGENT_PROTOCOL.md)
 - Ações financeiras e legais sensíveis exigem autorização explícita(12 e  34 do roadmap;Proposta D acima)
 - NEXORA nunca deve afirmar que um produto possui capacidade que ele não possui(Regra de Veracidade,seção 19 do roadmap)
+## ADRs de Arquitetura — CONCLUIDOS na Fase 0.5
+ 
+> As decisoes P1-P11 foram formalizadas como ADRs em docs/adr/ ( ADR-001..011,) com data, contexto e consequencias. Registro aqui marcado como concluido. Indice em docs/adr/README.md.
+ 
+P1=ADR-001,P2=ADR-002,P3=ADR-003,P4=ADR-004,P5=ADR-005,P6=ADR-006,P7=ADR-007,P8=ADR-008,P9=ADR-009,P10=ADR-010,P11=ADR-011

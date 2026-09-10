@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/tool.schema.json",
+  "title": "Tool (ferramenta",
+  "description": "Contrato de ferramenta da NEXORA: registry versionado com schema,risco,permissao,documentacao. Toda ferramenta executavel e registrada,e sua execucao gera evento. Ver ADR-008 e 04_ARCHITECTURE_REQUIREMENTS.md.",
+  "type": "object",
+  "required": ["nome", "versao", "schema_parametros", "nivel_risco"],
+  "properties": {
+    "nome": {"type": "string"},
+    "versao": {"type": "string"},
+    "descricao": {"type": "string"},
+    "schema_parametros": {"type": "object", "description": "JSON Schema dos parametros que a ferramenta aceita"},
+    "nivel_risco": {"enum": ["nenhum", "baixo", "medio", "alto", "critico"]},
+    "permissoes_necessarias": {"type": "array", "items": {"type": "string", "description": "Permissoes( ex: workspace.escrever, rede.chamada, terminal.executar )"}},
+    "documentacao": {"type": "string", "description": "URL ou caminho para documentacao"},
+    "side_effects": {"type": "boolean", "description": "Se a ferramenta altera estado externo"},
+    "exige_aprovacao": {"type": "boolean", "description": "Se acoes desta ferramenta exigem gate humano"},
+    "categoria": {"enum": ["arquivo", "terminal", "rede", "git", "ia", "dados", "sistema", "extensao"]},
+    "estado": {"enum": ["nova", "experimental", "estavel", "deprecada", "removida"]}
+  },
+  "additionalProperties": false}

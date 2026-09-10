@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/plano.schema.json",
+  "title": "Plano",
+  "description": "Plano de execucao da NEXORA: tarefas, dependencias, validacao e criterios de aceitacao.",
+  "type": "object",
+  "required": ["id", "objetivo_id", "tarefas", "status"],
+  "properties": {
+    "id": {"type": "string"},
+    "objetivo_id": {"type": "string"},
+    "versao": {"type": "string"},
+    "status": {"enum": ["rascunho", "aprovado", "em_execucao", "concluido", "falhou", "bloqueado"]},
+    "tarefas": {"type": "array", "items": {"type": "object", "required": ["id", "descricao"], "properties": {
+      "id": {"type": "string"},
+      "descricao": {"type": "string"},
+      "status": {"enum": ["pendente", "em_execucao", "concluida", "falhou", "bloqueada"]},
+      "dependencias": {"type": "array", "items": {"type": "string"}},
+      "ferramentas_permitidas": {"type": "array", "items": {"type": "string"}},
+      "criterios_aceitacao": {"type": "array", "items": {"type": "string"}}
+    }}},
+    "validacao": {"type": "object", "properties": {
+      "metodo": {"enum": ["testes", "inspecao_humana", "revisao_cruzada", "metricas", "comparacao"]},
+      "criterios": {"type": "array", "items": {"type": "string"}},
+      "experiencia_necessaria": {"type": "boolean"}
+    }},
+    "created_at": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false
+}

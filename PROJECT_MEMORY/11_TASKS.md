@@ -31,3 +31,17 @@
 - [ ] Health Checks
 - [ ] Runtime básico + runtime simples
 - [ ] Gerenciamento de processos,configuração,sistema de eventos interno
+## Concluido na Fase 0.5 (Decisao e Design, sem codigo:
+ 
+- [x] 11 ADRs criados e aprovados em docs/adr/ (ADR-001..011, cobrindo P1-P11)
+- [x] Indice de ADRs em docs/adr/README.md
+- [x] 8 contratos JSON Schema criados e validados em docs/contracts/
+- [x] Design doc em docs/design/repositorio.md propondo estrutura de repositorio,modulos e fluxo
+- [x] Canal construidor-analyiso testado (HELLO) e registrado em CANAL_CONSTRUTOR.md
+- [x] Caracteres zero-width/CJK sanitizados dos docs
+ 
+## Proxima (Fase 1 — Fundacao, apos aprovacao explicita:
+ 
+- [ ] Receber aprovacao do criador/analista para iniciar a Fase 1
+- [ ] Implementar cores basicos (ciclo de agente,event store simples,checkpoints)
+- [ ] Configuration Manager,Environment Manager,Logging estruturado JSON,Error Handling,Process Manager,CLI minimo,Version Manager,Test Framework,Health Checks

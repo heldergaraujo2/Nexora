@@ -42,4 +42,13 @@
 
 - [ ] Executar Fase 0.5(Decisão e Design:ADRs,contratos,estrutura proposta…
 - [ ] Ratificar P1–P11 com o criador
-- [ ] Fase  1(Fundação)— implementação( aguardando aprovação explícita por etapa
+- [ ] Fase  1(Fundação)— implementação( aguardando aprovação explícita por etapa## Fase Atual (atualizado apos conclusao da Fase 0.5:
+ 
+**Fase 0.5 — Decisão e Design** — **CONCLUÍDA**: 11 ADRs (ADR-001..011) criados e aprovados em docs/adr/;8 contratos JSON Schema criados e validados em docs/contracts/;design doc em docs/design/repositorio.md;canal construidor-analyiso testado (HELLO)。
+ 
+**Status:** Fase 0.5 CONCLUÍDA e pronta para push. Proxima: Fase 1 — Fundacao ( implementacao,) aguardando aprovacao explicita do criador/analista.
+ 
+**Pendente:**
+- [x] Fase 0.5 executada (ADRs,contratos,design,canal,validação JSON,sanitização)
+- [ ] Ratificar P1-P11 formalmente ( ja formalizados nos ADRs;confirmação do criador pendente)
+- [ ] Aprovacao explicita para Fase 1 — Fundacao

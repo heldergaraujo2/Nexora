@@ -26,3 +26,12 @@
 
 - Commit `0e271d9` —"docs: Capability Discovery(fase pre-implementacao)"
 - 6 arquivos:00/01 versionados do agent;02_CAPABILITY_DISCOVERY(≈1.250 linhas,13 categorias);03_CAPABILITY_MATRIX;04_ARCHITECTURE_REQUIREMENTS;5_DISCOVERY_HANDOFF始 início do handoff da Discovery))
+## 2026-09-10 — Fase 0.5 concluida — Decisao e Design
+ 
+- 11 ADRs criados e aprovados em docs/adr/ (ADR-001..011) formalizam P1-P11
+- Indice de ADRs em docs/adr/README.md
+- 8 contratos JSON Schema criados e VALIDADOS em docs/contracts/ (objetivo,plano,provider,evento,tool,delegacao,memoria,aprovacao)
+- Design doc criado em docs/design/repositorio.md que propoe estrutura,modulos e fluxo
+- Canal construidor-analyiso estabelecido e testado (palavra HELLO confirmada;CANAL_CONSTRUTOR.md criado)
+- Caracteres zero-width/CJK removidos de todos os docs e schemas
+- Schemas JSON corrompidos pelo canal regenerados com echo linha-a-linha

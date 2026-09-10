@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nexora.dev/schemas/aprovacao.schema.json",
+  "title": "Aprovacao",
+  "description": "Gate de aprovacao humana da NEXORA.",
+  "type": "object",
+  "required": ["id", "acao", "nivel", "status"],
+  "properties": {
+    "id": {"type": "string"},
+    "acao": {"type": "string"},
+    "nivel": {"enum": ["nenhum", "informar", "confirmar", "aprovacao_dupla"]},
+    "status": {"enum": ["pendente", "aprovada", "rejeitada", "expirada", "cancelada"]},
+    "criado_em": {"type": "string", "format": "date-time"},
+    "decidido_em": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false
+}
