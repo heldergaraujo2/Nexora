@@ -1,73 +1,80 @@
-# NEXT COMMAND — Fase 0.5: Decisão e Design
+# NEXT COMMAND — Fase 2: Providers & Conectores
 
-> **Canal de comando da coordenação.** Este arquivo contém o comando atual,a ser executado pelo agent construсor(OpenHands). Ao concluir,o agent deve atualizar `PROJECT_MEMORY/15_HANDOFF.md` e marcar esta seção como executada;então,o coordenador redigirá o próximo comando aqui.
-
-**Origem:** Coordenador/Arquiteto(Arena agent central) — após auditoria do estado do repositório e aprovação do criador.
-
- Entregue via o link do repositório.
+> **Canal de comando da coordenacao.** Este arquivo contem o comando atual, a ser executado pelo agente construtor (OpenHands.. Ao concluir,, o agente deve atualizar `PROJECT_MEMORY/15_HANDOFF.md` e marcar esta secao como executada; entao,, o coordenador redigira o proximo comando aqui.
 
 
 
-## COMANDO — Fase 0.5: Decisão e Design(sem código!
-
-**OBJETIVO:** Converter a Capability Discovery já auditada e integrada(02–05) em **decisões formais** (ADRs) e **contratos iniciais por schema**, mais a **estrutura de repositório proposta** — tudo como **documentação**,sem escrever código de produção.
+**Origem:** Coordenador/Arquiteto (Arena agent central) — apos auditoria do estado do repositorio e aprovacao do criador/analista.
 
 
 
-**CONTEXTO OBRIGATÓRIO — leia nesta ordem:**
+## COMANDO — Fase 2: Providers & Conectores
 
-1. `PROJECT_MEMORY/15_HANDOFF.md`( este repo — ponto de continuidade)
-2. `PROJECT_MEMORY/08_CURRENT_STATE.md`( estado e estrutura)
-3. `PROJECT_MEMORY/09_DECISIONS.md`( decisões aprovadas + P1–P11 provisórios)
+**OBJETIVO:** Implementar a camada de Providers de IA de forma extensivel, com contrato tipado, registros dinâmicos e pelo menos DOIS providers concretos: o FakeProvider existente e um Provider Groq funcional, seguindo a ADR-003 (desacoplar modelos e provedores..
 
-4. `PROJECT_MEMORY/04_ARCHITECTURE_REQUIREMENTS.md`( requisitos arquiteturais)
-5. `PROJECT_MEMORY/05_DISCOVERY_HANDOFF.md`( handoff da Discovery,seções 6–9)
-6. `PROJECT_MEMORY/07_ROADMAP.md`( roadmap v1)
-7. `PROJECT_MEMORY/14_AGENT_PROTOCOL.md`( protocolo obrigatório)
+**CONTEXTO OBRIGATORIO — leia nesta ordem:**
 
-
-
-**ESCOPO( o que produzir:**
-
-1. **ADRs**( Architecture Decision Records) das **decisões P1–P11**(decisões provisisórias em 09_DECISIONS.md)— formalizá-las com contexto,decisão,e consequências,cada uma em `docs/adr/ADR-00X-<nome>.md`( ou um único `docs/adr.md` bem estruturado,se preferir — mas por arquivo é mais auditável)
-2. **Contratos iniciais por schema**( JSON Schema) em `docs/contracts/`:
-   - `objetivo.schema.json`( intenção,escopo,restrições,critérios de sucesso,autonomia nível,orçamento)
-
-   - `plano.schema.json`( DAG de subtarefas com dependências,validação acíclica…)
-   - `provider.schema.json`( interface tipada:generate/stream/tools/capabilities/errors…)
-   - `evento.schema.json`( eventos de primeira classe:carimbo,origem,tipo,dados…)
-   - `tool.schema.json`( registry versionado:schema,risco,permissão,documentação…)
-   - `delegacao.schema.json`( contrato de delegação:especialidade,entregável,verificação…)
-   - `memoria.schema.json`( curto/longo prazo,provenance,versionamento,governança…)
-   - `aprovacao.schema.json`( gates de aprovação humana:ação,escopo,decisor,evidência…)
-3. **Estrutura de repositório proposta**( como PROPOSTA,não implementação):um `docs/design/repositorio.md` descrevendo:
-   - Diretórios( src/nexora/,tests/,docs/,PROJECT_MEMORY/…)
-   - Nomes/namespaces dos módulos( core,config,logging,providers,tools,runtime,…em conformidade com 04)
-   - Arquivos-base previstos( __init__.py,pyproject.toml,AGENTS.md,…)
-   - Fluxo de módulos( como o ciclo agente atravessa providers→tools→verify→memory→events)
-   - Não criar código — apenas o desenho proposta
-4. **Atualizar a memória do projeto** ao concluir:
-   - `PROJECT_MEMORY/08_CURRENT_STATE.md`( estado: Fase  0.5 concluída`)
-   - `PROJECT_MEMORY/09_DECISIONS.md`( formalizar P1–P11 como "decisões registradas",com data e responsável;adicionar ADRs referenciados)
-
-   - `PROJECT_MEMORY/11_TASKS.md`( marcar os itens da Fase  0.5 concluídos)
-   - `PROJECT_MEMORY/13_CHANGELOG.md`( registrar a mudança«
-   - `PROJECT_MEMORY/15_HANDOFF.md`( novo ponto de continuação:Fase  1 — Fundação,aguardando aprovação explícita)
+1. `PROJECT_MEMORY/15_HANDOFF.md` ( este repo — ponto de continuidade)
+2. `PROJECT_MEMORY/08_CURRENT_STATE.md` ( estado e estrutura)
+3. `PROJECT_MEMORY/09_DECISIONS.md` ( decisoes aprovadas + ADRs referenciados)
+4. `docs/adr/ADR-003-*.md` ( provider abstraction)
+5. `docs/contracts/provider.schema.json` ( contrato tipado de provider)
+6. `docs/design/repositorio.md` ( estrutura e fluxo propostos)
+7. `PROJECT_MEMORY/14_AGENT_PROTOCOL.md` ( protocolo obrigatorio
 
 
-**CRITÉRIOS DE ACEITAÇÃO( tudo verificável:**
 
-- [ ] Nenhum código de produção criado( sem src/,sem dependências,etc.)
-- [ ] Nenhum teste formal exigido( sem código)
-- [ ] P1–P11 formalizados como ADRs( com contexto,decisão,e consequências)
-- [ ] Contratos em `docs/contracts/` cobrindo pelo menos:Objetivo,Plano/DAG,Provider,Evento,Tool,Delegação,Memória,Aprovação
-- [ ] Estrutura de repositório proposta documentada( `docs/design/repositorio.md` ou similar)
-- [ ] 08/09/11/13/15 atualizados e consistentes
-- [ ] Tudo commitado com mensagem descritiva( ex:`docs(fase-0.5): ADRs,contratos e estrutura proposta`)
-- [ ] `15_HANDOFF.md` indica o novo ponto de continuação(Fase `1` — Fundação) e que a próxima etapa exige aprovação explícita do criador/coordenador
+**ESCOPO (o que produzir:**
 
-**PROTOCOLO:** seguir `PROJECT_MEMORY/14_AGENT_PROTOCOL.md`( sem exceções:veracidade,rastreabilidade,autorização,comunicação por eventos/arquivos,escrever em PT-BR,usar git com mensagens descritivas,etapas pequenas verificáveis)
+1. **Contrato tipado de provider** em `src/nexora/providers/base.py`:
+   - Revisar/estender a interface existente com: `nome`, `gerar(texto)`, `gerar_stream(texto)`, `capabilities()`, `saudavel()` e `fechar()`,se ainda nao existirem todas..
+   - Tipos estritos,docstrings PT-BR,e sem dependencias externas ( stdlib apenas..
+2. **Registry dinâmico** em `src/nexora/providers/registry.py`:
+   - Registrar fabricas por nome,, obter por nome ( case-insensitive,, listar disponiveis,, remover e levantar `ProviderDesconhecido` para nomes ausentes.. — Manter 100% dos testes existentes verdes..
+3. **FakeProvider** em `src/nexora/providers/fake.py`:
+   - Provider deterministico para testes,, sem rede,, com capacidades declaradas,, geracao de texto simples ( ex: eco/prefixo)#,, stream opcional,, e estado auditavel ( chamadas registradas..
+4. **Provider Groq** em `src/nexora/providers/groq.py`:
+   - Usar a API da Groq ( POST https://api.groq.com/openai/v1/chat/completions) com apenas stdlib ( urllib.request) e chave da env var `GROQ_API_KEY`.
+   - Modelo slidevel via `NEXORA_GROQ_MODEL`（ default: `llama-3.3-70b-versatile`). — Sem dependencia pip..#
+   - Erros de rede/Autenticacao mapeados para excecoes tipadas ( ex: `ProviderIndisponivel`,`ProviderSemCredencial`..
+   - Se nao houver chave configurada,, o provider deve falhar de forma clara e auditavel,, nunca silenciosamente..
+5. **Registro central** em `src/nexora/providers/__init__.py`:
+   - Expor `RegistryProviders`, `FakeProvider`, `ProviderGroq`, `ProviderSemCredencial` e `ProviderIndisponivel` para import simples..
+6. **Testes unitarios** em `tests/unit/`:
+   - `test_providers_groq.py`: testes de construcao sem chave,, erros tipados,, e mapeamento de erros HTTP com monkeypatch de urllib.request ( sem rede real..
+   - Manter `test_providers_registry.py` verde e ampliar para cobrir registrar/obter/remover/listar/desconhecido..
+   - Rodar a suite completa: `python3 -m pytest tests/ -q` — todos verdes..#
 
- mantendo tudo em PT-BR,em markdown limpo(sem zero-width spaces,sem caracteres estranhos,verificar antes de commitar。
+**FORA DE ESCOPO (nao fazer nesta fase:**
 
-**DATA DE VALIDADE:** v0.1 — válido até a conclusão desta Fase  0.5;após isso,aguardar novo comando do coordenador.
+- NAO implementar orquestracao de agentes ( Fase 3)
+- NAO implementar ferramentas/golpes reais ( alem do registry vazio e do sandbox existente..
+- NAO adicionar dependencias pip
+- NAO tocar em core/runtime/config alem do necessario para compilar os imports de teste
+
+
+
+**CRITERIOS DE ACEITACAO ( tudo verificavel:**
+
+- [ ] `ProviderGroq` importavel sem chave de API configurada
+- [ ] Construir sem chave nao levanta; chamar `gerar()` sem chave levanta `ProviderSemCredencial`
+- [ ] Erros HTTP 401/429/5xx mapeados para excecoes tipadas,, via monkeypatch..
+- [ ] `RegistryProviders` continua com 100% dos testes existentes verdes
+- [ ] Suite completa `python3 -m pytest tests/ -q` — todos verdes( esperado: 30 + novos,, sem regressoes..
+- [ ] Tudo commitado e pushado com mensagem descritiva( ex: `fase(2): providers tipados, Groq provider e registros extensiveis`
+- [ ] `15_HANDOFF.md` atualizado com novo ponto de continuacao(Fase 3 — Orquestracao de Agente,, saindo do escopo atual..
+
+
+
+**PROTOCOLO:** seguir `PROJECT_MEMORY/14_AGENT_PROTOCOL.md`( sem excecoes: veracidade,rastreabilidade,autorizacao,comunicacao por eventos/arquivos,escrever em PT-BR,usar git com mensagens descritivas,etapas pequenas verificaveis) e atualizar `08_CURRENT_STATE`,`11_TASKS`,`12_TESTS`,`13_CHANGELOG` ao concluir..
+
+
+
+**DATA DE VALIDADE:** v0.1 — valido ate a conclusao desta Fase 2; apos isso,, aguardar novo comando do coordenador..
+
+
+
+**HANDOFF PARA O ANALISTA — apos executar este comando,, o construtor deve:**
+
+1. Enviar o resultado da Fase  2 ( resumo do que foi implementado,, testes verdes,, e commit hash..
+2. E COBRAR o proximo comando do analista/coordenador,, indicando que a Fase  3 — Orquestracao de Agente aguarda aprovacao explicita..

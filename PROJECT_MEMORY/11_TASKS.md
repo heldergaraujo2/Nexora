@@ -45,3 +45,22 @@
 - [ ] Receber aprovacao do criador/analista para iniciar a Fase 1
 - [ ] Implementar cores basicos (ciclo de agente,event store simples,checkpoints)
 - [ ] Configuration Manager,Environment Manager,Logging estruturado JSON,Error Handling,Process Manager,CLI minimo,Version Manager,Test Framework,Health Checks
+## Concluido na Fase 1 (Fundacao, 2026-09-10:
+
+- [x] `src/nexora/core/` — Objetivo, Plano/Tarefa,, Ciclo,, executar_ciclo() e ResultadoCiclo
+
+- [x] `src/nexora/providers/` — registry dinamico,, base,, FakeProvider,, pronto para Groq/Conectores (
+- [x] `src/nexora/tools/registry.py` — Ferramenta + RegistryFerramentas (
+- [x] `src/nexora/config/loaders.py` — JSON + ambiente ( prefixo NEXORA_)
+- [x] `src/nexora/runtime/` — logs estruturados,, memoria(( episodica/semantica), verificacao( saida), sandbox( allowlist de comandos (
+- [x] 30 testes unitarios passando( pytest) em tests/unit (
+- [x] Empacotamento pyproject + CLI minimo( python -m nexora)
+
+## Proxima ( Fase 2 — Providers & Conectores, apos aprovacao explicita:
+
+- [ ] Receber aprovacao do analista/coordenador para iniciar a Fase  2
+- [ ] Estender o contrato tipado de provider ( base.py); manter registry dinamico verde
+
+- [ ] Implementar Provider Groq( API real com stdlib, sem dependencia pip;erros tipados( ProviderSemCredencial, ProviderIndisponivel)
+- [ ] FakeProvider deterministico com estado auditavel
+- [ ] Testes: test_providers_groq.py + ampliar test_providers_registry.py

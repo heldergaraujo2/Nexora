@@ -27,3 +27,10 @@
 ## Regra
 
 Não avançar para a próxima fase sem testes passando.
+| Testes unitarios da Fase 1 ( pytest) | core+providers+tools+config+runtime | 30 passed em tests/unit ( 2026-09-10)
+
+## Ultimo Teste
+
+- **Data:** 2026-09-10
+- **Escopo:** Suite completa `python3 -m pytest tests/ -q`
+- **Resultado:** 30 passed, 0 failed ( comando `python -m nexora` tambem validado)

@@ -35,3 +35,11 @@
 - Canal construidor-analyiso estabelecido e testado (palavra HELLO confirmada;CANAL_CONSTRUTOR.md criado)
 - Caracteres zero-width/CJK removidos de todos os docs e schemas
 - Schemas JSON corrompidos pelo canal regenerados com echo linha-a-linha
+## 2026-09-10 — Fase 1 concluida — Fundacao ( commit e73a266:
+
+- Nucleo do agente: `core/objetivo.py`, `core/plano.py`, `core/ciclo.py` ( Objetivo, Plano/Tarefa, Ciclo, Executor, Verificador, executar_ciclo, ResultadoCiclo(
+- Providers: `providers/base.py`, `providers/registry.py`, `providers/fake.py` ( contracto tipado, fake deterministico, registry dinamico com ProviderDesconhecido(
+- Ferramentas: `tools/registry.py` ( Ferramenta + RegistryFerramentas(
+- Config: `config/loaders.py` ( JSON + ambiente com prefixo NEXORA_(
+- Runtime: `runtime/logs.py`, `runtime/memoria.py`, `runtime/verificacao.py`, `runtime/sandbox.py` ( logs estruturados, memoria episodica/semantica, verificacao de saida, sandbox com allowlist(
+- 30 testes unitarios passando em `tests/unit/` ( commit pushado para origin/main(

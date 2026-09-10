@@ -4,10 +4,10 @@
 
 ## Estado Atual
 
-- **Versão:** v0.0.2(integração concluída;Fase 0.5 em preparação)
-- **Fase atual:** Fase 0.5 — Decisão e Design**( sem código;discovery concluída e integrada**
-- **Fase anterior:** Fase 0 — Continuidade e Memória(**concluída**:estrutura,README,.gitignore,PROJECT_MEMORY 00–15 integrado,commits e push)**
-- **Ponto de continuação:** validar `NEXT_COMMAND.md`( canal de comando da coordenação) e executar a Fase  0.5
+- **Versão:** v0.1.0 ( Fase 1 completa e pushada;Fase 2 em NEXT_COMMAND.md)
+- **Fase atual:** Fase 1 — Fundação(**CONCLUÍDA**: núcleo do agente em `src/nexora/` com 30 testes unitários passando;commit `e73a266` pushado para `origin/main`)
+- **Fase anterior:** Fase 0.5 — Decisão e Design ( concluída: 11 ADRs,8 contratos JSON Schema,design doc,canal construidor-analista) — e Fase  0( esqueleto e memória)
+- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase  2 — Providers & Conectores: contrato tipado, FakeProvider,+ Provider Groq com stdlib, testes sem rede) após aprovação explícita do analista/coordenador.
 
 ## Como ler 宣 este repositório
 
