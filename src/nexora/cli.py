@@ -19,6 +19,7 @@ from nexora.seguranca.registro import Acao, RegistroPolitica
 from nexora.memoria.registro import ItemMemoria, RegistroMemorias
 from nexora.recursos.registro import Recurso, RegistroRecursos
 from nexora.portfolio.registro import ItemPortfolio, RegistroPortfolio
+from nexora.autonomia.registro import MetaLongoPrazo, RegistroAutonomia
 from nexora.economia.registro import CustoExecucao, RegistroCustos
 
 
@@ -174,6 +175,24 @@ def _portfolio_comando(acao, arquivo, nome=None, categoria=None, status=None, it
         print("portfolio_resumo={}".format(resumo))
 
 
+def _autonomia_comando(acao, arquivo, nome=None, descricao=None, status=None, meta_id=None):
+    registro = RegistroAutonomia(Path(arquivo))
+    if acao == "definir":
+        registro.definir(nome=nome, descricao=descricao or "", status=status or "ativa")
+        print("meta definida")
+    elif acao == "atualizar":
+        registro.atualizar_status(meta_id, status)
+        print("status atualizado")
+    elif acao == "listar":
+        metas = registro.listar()
+        for meta in metas:
+            print("{}".format(meta.nome))
+        print("autonomia_metas={}".format(len(metas)))
+    else:
+        resumo = registro.resumir()
+        print("autonomia_resumo={}".format(resumo))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="nexora", description="NEXORA plataforma de agentes de IA")
     parser.add_argument("--version", action="version", version=__about__.__version__)
@@ -273,6 +292,21 @@ def main() -> None:
     p_lst_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
     p_res_pf = p_pf_sub.add_parser("resumir", help="resumo por categoria")
     p_res_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
+    p_auto = sub.add_parser("autonomia", help="metas de longo prazo")
+    p_auto_sub = p_auto.add_subparsers(dest="acao", required=True)
+    p_def_auto = p_auto_sub.add_parser("definir", help="define uma meta de longo prazo")
+    p_def_auto.add_argument("--nome", required=True, help="nome da meta")
+    p_def_auto.add_argument("--descricao", default="", help="descricao da meta")
+    p_def_auto.add_argument("--status", default="ativa", help="status inicial")
+    p_def_auto.add_argument("--arquivo", required=True, help="caminho do arquivo de autonomia")
+    p_upd_auto = p_auto_sub.add_parser("atualizar", help="atualiza status de uma meta")
+    p_upd_auto.add_argument("--id", dest="meta_id", required=True, help="id da meta")
+    p_upd_auto.add_argument("--status", required=True, help="novo status")
+    p_upd_auto.add_argument("--arquivo", required=True, help="caminho do arquivo de autonomia")
+    p_lst_auto = p_auto_sub.add_parser("listar", help="lista metas")
+    p_lst_auto.add_argument("--arquivo", required=True, help="caminho do arquivo de autonomia")
+    p_res_auto = p_auto_sub.add_parser("resumir", help="resumo por status")
+    p_res_auto.add_argument("--arquivo", required=True, help="caminho do arquivo de autonomia")
 
     args = parser.parse_args()
     if args.comando == "info":
@@ -295,6 +329,8 @@ def main() -> None:
         _recursos_comando(args.acao, args.arquivo, tipo=getattr(args, "tipo", None), quantidade=getattr(args, "quantidade", None), executor=getattr(args, "executor", None))
     elif args.comando == "portfolio":
         _portfolio_comando(args.acao, args.arquivo, nome=getattr(args, "nome", None), categoria=getattr(args, "categoria", None), status=getattr(args, "status", None), item_id=getattr(args, "item_id", None))
+    elif args.comando == "autonomia":
+        _autonomia_comando(args.acao, args.arquivo, nome=getattr(args, "nome", None), descricao=getattr(args, "descricao", None), status=getattr(args, "status", None), meta_id=getattr(args, "meta_id", None))
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)

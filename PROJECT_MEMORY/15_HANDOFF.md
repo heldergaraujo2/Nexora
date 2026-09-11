@@ -3,21 +3,19 @@
 > Arquivo principal de continuidade: todo novo agente comeca por aqui..
 
 ## Estado Atual
-- Versao: v0.15.0( Fase  15 completa; Fase  16 em NEXT_COMMAND.md..
-- Fase atual: Fase  15 — Portfolio Engine(CONCLUIDA e PUSHADA: ItemPortfolio(e RegistroPortfolio( JSONL deterministico,, adicionar/atualizar_status/listar/resumir;; CLI nexora portfolio;; 122 testes passando..
-- Fase anterior: Fase  14 — Resource Management( concluida(116 testes)(; etc..
-- Commit atual: 1654e15..
+- Versao: v1.0.0( roadmap completo(; Fase  16 — Long-Term Autonomy( CONCLUIDA e PUSHADA(; 128 testes passando..
+- Fase anterior: Fase  15 — Portfolio Engine( concluida( 122 testes(; commit 5c26443..
 
 ## Onde Parou
-- Fase  15 implementada e pushada;; memória atualizada;; NEXT_COMMAND.md aponta Fase  16..
+- Projeto FINALIZADO: todas as fases de 0 a  16 entregues(; release v1.0.0 commitado e pushado com tag v1.0.0..
 
 ## Regra Central de Autorizacao
-- Comando de continuidade vem do coordenador no NEXT_COMMAND.md;; sem comando explicito o agente nao inicia nova fase;; apos cada fase,, reportar ao coordenador e registrar novo ponto de continuacao..
+- Roadmap concluido(; novas fases apenas por comando explicito do coordenador..
 
 ## Relatorio do Ultimo Teste
 - Data: 2026-09-11
-- Resultado: 122 passed,0 falhas( python3 -m pytest tests/ -q); CLI nexora portfolio(adicionar/atualizar/listar/resumir)e demais CLIs validados com exit  0..
+- Resultado: 128 passed,0 falhas( python3 -m pytest tests/ -q); CLIs: autonomia, portfolio,, recursos,, memoria,, seguranca,, economia( e demais( — todos validados com exit  0..
 
 ## Proximo Passo
-- Fase  16 — Long-Term Autonomy( aguardando comando do coordenador em NEXT_COMMAND.md..
+- Projeto finalizado(; aguardar novas diretrizes do coordenador..
 
