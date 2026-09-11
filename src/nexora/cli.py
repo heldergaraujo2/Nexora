@@ -4,11 +4,13 @@ import sys
 
 from nexora import __about__
 from nexora.agentes.coding import CodingAgent
+from nexora.agentes.pesquisa import ResearchAgent
 from nexora.orquestracao.orquestrador import Orquestrador
 from nexora.orquestracao.roteador import Roteador
 from nexora.providers.fake import FakeProvider
 from nexora.providers.groq import ProviderGroq
 from nexora.providers.registry import RegistryProviders
+from nexora.tools.registry import Ferramenta, RegistryFerramentas
 
 
 def _montar_registry():
@@ -16,6 +18,10 @@ def _montar_registry():
     reg.registrar("fake", lambda: FakeProvider())
     reg.registrar("groq", lambda: ProviderGroq())
     return reg
+
+
+def _buscar_fake(parametros):
+    return [{"titulo": "Nexora", "url": "https://nexora.dev", "trecho": "plataforma de agentes de IA"}]
 
 
 def _executar_comando(objetivo_texto, alias=None):
@@ -36,7 +42,20 @@ def _codar_comando(tarefa, linguagem, alias):
     res = ag.codar(tarefa, linguagem=linguagem)
     print(f"sucesso={res.sucesso} tentativas={res.tentativas}")
     print(res.saida_final)
-    sys.exit(0 if res.sucesso else  1)
+    sys.exit(0 if res.sucesso else 1)
+
+
+def _pesquisar_comando(pergunta, quantidade, alias):
+    reg = _montar_registry()
+    rot = Roteador(reg)
+    prov = rot.obter_provider(pergunta, alias=alias)
+    ferramentas = RegistryFerramentas()
+    ferramentas.registrar(Ferramenta("buscar", "busca fake", _buscar_fake))
+    ag = ResearchAgent(prov, ferramentas)
+    res = ag.pesquisar(pergunta, quantidade=quantidade)
+    print(f"sucesso={res.sucesso} tentativas={res.tentativas}")
+    print(res.saida_final)
+    sys.exit(0 if res.sucesso else 1)
 
 
 def main() -> None:
@@ -55,6 +74,10 @@ def main() -> None:
     p_codar.add_argument("tarefa", help="tarefa de codigo em linguagem natural")
     p_codar.add_argument("--linguagem", default="python", help="linguagem alvo")
     p_codar.add_argument("--provider", dest="provider", default=None, help="alias do provider")
+    p_pesquisar = sub_ag.add_parser("pesquisar", help="pesquisa um topico e sintetiza resposta com fontes")
+    p_pesquisar.add_argument("pergunta", help="pergunta ou topico em linguagem natural")
+    p_pesquisar.add_argument("--fontes", dest="quantidade", type=int, default=3, help="quantidade de consultas/fontes")
+    p_pesquisar.add_argument("--provider", dest="provider", default=None, help="alias do provider")
 
     args = parser.parse_args()
     if args.comando == "info":
@@ -62,6 +85,8 @@ def main() -> None:
     elif args.comando == "executar":
         _executar_comando(args.objetivo, alias=args.provider)
     elif args.comando == "agente":
+        if args.subcomando == "pesquisar":
+            _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)
         if args.subcomando == "codar":
             _codar_comando(args.tarefa, linguagem=args.linguagem, alias=args.provider)
 

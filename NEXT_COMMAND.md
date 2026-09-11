@@ -1,34 +1,32 @@
-# NEXT COMMAND — Fase 7: Research Engine
+# NEXT COMMAND — Fase 8: Experience Engine
 
-> Canal de comando da coordenacao. Este arquivo contem o comando atual, a ser executado pelo agente construtor ( OpenHands). Ao concluir,, o agente deve atualizar PROJECT_MEMORY/15_HANDOFF.md e marcar esta secao como executada;; entao,, o coordenador redigira o proximo comando aqui. O comando anterior( Fase  6 — Coding Agent) foi concluido e pushado;; 74 testes passando.
+> Canal de comando da coordenacao. Este arquivo contem o comando atual, a ser executado pelo agente construtor( OpenHands). Ao concluir,, o agente deve atualizar PROJECT_MEMORY/15_HANDOFF.md e marcar esta secao como executada;; entao,, o coordenador redigira o proximo comando aqui. O comando anterior( Fase  7 — Research Engine) foi concluido e pushado;; 79 testes passando.
 
-**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  6 e continuidade do roadmap.
+**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  7 e continuidade do roadmap.
 
-## COMANDO — Fase 7: Research Engine
+## COMANDO — Fase 8: Experience Engine
 
-**OBJETIVO:** Implementar o Research Engine da NEXORA( motor de pesquisa e sintese de informacao, integrado ao runtime e ao Coding Agent(, capaz de receber uma pergunta/topico, planejar consultas, executar buscas via ferramentas( mocked/registry), sintetizar uma resposta verificada e registrar tudo no EventStore.
+**OBJETIVO:** Implementar o Experience Engine da NEXORA( motor de experiencia do agente: registrar, consultar e resumir decisoes e resultados ao longo do tempo, harmonizando-se com o runtime e a memoria existente(, conforme 10_MODULES.md.
 
 **ESCOPO (o que produzir(:**
 
-1. `src/nexora/agentes/pesquisa.py` — ResearchAgent( wrap do AgenteRuntime com prompt de pesquisa, uso do RegistryFerramentas para buscas( fake/mock em testes), sintese da resposta e verificacao de presenca de fontes/citacoes.
-2. `src/nexora/agentes/__init__.py` — export ResearchAgent.
-3. Integracao com Provider System( usa FakeProvider/Groq via CLI.
-4. CLI( `nexora agente pesquisar "<pergunta>"`( no cli.py, com `--provider` e `--fontes N`.
-5. Testes unitarios em tests/unit/test_agentes_pesquisa.py( planejamento de consultas, execucao de busca via registry, sintese com citacoes, limite de tentativas.
-6. Documentacao e memoria( atualizar 08_CURRENT_STATE,,12_TESTS.md,,13_CHANGELOG.md,,15_HANDOFF.md e NEXT_COMMAND.md( trocar para Fase  8 — Experience Engine.
+1. `src/nexora/experiencia/`( modulo com registrador de experiencias( e consultas deterministicas insipidadas na memoria JSON existente(.,
+2. Integracao com o runtime: registrar eventos de sucesso/falha por tipo de tarefa.
+3. CLI( `nexora experiencia`( no cli.py, para listar e resumir experiencias(.
+4. Testes unitarios( em tests/unit/test_experiencia.py(.
+5. Documentacao e memoria( atualizar 08_CURRENT_STATE,,12_TESTS.md,,13_CHANGELOG.md,,15_HANDOFF.md e NEXT_COMMAND.md( trocar para Fase  9.
 
-**FORA DE ESCOPO:** NAO implementar ferramentas/plugins reais( alem do registry vazio);NAO multi-agente;;NAO adicionar dependencias pip.
+**FORA DE ESCOPO:** NAO implementar multi-agente;;NAO adicionar dependencias pip alem das ja existentes;;NAO alterar contratos existentes sem necessidade.
 
 **CRITERIOS DE ACEITACAO:**
 
-- [ ] `python3 -m nexora agente pesquisar "o que e a nexora"` executou( com FakeProvider, sem rede.
-- [ ] ResearchAgent planeja consultas e executa buscas via RegistryFerramentas( fake/mock.
-- [ ] Resposta sintetizada contem citacoes/fontes presentes no resultado.
-- [ ] Suite completa verde( esperado:  74 + novos,, sem regressoes.
+- [ ] `pytest tests/ -q` verde com novos testes( esperado:  79 + novos,, sem regressoes.
+- [ ] CLI `nexora experiencia` funciona( com FakeProvider, sem rede.
+- [ ] Experiencias registradas sao consultaveis e resumiveis de forma deterministica.
 - [ ] Tudo commitado e pushado com mensagem descritiva.
-- [ ] 15_HANDOFF.md atualizado com novo ponto de continuacao( Fase  8 — Experience Engine,, aguardando comando.
+- [ ] 15_HANDOFF.md atualizado com novo ponto de continuacao( Fase  9,, aguardando comando.
 
 **PROTOCOLO:** seguir PROJECT_MEMORY/14_AGENT_PROTOCOL.md( sem excecoes: veracidade,,rastreabilidade,,autorizacao,,comunicacao por eventos/arquivos,,escrever em PT-BR,,usar git com mensagens descritivas,,etapas pequenas verificaveis.
 
-**DATA DE VALIDADE:** v0.6.0 — valido ate a conclusao desta Fase  7;apos isso,, aguardar novo comando do coordenador.
+**DATA DE VALIDADE:** v0.7.0 — valido ate a conclusao desta Fase  8;apos isso,, aguardar novo comando do coordenador.
 

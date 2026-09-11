@@ -2,25 +2,24 @@
 
 ## Fase Atual
 
-**Fase 6 — Coding Agent** — **CONCLUÍDA e PUSHADA**: `src/nexora/agentes/coding.py` — CodingAgent wraps do AgenteRuntime com prompt de engenharia e verificador de sintaxe; CLI `nexora agente codar "<tarefa>" [--linguagem L] [--provider P]`; teste de regressão do `nexora executar`; 74 testes unitários passando.
+**Fase 7 — Research Engine** — **CONCLUÍDA e PUSHADA**: `src/nexora/agentes/pesquisa.py` — ResearchAgent wraps do AgenteRuntime, planeja consultas, executa buscas via RegistryFerramentas(fake em testes), sintetiza resposta verificada com citacoes(fonte:; CLI `nexora agente pesquisar "<pergunta>" [--fontes N] [--provider P]` 79 testes unitarios passando.
 
-**Status:** Fase 6 CONCLUÍDA. Próxima: **Fase 7 — Research Engine** conforme 10_MODULES.md e roadmap, aguardando comando em NEXT_COMMAND.md.
+**Status:** Fase 7 CONCLUÍDA. Próxima: Fase  8 — Experience Engine conforme 10_MODULES.md e roadmap, aguardando comando em NEXT_COMMAND.md.
 
-**Histórico:** Fase 0/0.5/1/2/3/4/5/6 concluídas; 74 testes unitários passando (30 base,13 providers,5 orquestracao,3 ajustes,7 fase4,11 fase5,5 fase6).
+**Histórico:** Fase 0/0.5/1/2/3/4/5/6/7 concluídas; 79 testes unitários passando(30 base,13 providers,5 orquestracao,3 ajustes,7 fase4,11 fase5,5 fase6,5 fase7).
 
 
 ## Concluído nesta fase
 
-- [x] src/nexora/agentes/coding.py — CodingAgent(provider, registrar, max_tentativas): wrap do AgenteRuntime com _executar(provider.generate), _verificar(texto_nao_vazio + compile Python se parecer código), _analisar(enriquece erro de sintaxe), codar(monta prompt de engenharia por linguagem).
-- [x] src/nexora/agentes/__init__.py — export CodingAgent.
-- [x] src/nexora/cli.py — subcomando `nexora agente codar "<tarefa>" [--linguagem] [--provider]`; `executar` mantido e f-strings corrigidas.
-- [x] tests/unit/test_agentes_coding.py — 4 novos testes( geração válida, correção de sintaxe, limite de tentativas, CLI codar.
-- [x] tests/unit/test_orquestracao_cli.py — +1 teste de regressão do `executar`.
-- [x] 74 testes verdes: python3 -m pytest tests/ -q
+- [x] src/nexora/agentes/pesquisa.py — ResearchAgent(provider, ferramentas, registrar, max_tentativas): planeja consultas deterministico, busca via ferramentas.executar(buscar),, sintetiza prompt com fontes,e verifica presenca de citacoes.
+- [x] src/nexora/agentes/__init__.py — export ResearchAgent.
+- [x] src/nexora/cli.py — subcomando `nexora agente pesquisar "<pergunta>" [--fontes] [--provider]` com ferramenta fake buscar registrada; demais comandos mantidos.
+- [x] tests/unit/test_agentes_pesquisa.py — 5 novos testes(planejamento,busca via ferramentas,sintese com citacoes,limite de tentativas,CLI pesquisar.
+- [x] 79 testes verdes: pytest tests/ -q(74 base +5 novos sem regressao.
 
 
 ## Pendente
 
-- [ ] Fase 7 — Research Engine( conforme 10_MODULES.md e NEXT_COMMAND.md.
-- [ ] Fases 8–14 + WORKSPACE COMPLETO( conforme 10_MODULES.md e aprovação em lote do analista.
+- [ ] Fase 8 — Experience Engine( conforme 10_MODULES.md e NEXT_COMMAND.md.
+- [ ] Fases 9–14 + WORKSPACE COMPLETO( conforme 10_MODULES.md e aprovacao em lote do analista.
 

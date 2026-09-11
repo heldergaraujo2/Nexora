@@ -12,20 +12,21 @@
 |--------|--------|-----------|
 | Fase 1 (unit) | core+providers+tools+config+runtime | 30 passed( 2026-09-10) |
 | Fase 2 (unit) | providers tipados+registry+groq |43 passed( 2026-09-10) |
-| Fase 3 (unit) | orquestracao(roteador,orquestrador,CLI)+ suite completa |51 passed em 0.26s( 2026-09-10) |
+| Fase 3 (unit) |orquestracao(roteador,orquestrador,CLI)+ suite completa |51 passed( 2026-09-10) |
 | Fase 4 (unit)| Provider System: ProviderManager + fallback do Roteador |58 passed( 2026-09-10) |
 | Fase 5 (unit)| runtime do agente: observacao,analise,correcao,agente |69 passed( 2026-09-10) |
-| Fase 6 (unit)| Coding Agent: CodingAgent + CLI agente codar + regressão executar |74 passed( 2026-09-10) |
+| Fase 6 (unit)| Coding Agent: CodingAgent + CLI agente codar + regressao executar |74 passed( 2026-09-10) |
+| Fase 7 (unit)| Research Engine: ResearchAgent + CLI agente pesquisar + ferramenta fake buscar |79 passed( 2026-09-10) |
 
 
 ## Último Teste
 
-- **Data:** 2026-09-10
-- **Escopo:** Suíte completa após Fase 6( Coding Agent.
-- **Resultado:** 74 passed,0 falhas; CLI `nexora executar` e `nexora agente codar` validados com `sucesso=True`.
+- **Data:**itude 2026-09-10
+- **Escopo:** Suíte completa após Fase  7 (Research Engine.
+- **Resultado:** 79 passed,0 falhas; CLI `nexora executar`, `nexora agente codar` e `nexora agente pesquisar` validados com exit 0.
 
 
 ## Regra
 
-Não avançar para a próxima fase sem testes passando.
+Nao avançar para a próxima fase sem testes passando.
 
