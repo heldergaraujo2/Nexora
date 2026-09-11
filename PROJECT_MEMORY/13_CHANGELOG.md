@@ -1,5 +1,23 @@
 # 13 — CHANGELOG
 
+## Checkpoint Engine — 2026-09-11
+
+O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
+
+### Checkpoint
+- [x] Criado `src/nexora/runtime/checkpoint.py` com `Checkpoint` imutável e `CheckpointEngine`.
+- [x] Captura de estado com cópia profunda, evitando que alterações posteriores no estado original contaminem o snapshot.
+- [x] Recuperação devolve nova cópia e não executa ferramentas nem tenta desfazer efeitos externos.
+- [x] Checkpoints podem ser filtrados por `execucao_id`.
+- [x] Criação e recuperação podem ser registradas no `RegistroAuditoria`.
+- [x] Validações cobrem identificadores, motivo, tipo de estado e checkpoint inexistente.
+- [x] Testes em `tests/unit/test_checkpoint.py`.
+
+### Limites deliberados
+- [ ] Persistência durável de checkpoints ainda não implementada.
+- [ ] Rollback de efeitos externos ainda não implementado.
+- [ ] Integração automática com Tool/Sandbox ainda não implementada; o boundary permanece explícito até haver contrato que justifique acoplamento.
+
 ## Evolução multiagente e governança de execução — 2026-09-11
 
 A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`. O `main` continuou evoluindo sem criar uma nova fase.
@@ -32,9 +50,9 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo importação no CI.
 
 ### Validação
-- [x] CI histórico `34653209175` verde para Python 3.11–3.14 no HEAD `dec0bbd4430bbe5883476112704ea78c97b90be3`.
-- [ ] CI do HEAD atual `8745681cb21a71690a2360f0b7851ca2d3e50027` ainda não retornou workflow associado e não deve ser marcado como verde.
-- [x] Testes adicionados para permission boundary, policy lifecycle, tool governance e Sandbox governance.
+- [x] CI histórico verde para Python 3.11–3.14 nos HEADs históricos registrados neste arquivo.
+- [ ] CI do HEAD atual ainda não confirmado; não marcar como verde sem evidência.
+- [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance e Checkpoint Engine.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
 
@@ -47,15 +65,3 @@ Foram identificados e reconciliados os componentes arquiteturais pós-release an
 - CLI `nexora autonomia definir|atualizar|listar|resumir`.
 - Suite documentada naquele ponto: 128 testes passando.
 - Tag `v1.0.0` criada em `c49d3d2...`.
-
-## v0.16.0 — Fase 16 — Long-Term Autonomy
-
-- [x] `autonomia/registro.py`: `MetaLongoPrazo` e `RegistroAutonomia`.
-- [x] CLI de autonomia.
-- [x] 6 novos testes: 122 → 128.
-
-## v0.15.0 — Fase 15 — Portfolio Engine
-
-- [x] `portfolio/registro.py`: `ItemPortfolio` e `RegistroPortfolio`.
-- [x] CLI de portfolio.
-- [x] 6 novos testes: 116 → 122.
