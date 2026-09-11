@@ -1,12 +1,12 @@
-# NEXT COMMAND — Fase 14: Resource Management
+# NEXT COMMAND — Fase 15: Portfolio Engine
 
-> Canal de comando da coordenacao. O comando anterior( Fase  13 — Memory Engine) foi concluido e pushado;; 110 testes passando..
+> Canal de comando da coordenacao. O comando anterior( Fase  14 — Resource Management) foi concluido e pushado;; 116 testes passando..
 
-**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  13 e continuidade do roadmap..
+**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  14 e continuidade do roadmap..
 
-## COMANDO — Fase 14: Resource Management
+## COMANDO — Fase 15: Portfolio Engine
 
-**OBJETIVO:** Implementar o Resource Management da NEXORA( controlar e rastrear recursos usados pela plataforma( conforme roadmap..
+**OBJETIVO:** Implementar o Portfolio Engine da NEXORA( gerenciar portfolio de trabalhos da plataforma( conforme roadmap..
 
 **ESCOPO (o que produzir(:**
 

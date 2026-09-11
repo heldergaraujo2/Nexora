@@ -17,6 +17,7 @@ from nexora.experimentacao.experimento import ExecutorExperimentos, Experimento
 from nexora.evolucao.registro import Aprendizado, RecomendadorEvolucao, RegistroAprendizados
 from nexora.seguranca.registro import Acao, RegistroPolitica
 from nexora.memoria.registro import ItemMemoria, RegistroMemorias
+from nexora.recursos.registro import Recurso, RegistroRecursos
 from nexora.economia.registro import CustoExecucao, RegistroCustos
 
 
@@ -145,6 +146,15 @@ def _memoria_comando(acao, arquivo, chave=None, conteudo=None):
         resumo = registro.resumir()
         print("resumo={}".format(resumo))
 
+def _recursos_comando(acao, arquivo, tipo=None, quantidade=None, executor=None):
+    registro = RegistroRecursos(Path(arquivo))
+    if acao == "registrar":
+        registro.registrar(tipo=tipo, quantidade=float(quantidade), executor=executor)
+        print("recurso registrado")
+    else:
+        resumo = registro.resumir()
+        print("recursos_resumo={}".format(resumo))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="nexora", description="NEXORA plataforma de agentes de IA")
     parser.add_argument("--version", action="version", version=__about__.__version__)
@@ -220,6 +230,15 @@ def main() -> None:
     p_buscar.add_argument("--arquivo", required=True, help="caminho do arquivo de memoria")
     p_res_mem = p_mem_sub.add_parser("resumir", help="resumo por escopo")
     p_res_mem.add_argument("--arquivo", required=True, help="caminho do arquivo de memoria")
+    p_rec = sub.add_parser("recursos", help="consumo de recursos por executor")
+    p_rec_sub = p_rec.add_subparsers(dest="acao", required=True)
+    p_reg_rec = p_rec_sub.add_parser("registrar", help="registra consumo de recurso")
+    p_reg_rec.add_argument("--tipo", required=True, help="tipo do recurso")
+    p_reg_rec.add_argument("--quantidade", required=True, help="quantidade consumida")
+    p_reg_rec.add_argument("--executor", required=True, help="executor do recurso")
+    p_reg_rec.add_argument("--arquivo", required=True, help="caminho do arquivo de recursos")
+    p_res_rec = p_rec_sub.add_parser("resumir", help="resumo por tipo")
+    p_res_rec.add_argument("--arquivo", required=True, help="caminho do arquivo de recursos")
 
     args = parser.parse_args()
     if args.comando == "info":
@@ -238,6 +257,8 @@ def main() -> None:
         _seguranca_comando(args.acao, args.arquivo, nome=getattr(args, "acao_nome", None), permitir=getattr(args, "permitir", False))
     elif args.comando == "memoria":
         _memoria_comando(args.acao, args.arquivo, chave=getattr(args, "chave", None), conteudo=getattr(args, "conteudo", None))
+    elif args.comando == "recursos":
+        _recursos_comando(args.acao, args.arquivo, tipo=getattr(args, "tipo", None), quantidade=getattr(args, "quantidade", None), executor=getattr(args, "executor", None))
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)

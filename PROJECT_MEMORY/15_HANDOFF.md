@@ -4,14 +4,14 @@
 
 ## Estado Atual
 
-- Versao: v0.13.0( Fase  13 completa e pushada; Fase  14 em NEXT_COMMAND.md..
-- Fase atual: Fase  13 — Memory Engine(CONCLUIDA: ItemMemoria(e RegistroMemorias( JSONL deterministico, lembrar/buscar/listar/resumir;; CLI nexora memoria lembrar|buscar|resumir;; 110 testes passando..
-- Fase anterior: Fase  12 — Security Engine( concluida(104 testes)(; Fase  11 — Economic Engine( concluida(98 testes)(; etc..
+- Versao: v0.14.0( Fase  14 completa e pushada; Fase  15 em NEXT_COMMAND.md..
+- Fase atual: Fase  14 — Resource Management(CONCLUIDA: Recurso(e RegistroRecursos( JSONL deterministico, registrar/listar/resumir por tipo/executor;; CLI nexora recursos registrar|resumir;; 116 testes passando..
+- Fase anterior: Fase  13 — Memory Engine( concluida(110 testes)(; Fase  12 — Security Engine( concluida(104 testes)(; etc..
 - Commit atual:a ser registrado no push desta fase..
 
 ## Onde Parou
 
-- Fase 13 implementada e pushada;; memória atualizada;; NEXT_COMMAND.md aponta Fase  14..
+- Fase 14 implementada e pushada;; memória atualizada;; NEXT_COMMAND.md aponta Fase  15..
 
 ## Regra Central de Autorizacao
 
@@ -20,9 +20,9 @@
 ## Relatorio do Ultimo Teste
 
 - Data: 2026-09-11
-- Resultado: 110 passed,0 falhas( python3 -m pytest tests/ -q); CLI nexora memoria(lembrar/buscar/resumir)e demais CLIs validados com exit  0..
+- Resultado: 116 passed,0 falhas( python3 -m pytest tests/ -q); CLI nexora recursos(registrar/resumir)e demais CLIs validados com exit  0..
 
 ## Proximo Passo
 
-- Fase 14( aguardando comando do coordenador em NEXT_COMMAND.md..
+- Fase 15( aguardando comando do coordenador em NEXT_COMMAND.md..
 
