@@ -53,7 +53,7 @@ def test_registry_checkpoint_apos_allow_e_antes_da_execucao():
 
 
 def test_registry_policy_deny_nao_cria_checkpoint_nem_executa():
-    executou = False
+    executou: list[bool] = []
     checkpoint = CheckpointEngine()
     policy = PolicyEngine([])
     permissoes = GerenciadorPermissoes(policy)
@@ -62,7 +62,7 @@ def test_registry_policy_deny_nao_cria_checkpoint_nem_executa():
         Ferramenta(
             nome="soma",
             descricao="",
-            executar=lambda parametros: None,
+            executar=lambda parametros: executou.append(True),
         )
     )
 
@@ -73,12 +73,12 @@ def test_registry_policy_deny_nao_cria_checkpoint_nem_executa():
     else:
         raise AssertionError("politica deny deveria impedir a ferramenta")
 
-    assert executou is False
+    assert executou == []
     assert checkpoint.listar(execucao_id="exec-1") == []
 
 
 def test_registry_checkpoint_falhando_impede_execucao():
-    executou = False
+    executou: list[bool] = []
 
     class CheckpointQueFalha:
         def criar(self, *args, **kwargs):
@@ -89,7 +89,7 @@ def test_registry_checkpoint_falhando_impede_execucao():
         Ferramenta(
             nome="soma",
             descricao="",
-            executar=lambda parametros: globals().update(executou=True),
+            executar=lambda parametros: executou.append(True),
         )
     )
 
@@ -100,4 +100,4 @@ def test_registry_checkpoint_falhando_impede_execucao():
     else:
         raise AssertionError("falha do checkpoint deveria impedir a ferramenta")
 
-    assert executou is False
+    assert executou == []
