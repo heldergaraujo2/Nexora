@@ -166,12 +166,7 @@ class DelegadorAgentes:
 
 
 class ExecutorDelegacoes:
-    """Liga mensagens de delegacao a handlers explicitamente registrados.
-
-    Esta camada executa tarefas; o CommunicationBus continua sendo apenas transporte.
-    Quando uma PolicyEngine e fornecida, a decisao de autorizacao ocorre antes da
-    aceitacao e execucao do handler. Decisoes tambem podem ser enviadas para auditoria.
-    """
+    """Liga mensagens de delegacao a handlers explicitamente registrados."""
 
     def __init__(
         self,
@@ -271,6 +266,8 @@ class ExecutorDelegacoes:
                     "efeito": decisao.efeito.value,
                     "permitido": decisao.permitido,
                     "motivo": decisao.motivo,
+                    "versao": decisao.versao,
+                    "origem": decisao.origem,
                 },
             )
             if not decisao.permitido:
@@ -292,31 +289,18 @@ class ExecutorDelegacoes:
             except Exception as exc:
                 delegacao.erro = str(exc)
                 if delegacao.tentativas >= self.max_tentativas:
-                    self.delegador.atualizar(
-                        delegacao_id,
-                        estado=EstadoDelegacao.FALHOU,
-                        erro=str(exc),
-                    )
+                    self.delegador.atualizar(delegacao_id, estado=EstadoDelegacao.FALHOU, erro=str(exc))
                     self._auditar("delegacao.falhou", delegacao)
                     self._registrar_experiencia(delegacao)
                     return
                 continue
             sucesso = getattr(resultado, "sucesso", True)
             if sucesso:
-                self.delegador.atualizar(
-                    delegacao_id,
-                    estado=EstadoDelegacao.CONCLUIDA,
-                    resultado=resultado,
-                )
+                self.delegador.atualizar(delegacao_id, estado=EstadoDelegacao.CONCLUIDA, resultado=resultado)
                 self._auditar("delegacao.concluida", delegacao)
             else:
                 erro = getattr(resultado, "saida_final", "verificacao da tarefa falhou")
-                self.delegador.atualizar(
-                    delegacao_id,
-                    estado=EstadoDelegacao.FALHOU,
-                    resultado=resultado,
-                    erro=str(erro),
-                )
+                self.delegador.atualizar(delegacao_id, estado=EstadoDelegacao.FALHOU, resultado=resultado, erro=str(erro))
                 self._auditar("delegacao.falhou", delegacao)
             self._registrar_experiencia(delegacao)
             return
