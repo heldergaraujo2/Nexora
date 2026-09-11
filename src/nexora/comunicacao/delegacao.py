@@ -266,6 +266,7 @@ class ExecutorDelegacoes:
                     "efeito": decisao.efeito.value,
                     "permitido": decisao.permitido,
                     "motivo": decisao.motivo,
+                    "regra_id": decisao.regra_id,
                     "versao": decisao.versao,
                     "origem": decisao.origem,
                 },
