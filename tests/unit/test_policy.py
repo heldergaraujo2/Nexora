@@ -152,9 +152,11 @@ def test_executor_negar_execucao_e_audita_decisao(tmp_path):
         tarefa="executar codigo",
     )
 
-    assert delegacao.estado is EstadoDelegacao.FALHOU
+    assert delegacao.estado is EstadoDelegacao.DENEGADA
     assert chamadas == []
     assert "execucao negada pela politica" in delegacao.erro
+    mensagens = bus.listar(correlacao_id=delegacao.id)
+    assert mensagens[-1].tipo == "delegacao.resultado"
     eventos = auditoria.listar(entidade_id=delegacao.id)
     assert eventos[0]["evento"] == "politica.decisao"
     assert eventos[0]["dados"]["efeito"] == "deny"
@@ -165,5 +167,5 @@ def test_executor_negar_execucao_e_audita_decisao(tmp_path):
     assert eventos[0]["dados"]["fingerprint"] == policy.fingerprint
     assert [item["evento"] for item in eventos] == [
         "politica.decisao",
-        "delegacao.falhou",
+        "delegacao.denegada",
     ]
