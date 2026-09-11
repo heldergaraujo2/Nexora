@@ -53,8 +53,9 @@ def test_executor_processa_delegacao_e_publica_resultado():
 
     assert delegacao.estado is EstadoDelegacao.CONCLUIDA
     assert delegacao.resultado == {"tarefa": "pesquisar mercado", "ok": True}
-    estados = [m.tipo for m in bus.listar(correlacao_id=delegacao.id)]
-    assert estados == ["delegacao.solicitada", "delegacao.estado", "delegacao.resultado"]
+    mensagens = bus.listar(correlacao_id=delegacao.id)
+    assert [m.tipo for m in mensagens] == ["delegacao.solicitada", "delegacao.estado", "delegacao.resultado"]
+    assert mensagens[-1].resposta_a == delegacao.mensagem_id
 
 
 def test_executor_registra_falha_do_handler():
