@@ -4,41 +4,36 @@
 
 ## Estado Atual
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- Último HEAD implementado: `8745681cb21a71690a2360f0b7851ca2d3e50027`.
-- CI específico desse HEAD: ainda não há workflow associado retornado pelo conector; portanto **não declarar CI verde** para os commits mais recentes.
-- O projeto não está congelado em v1.0.0.
-- Não foi criada uma nova fase.
+- Último HEAD implementado nesta etapa: `5e022a6a2b9d6df031deb17fd4983b8d5860ee90`.
+- CI específico desse HEAD: ainda não confirmado; **não declarar CI verde**.
+- O projeto continua evoluindo após v1.0.0 sem criar nova fase.
 
 ## Onde Parou
 A Fase 16 — Long-Term Autonomy permanece concluída e preservada.
 
-Depois dela foram implementados:
-- Context Engine;
-- Knowledge Engine;
-- World Model Engine;
-- Goal Engine;
-- Strategy Engine;
-- Communication Bus;
-- Agent Runtime / Orchestrator com comunicação;
-- DelegadorAgentes;
-- Agent Registry / Capability Registry;
-- delegação por capacidade;
-- `ExecutorDelegacoes`;
-- integração de delegação com `AgenteRuntime`;
-- recovery de delegações;
-- registro de experiências;
-- auditoria append-only;
-- `PolicyEngine` mínimo com ALLOW/DENY e auditoria da decisão;
-- loader declarativo TOML versionado para políticas;
-- validação estrita do schema de política;
-- rastreabilidade da decisão com versão e origem;
-- identidade explícita e única das regras;
-- fingerprint canônico SHA-256 do conteúdo semântico;
-- distinção entre negação de política e falha de execução por `EstadoDelegacao.DENEGADA`;
-- `GerenciadorPermissoes` / `PedidoPermissao` como fronteira explícita antes de ações sensíveis;
-- `GerenciadorPolitica` com reload validado e troca atômica da política ativa;
-- integração da fronteira de permissões ao `RegistryFerramentas`;
-- integração da fronteira de permissões ao `Sandbox`, preservando a allowlist e impedindo `subprocess.run` quando a política nega.
+Depois dela foram implementados Context, Knowledge, World Model, Goal, Strategy, Communication Bus, Runtime/Orchestrator, Delegation, Agent Registry, capability delegation, recovery, experiência, auditoria e a camada de governança.
+
+Governança atual:
+- `PolicyEngine` mínimo com ALLOW/DENY e default DENY;
+- loader TOML versionado e validação estrita;
+- fingerprint canônico SHA-256;
+- `DENEGADA` separado de falha real;
+- `GerenciadorPermissoes` / `PedidoPermissao` como fronteira de autorização;
+- `GerenciadorPolitica` com reload validado e troca atômica;
+- Registry de ferramentas e Sandbox podem exigir Policy antes da execução.
+
+## Checkpoint Engine
+Implementado em `src/nexora/runtime/checkpoint.py`.
+
+Contrato atual:
+- `Checkpoint` identifica `id`, `execucao_id`, estado lógico, motivo e carimbo UTC.
+- `CheckpointEngine.criar()` captura uma cópia profunda do estado.
+- `CheckpointEngine.obter()` recupera o snapshot isolado.
+- `CheckpointEngine.recuperar()` devolve nova cópia do estado e registra auditoria quando configurada.
+- `CheckpointEngine.listar()` permite filtrar por execução.
+- O engine não executa ferramentas, não chama subprocessos e não desfaz efeitos externos.
+- Auditoria opcional reutiliza `RegistroAuditoria`.
+- O componente é deliberadamente em memória nesta etapa; persistência durável e rollback externo ficam fora do MVP.
 
 ## Arquitetura real da execução
 `Pedido → Permission → Policy → Sandbox/Tool → Checkpoint → Observation → Verification → Audit → Result`
@@ -46,62 +41,33 @@ Depois dela foram implementados:
 Para delegação, permanece:
 `Delegação → Policy → ALLOW/DENY → Executor → Runtime/Verificação → Recovery → Experiência + Auditoria`
 
-- `AgenteRegistro` descreve agente, capacidades, tags, prioridade, disponibilidade e metadados.
-- `CommunicationBus` transporta mensagens e mantém correlação/estado; não executa providers nem ferramentas.
-- `ExecutorDelegacoes` recebe solicitações, consulta a Policy, executa handlers/runtimes registrados e atualiza o estado terminal.
-- `AgenteRuntime` mantém o ciclo de execução/verificação/análise/correção/reteste.
-- `RegistroExperiencias` registra o resultado terminal.
-- `RegistroAuditoria` persiste eventos relevantes em JSONL append-only.
-- `PolicyEngine` aplica regras ordenadas e default DENY antes da execução.
-- `GerenciadorPermissoes` avalia pedidos e audita a decisão, sem executar a ação.
-- `GerenciadorPolitica` permite reload somente após carregamento/validação, mantendo a política anterior se a nova for rejeitada.
-- `RegistryFerramentas` pode operar sem governança para compatibilidade retroativa, ou exigir permissão antes do executor.
-- `Sandbox` mantém sua allowlist; quando configurado com `GerenciadorPermissoes`, a política é verificada antes do subprocesso.
-- A auditoria do Sandbox registra apenas o comando-base no contexto de permissão, evitando registrar argumentos potencialmente sensíveis.
-
-## Política declarativa
-- Schema atual: `[policy]`, `version = 2`, `default = "deny"` e `[[policy.rules]]` com `id` obrigatório, `effect`, `requester`, `executor` e `task` opcionais.
-- Cada regra possui identidade explícita, não vazia e única.
-- `DecisaoPolitica.regra_id` identifica deterministicamente a regra vencedora.
-- `PolicyEngine` calcula fingerprint SHA-256 canônico sobre versão, default e regras semânticas, preservando ordem e excluindo origem.
-- Auditoria registra `regra_id`, efeito, permitido, motivo, versão, origem e fingerprint.
-- Loader usa `tomllib`, sem dependência externa, e não executa código da configuração.
-- Campos desconhecidos, versão inválida, tipos ambíguos, efeitos inválidos, IDs ausentes/duplicados, regras malformadas e TOML inválido são rejeitados.
-- Default continua DENY. YAML permanece fora do escopo.
-
-## Estado de delegação e governança
-- `DENEGADA` representa decisão de governança que impede a execução antes do handler.
-- `FALHOU` continua reservado para falhas reais de execução/verificação ou recovery esgotado.
-- Uma negação gera os eventos de decisão/negação previstos na auditoria e preserva `delegacao.resultado`.
-- `tentativas` permanece `0` quando a política nega a execução.
+O Checkpoint Engine é um boundary de estado, não um executor. A integração automática com Tool/Sandbox ainda não foi feita para evitar acoplamento prematuro.
 
 ## Limites / Lacunas verificadas
-- Não há CI confirmado para os dois últimos commits desta etapa.
-- Não existe ainda um `Checkpoint` concreto no runtime; a palavra checkpoint na cadeia arquitetural representa o próximo boundary a implementar.
+- CI não confirmado para o HEAD atual.
+- Checkpoints ainda são em memória.
+- Não existe rollback de efeitos externos.
 - Registry/capabilities continuam em memória.
-- Execução delegada é síncrona/in-memory; não há fila distribuída, workers persistentes ou transporte externo.
+- Execução delegada é síncrona/in-memory.
 - Ainda não existe ciclo autônomo completo de planejamento multi-agente, economia e evolução.
 
 ## Testes / CI
-- CI anteriormente validado: workflow `34653209175`, Python 3.11–3.14, todos os jobs success no HEAD histórico `dec0bbd4430bbe5883476112704ea78c97b90be3`.
-- Foram adicionados testes específicos para `GerenciadorPermissoes`, `GerenciadorPolitica`, Registry de ferramentas governado e Sandbox governado.
-- O arquivo `tests/unit/test_sandbox_governanca.py` cobre compatibilidade sem política, ALLOW, DENY sem subprocesso, precedência da allowlist e auditoria da decisão.
-- A validação desses testes ainda precisa ser executada pelo CI ou por ambiente local antes de marcar o HEAD atual como validado.
+- Foram adicionados testes para permission boundary, policy lifecycle, tool governance, Sandbox governance e Checkpoint Engine.
+- `tests/unit/test_checkpoint.py` cobre isolamento do snapshot, recuperação sem mutação, filtro por execução, auditoria e validações.
+- A validação final do HEAD atual precisa ser obtida por CI ou ambiente local antes de marcar o estado como validado.
 
 ## Classificação arquitetural
 Os componentes pós-release continuam classificados como **ADAPTAR/CRIAR dentro da arquitetura própria da NEXORA**. Não houve cópia de implementação privada externa.
 
 ## Próximo Passo
-**Checkpoint Engine mínimo**, somente após validar o conjunto atual.
+**Validar o conjunto atual e, depois, projetar a integração do Checkpoint com o fluxo de execução somente se houver contrato claro.**
 
-Objetivo do próximo bloco:
-1. procurar novamente por qualquer implementação parcial de checkpoint/persistência de estado;
-2. definir contrato mínimo de checkpoint sem duplicar `execution_store` ou memória existente;
-3. criar checkpoint explícito entre Permission/Policy e execução quando necessário;
-4. integrar com Tool/Sandbox somente se o contrato justificar;
-5. testar criação, recuperação, idempotência e auditoria.
-
-Não iniciar nova fase. Preservar todos os contratos existentes.
+Antes de qualquer novo componente:
+1. confirmar o HEAD real;
+2. verificar CI;
+3. procurar implementação existente e documentação relacionada;
+4. preservar Long-Term Autonomy e contratos atuais;
+5. evitar duplicação e acoplamento prematuro.
 
 ## Instruções para o próximo agente
 1. Ler este HANDOFF e `08_CURRENT_STATE.md`.
