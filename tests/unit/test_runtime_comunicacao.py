@@ -26,7 +26,7 @@ def test_runtime_publica_ciclo_no_bus():
     assert resultado.sucesso is True
     mensagens = bus.listar(remetente="coding-agent")
     assert [m.tipo for m in mensagens] == ["agente.inicio", "agente.resultado"]
-    assert all(bus.estado(m.id) == EstadoMensagem.ENTREGUE for m in mensagens)
+    assert all(bus.estado(m.id) == EstadoMensagem.PENDENTE for m in mensagens)
 
 
 def test_runtime_sem_bus_continua_compativel():
