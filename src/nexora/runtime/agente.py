@@ -1,13 +1,14 @@
-"""Runtime do agente generalista: OBJECTIVE->PLAN->EXECUTE->OBSERVE->VERIFY->ANALYZE->CORRECT->RETEST."""
+"""Runtime do agente generalista com comunicacao entre agentes."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from nexora.comunicacao import CommunicationBus
+
 
 @dataclass
 class ResultadoAgente:
-
     objetivo: str
     sucesso: bool
     saida_final: str = ""
@@ -18,6 +19,7 @@ class ResultadoAgente:
 
 
 class AgenteRuntime:
+    """Executa um agente e pode publicar seu ciclo no barramento de comunicacao."""
 
     def __init__(
         self,
@@ -28,64 +30,72 @@ class AgenteRuntime:
         *,
         registrar: Callable[[str, dict[str, Any]], None] | None = None,
         max_tentativas: int = 3,
+        communication_bus: CommunicationBus | None = None,
+        agent_id: str = "agent",
     ) -> None:
-
+        if max_tentativas < 1:
+            raise ValueError("max_tentativas deve ser >= 1")
+        if not agent_id.strip():
+            raise ValueError("agent_id deve ser uma string nao vazia")
         self._executar = executar
         self._verificar = verificar
         self._analisar = analisar
         self._corregir = corregir
         self._registrar = registrar
         self._max_tentativas = max_tentativas
+        self._communication_bus = communication_bus
+        self._agent_id = agent_id
 
+    def _publicar(self, tipo: str, payload: dict[str, Any], *, destinatario: str = "*") -> None:
+        if self._communication_bus is not None:
+            self._communication_bus.publicar(
+                remetente=self._agent_id,
+                destinatario=destinatario,
+                tipo=tipo,
+                payload=payload,
+            )
 
     def executar(self, objetivo: str) -> ResultadoAgente:
-
-
-
         historico: list[dict[str, Any]] = []
         saida = ""
         tentativas = 0
         ultimo_erro = None
         ok = False
+        self._publicar("agente.inicio", {"objetivo": objetivo})
 
         while tentativas < self._max_tentativas:
-
             tentativas += 1
             saida = self._executar(objetivo)
             observacao = {"tentativa": tentativas, "saida": saida, "erro": None}
             ok = self._verificar(saida)
+            historico.append(observacao)
 
             if not ok:
-
                 if self._registrar is not None:
                     self._registrar("observacao", observacao)
+                self._publicar("agente.observacao", observacao)
                 falha = self._analisar(observacao)
+                falha_dict = falha.para_dict() if hasattr(falha, "para_dict") else {"plano": str(falha)}
                 if self._registrar is not None:
-                    self._registrar("falha", falha.para_dict() if hasattr(falha, "para_dict") else {"plano": str(falha)})
+                    self._registrar("falha", falha_dict)
+                self._publicar("agente.falha", {"tentativa": tentativas, **falha_dict})
                 ultimo_erro = falha.motivo if hasattr(falha, "motivo") else str(falha)
-                if falha.plano == "abort":
-
-
-                    break
-                if falha.plano == "troca_provider":
-
-
+                if falha.plano in {"abort", "troca_provider"}:
                     break
                 if falha.plano == "ajuste_prompt":
                     saida = self._corregir(objetivo, falha)
                     ok = self._verificar(saida)
+                    reteste = {"tentativa": tentativas, "ok": ok, "saida": saida}
+                    historico.append(reteste)
                     if self._registrar is not None:
-                        self._registrar("reteste", {"tentativa": tentativas, "ok": ok, "saida": saida})
+                        self._registrar("reteste", reteste)
+                    self._publicar("agente.reteste", reteste)
                 if ok:
                     break
                 continue
+            break
 
-            else:
-
-                break
-
-
-        return ResultadoAgente(
+        resultado = ResultadoAgente(
             objetivo=objetivo,
             sucesso=ok,
             saida_final=saida,
@@ -94,3 +104,10 @@ class AgenteRuntime:
             metricas={"tentativas": tentativas, "max_tentativas": self._max_tentativas},
             historico=historico,
         )
+        self._publicar("agente.resultado", {
+            "objetivo": objetivo,
+            "sucesso": ok,
+            "tentativas": tentativas,
+            "saida": saida,
+        })
+        return resultado
