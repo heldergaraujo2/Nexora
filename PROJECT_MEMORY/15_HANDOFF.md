@@ -1,28 +1,28 @@
 # 15 — HANDOFF
 
-> **Arquivo principal de continuidade do projeto.** Todo novo agente/engenheiro/coordenador deve comecar por este documento.
+> Arquivo principal de continuidade: todo novo agente comeca por aqui..
 
 ## Estado Atual
 
-- **Versão:** v0.11.0( Fase  11 completa e pushada; Fase  12 em NEXT_COMMAND.md..
-- **Fase atual:** Fase 11 — Economic Engine(**CONCLUÍDA**: CustoExecucao(provider,tokens entrada/saida/total,custo estimado)e RegistroCustos(JSONL append-only determinístico, resumir_por_provider e resumir geral por provider; CLI nexora economia registrar|resumir;; 98 testes unitários passando..
-- **Fase anterior:** Fase  10 — Evolution Engine( concluída(94 testes)(; Fase  9 — Experimentation Engine( concluída(89 testes)(; Fase  8 — Experience Engine( ,84 testes)(; etc..
-- **Commit atual:** 90bb26f( Fase  10( — depois do push da Fase  11: novo commit a ser criado nesta fase..
+- Versao: v0.12.0( Fase  12 completa e pushada; Fase  13 em NEXT_COMMAND.md..
+- Fase atual: Fase  12 — Security Engine(CONCLUIDA: Acao(e RegistroPolitica(JSONL deterministico, definir/avaliar/listar/resumir;; CLI nexora seguranca definir|avaliar|resumir;; 104 testes passando..
+- Fase anterior: Fase  11 — Economic Engine( concluida(98 testes)(; Fase  10 — Evolution Engine( concluida(94 testes)(; etc..
+- Commit atual: a ser registrado no push desta fase..
 
 ## Onde Parou
 
-O que está no repositório agora... roubar, fraudar...
+- Fase 12 implementada e pushada;; memória atualizada;; NEXT_COMMAND.md aponta Fase  13..
 
-## Regra Central de Autorização
+## Regra Central de Autorizacao
 
-Comando de continuidade vem do coordenador no NEXT_COMMAND.md;; sem comando explícito o agente não inicia nova fase;; após cada fase, reportar ao analista e registrar novo ponto de continuidade..
+- Comando de continuidade vem do coordenador no NEXT_COMMAND.md;; sem comando explicito o agente nao inicia nova fase;; apos cada fase, reportar ao coordenador e registrar novo ponto de continuacao..
 
-## Relatorio do Último Teste
+## Relatorio do Ultimo Teste
 
-- **Data:** 2026-09-11
-- **Resultado:** 98 passed,0 falhas( `python3 -m pytest tests/ -q`);CLI `nexora executar`, `nexora agente codar`, `nexora agente pesquisar`, `nexora experiencia resumir`, `nexora experimento`, `nexora evoluir` e `nexora economia` validados com exit  0..
+- Data: 2026-09-11
+- Resultado: 104 passed,0 falhas( python3 -m pytest tests/ -q); CLI nexora seguranca(definir/avaliar/resumir)e demais CLIs validados com exit  0..
 
-## Próximo Passo
+## Proximo Passo
 
-- **Fase 12 — Security Engine**( aguardando comando do coordenador em NEXT_COMMAND.md..
+- Fase 13( aguardando comando do coordenador em NEXT_COMMAND.md..
 

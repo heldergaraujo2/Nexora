@@ -1,13 +1,13 @@
-# NEXT COMMAND — Fase 12: Security Engine
+# NEXT COMMAND — Fase 13: Memory Engine
 
-> Canal de comando da coordenacao. Este arquivo contem o comando atual, a ser executado pelo agente construtor( OpenHands.. Ao concluir, o agente deve atualizar PROJECT_MEMORY/15_HANDOFF.md e marcar esta secao como executada;; entao, o coordenador redigira o proximo comando aqui.. O comando anterior( Fase  11 — Economic Engine) foi concluido e pushado;; 98 testes passando..
+> Canal de comando da coordenacao. O comando anterior( Fase  12 — Security Engine) foi concluido e pushado;; 104 testes passando..
 
-**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  11 e continuidade do roadmap..
+**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  12 e continuidade do roadmap..
 
-## COMANDO — Fase 12: Security Engine
+## COMANDO — Fase 13: Memory Engine
 
-**OBJETIVO:** Implementar o Security Engine da NEXORA( mecanismo para controlar permissoes de acoes da plataforma( conforme roadmap..
+**OBJETIVO:** Implementar o Memory Engine da NEXORA( mecanismo de memoria persistente da plataforma( conforme roadmap..
 
 **ESCOPO (o que produzir(:**
 
-1. 
+1.

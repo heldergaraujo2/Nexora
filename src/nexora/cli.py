@@ -15,6 +15,7 @@ from nexora.tools.registry import Ferramenta, RegistryFerramentas
 from nexora.experiencia.registro import RegistroExperiencias
 from nexora.experimentacao.experimento import ExecutorExperimentos, Experimento
 from nexora.evolucao.registro import Aprendizado, RecomendadorEvolucao, RegistroAprendizados
+from nexora.seguranca.registro import Acao, RegistroPolitica
 from nexora.economia.registro import CustoExecucao, RegistroCustos
 
 
@@ -119,6 +120,18 @@ def _economia_comando(acao, arquivo, provider=None, tokens_entrada=None, tokens_
         for nome, dados in resumo["por_provider"].items():
             print("  {}: execucoes={} tokens={}".format(nome, dados["execucoes"], dados["tokens_total"]))
 
+def _seguranca_comando(acao, arquivo, nome=None, permitir=False):
+    registro = RegistroPolitica(Path(arquivo))
+    if acao == "definir":
+        registro.definir(nome=nome, permitida=bool(permitir))
+        print("politica definida")
+    elif acao == "avaliar":
+        permitida = registro.avaliar(nome)
+        print("permitida={}".format(permitida))
+    else:
+        resumo = registro.resumir()
+        print("seguranca_resumo={}".format(resumo))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="nexora", description="NEXORA plataforma de agentes de IA")
     parser.add_argument("--version", action="version", version=__about__.__version__)
@@ -172,6 +185,17 @@ def main() -> None:
     p_registrar.add_argument("--arquivo", required=True, help="caminho do arquivo de custos")
     p_resumir_eco = p_eco_sub.add_parser("resumir", help="resumo por provider")
     p_resumir_eco.add_argument("--arquivo", required=True, help="caminho do arquivo de custos")
+    p_seg = sub.add_parser("seguranca", help="politica de permissao de acoes")
+    p_seg_sub = p_seg.add_subparsers(dest="acao", required=True)
+    p_def_seg = p_seg_sub.add_parser("definir", help="define a politica de uma acao")
+    p_def_seg.add_argument("--acao", dest="acao_nome", required=True, help="nome da acao")
+    p_def_seg.add_argument("--permitir", action="store_true", help="permite a acao")
+    p_def_seg.add_argument("--arquivo", required=True, help="caminho do arquivo de politica")
+    p_aval_seg = p_seg_sub.add_parser("avaliar", help="avalia se uma acao esta permitida")
+    p_aval_seg.add_argument("--acao", dest="acao_nome", required=True, help="nome da acao")
+    p_aval_seg.add_argument("--arquivo", required=True, help="caminho do arquivo de politica")
+    p_res_seg = p_seg_sub.add_parser("resumir", help="resumo por escopo")
+    p_res_seg.add_argument("--arquivo", required=True, help="caminho do arquivo de politica")
 
     args = parser.parse_args()
     if args.comando == "info":
@@ -186,6 +210,8 @@ def main() -> None:
         _evoluir_comando(args.acao, args.arquivo, tarefa=args.tarefa)
     elif args.comando == "economia":
         _economia_comando(args.acao, args.arquivo, provider=getattr(args, "provider", None), tokens_entrada=getattr(args, "tokens_entrada", None), tokens_saida=getattr(args, "tokens_saida", None))
+    elif args.comando == "seguranca":
+        _seguranca_comando(args.acao, args.arquivo, nome=getattr(args, "acao_nome", None), permitir=getattr(args, "permitir", False))
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)
