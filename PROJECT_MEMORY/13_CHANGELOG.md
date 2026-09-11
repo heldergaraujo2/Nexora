@@ -1,5 +1,21 @@
 # 13 — CHANGELOG
 
+## Orchestrator → Tool Registry — 2026-09-11
+
+O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
+
+### Integração
+- [x] `Orquestrador` aceita `RegistryFerramentas` opcional.
+- [x] Tarefas com `ferramenta` configurada são encaminhadas ao Registry existente.
+- [x] Tarefas sem ferramenta preservam o caminho existente de Provider.
+- [x] O fluxo integrado mantém `Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`.
+- [x] Foi criado teste de integração cobrindo o caminho Orchestrator → Registry e confirmando que o Provider não é chamado para a tarefa com ferramenta.
+- [x] Correção do teste integrado: `origem=` é o argumento correto do `PolicyEngine`.
+
+### Validação
+- [x] HEAD validado: `f67f270c25609559264c19ef7a2561cc359873b8`.
+- [x] CI Run #138 (`34658836451`) concluído com SUCCESS em Python 3.11, 3.12, 3.13 e 3.14.
+
 ## Fechamento do fluxo de ferramenta — 2026-09-11
 
 O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
@@ -69,9 +85,9 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo importação no CI.
 
 ### Validação
-- [x] CI histórico verde para Python 3.11–3.14 nos HEADs históricos registrados neste arquivo.
-- [ ] CI do HEAD atual ainda não confirmado nesta documentação.
-- [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance, Checkpoint Engine e auditoria de resultados de ferramentas.
+- [x] CI verde para Python 3.11–3.14 no HEAD atual `f67f270c25609559264c19ef7a2561cc359873b8`.
+- [x] Run #138 (`34658836451`) concluído com SUCCESS.
+- [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance, Checkpoint Engine, auditoria de resultados e integração Orchestrator → Tool Registry.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
 
