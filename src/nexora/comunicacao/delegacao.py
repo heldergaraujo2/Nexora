@@ -78,20 +78,20 @@ class DelegadorAgentes:
             prioridade=prioridade,
             contexto={} if contexto is None else contexto,
         )
-        # Registrar antes de publicar permite processamento sincrono por um executor.
         self._delegacoes[delegacao.id] = delegacao
+        mensagem = MensagemAgente(
+            remetente=solicitante,
+            destinatario=executor,
+            tipo="delegacao.solicitada",
+            payload=delegacao.para_dict(),
+            correlacao_id=delegacao.id,
+        )
+        delegacao.mensagem_id = mensagem.id
         try:
-            mensagem = self.bus.publicar(
-                remetente=solicitante,
-                destinatario=executor,
-                tipo="delegacao.solicitada",
-                payload=delegacao.para_dict(),
-                correlacao_id=delegacao.id,
-            )
+            self.bus.enviar(mensagem)
         except Exception:
             self._delegacoes.pop(delegacao.id, None)
             raise
-        delegacao.mensagem_id = mensagem.id
         return delegacao
 
     def delegar_por_capacidade(
