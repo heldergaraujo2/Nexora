@@ -10,19 +10,25 @@
 
 ## O que é a NEXORA?
 
-NEXORA é uma plataforma de inteligência e agentes autônomos. Não é apenas um modelo de IA — o modelo é apenas uma parte do sistema. NEXORA é o sistema completo: inteligência, providers, memória, conhecimento, experiência, planejamento, agentes, ferramentas, execução, observação, verificação, pesquisa, experimentação, produtos, economia, métricas, evolução e continuidade.o
+NEXORA é uma plataforma de inteligência e agentes autônomos. Não é apenas um modelo de IA — o modelo é apenas uma parte do sistema. NEXORA é o sistema completo: inteligência, providers, memória, conhecimento, contexto, world model, objetivos, estratégias, agentes, comunicação, capacidades, ferramentas, execução, observação, verificação, pesquisa, experimentação, produtos, economia, métricas, evolução, continuidade e governança.
 
-, 
+## Estado atual
+
+- **Release histórica:** `v1.0.0`, tag apontando para `c49d3d2...`.
+- **Estado real:** o código continuou evoluindo após a release; `main` não está congelada.
+- **Arquitetura pós-release:** Context, Knowledge, World Model, Goals, Strategy, Communication Bus, Agent Registry, Capability Registry e Capability Delegation já existem em diferentes níveis de MVP/infraestrutura.
+- **Long-Term Autonomy:** concluída e preservada.
+- **Próxima fase:** nenhuma formalizada. A próxima evolução depende de decisão explícita do coordenador.
 
 ## Estrutura do Projeto
 
 ```
 PROJECT/
-├── src/                    Código fonte( ainda vazio — Fase 1+)
-├── tests/                  Testes( ainda vazio)
-├── docs/                   Documentação( ADRs,contratos,design…)
-├── NEXT_COMMAND.md         Canal de comando da coordenação( comando atual da Fase  0.5)
-└── PROJECT_MEMORY/         Memória e continuidade do projeto(numeração canônica 00–15)
+├── src/                    Código fonte
+├── tests/                  Testes
+├── docs/                   Documentação e ADRs
+├── NEXT_COMMAND.md         Canal de comando da coordenação
+└── PROJECT_MEMORY/         Memória e continuidade do projeto
     ├── 00_IDENTITY.md
     ├── 01_NORTH_STAR.md
     ├── 02_CAPABILITY_DISCOVERY.md
@@ -41,23 +47,31 @@ PROJECT/
     └── 15_HANDOFF.md
 ```
 
-## Estado Atual
+## GitHub é a fonte de verdade
 
-- **Fase:** 0.5 — Decisão e Design( sem código:ADRs,contratos,estrutura proposta)
-- **Antecedente:** Capability Discovery concluída(60+ capacidades,13 categorias)e integrada
-- **Versão:**  v0.0.2
-- **Sistema de continuidade:** O projeto é sua própria fonte de verdade. **GitHub = SOURCE OF TRUTH.** Novos agentes devem ler `PROJECT_MEMORY/15_HANDOFF.md` primeiramente,e executar o comando atual em `NEXT_COMMAND.md`.
+O código real deve sempre ser reconciliado com `PROJECT_MEMORY`. Em caso de divergência:
+
+**GIT → AUDITORIA → DECISÃO → IMPLEMENTAÇÃO → TESTES → PROJECT_MEMORY → COMMIT → PUSH → HANDOFF**
+
+## Arquitetura de agentes atual
+
+- `RegistroAgentes` mantém agentes e capacidades em memória.
+- Descoberta por capacidade é determinística e considera disponibilidade/prioridade.
+- `CommunicationBus` transporta mensagens e eventos, sem executar providers ou ferramentas.
+- `DelegadorAgentes` cria solicitações e resultados correlacionados.
+- Runtime e Orchestrator publicam eventos de ciclo no Bus.
+- A execução automática completa entre agentes ainda não está implementada.
 
 ## Fluxo de Coordenação
 
-| Papel | Ator | Função |
-|-------|-----|--------|
-| Coordenador/Arquiteto | Arena Agent central( eu) | Audita estado,valida decisões,redige comandos(em `NEXT_COMMAND.md`),revisa resultados |
-| Executor | Arena Agent construсor(OpenHands | Executa o comando atual de `NEXT_COMMAND.md`,atualiza `15_HANDOFF.md`,commita |
-| Criador | Você | Decisões finais,aprovações de etapas,gates de ações sensíveis |
+| Papel | Função |
+|-------|--------|
+| Coordenador/Arquiteto | Audita estado, valida decisões, define comandos e revisa resultados |
+| Executor | Implementa alterações autorizadas, executa testes e atualiza continuidade |
+| Criador | Decisões finais, aprovações de etapas e gates de ações sensíveis |
 
 ## Segurança e Governança
 
-- Legalidade,transparência,autorização,rastreabilidade e auditoria.
-- Ações sensíveis exigem autorização explícita do criador( inclui decisões legais/contratuais — invariante)。
-- NEXORA nunca deve afirmar que um produto possui capacidade que ele não possui(Regra de Veracidade)。
+- Legalidade, transparência, autorização, rastreabilidade e auditoria.
+- Ações sensíveis exigem autorização explícita do criador.
+- NEXORA nunca deve afirmar que um produto possui capacidade que ele não possui.
