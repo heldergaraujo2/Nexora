@@ -15,6 +15,7 @@ from nexora.tools.registry import Ferramenta, RegistryFerramentas
 from nexora.experiencia.registro import RegistroExperiencias
 from nexora.experimentacao.experimento import ExecutorExperimentos, Experimento
 from nexora.evolucao.registro import Aprendizado, RecomendadorEvolucao, RegistroAprendizados
+from nexora.economia.registro import CustoExecucao, RegistroCustos
 
 
 def _montar_registry():
@@ -105,6 +106,19 @@ def _evoluir_comando(acao, arquivo, tarefa=None):
             print("nenhum aprendizado encontrado")
 
 
+
+def _economia_comando(acao, arquivo, provider=None, tokens_entrada=None, tokens_saida=None):
+    registro = RegistroCustos(Path(arquivo))
+    if acao == "registrar":
+        custo = CustoExecucao(provider=provider or "desconhecido", tokens_entrada=int(tokens_entrada or 0), tokens_saida=int(tokens_saida or 0))
+        registro.registrar(custo)
+        print("custo registrado")
+    else:
+        resumo = registro.resumir()
+        print("total={} tokens={}".format(resumo["total_execucoes"], resumo["total_tokens"]))
+        for nome, dados in resumo["por_provider"].items():
+            print("  {}: execucoes={} tokens={}".format(nome, dados["execucoes"], dados["tokens_total"]))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="nexora", description="NEXORA plataforma de agentes de IA")
     parser.add_argument("--version", action="version", version=__about__.__version__)
@@ -149,6 +163,15 @@ def main() -> None:
     p_recomendar = p_evol_sub.add_parser("recomendar", help="recomenda melhor abordagem para uma tarefa")
     p_recomendar.add_argument("--tarefa", required=True, help="tarefa a recomendar")
     p_recomendar.add_argument("--arquivo", required=True, help="caminho do arquivo de aprendizados")
+    p_eco = sub.add_parser("economia", help="registra custos e resumo por provider")
+    p_eco_sub = p_eco.add_subparsers(dest="acao", required=True)
+    p_registrar = p_eco_sub.add_parser("registrar", help="registra um custo de execucao")
+    p_registrar.add_argument("--provider", default="fake", help="alias do provider")
+    p_registrar.add_argument("--tokens-entrada", dest="tokens_entrada", type=int, default=0, help="tokens de entrada")
+    p_registrar.add_argument("--tokens-saida", dest="tokens_saida", type=int, default=0, help="tokens de saida")
+    p_registrar.add_argument("--arquivo", required=True, help="caminho do arquivo de custos")
+    p_resumir_eco = p_eco_sub.add_parser("resumir", help="resumo por provider")
+    p_resumir_eco.add_argument("--arquivo", required=True, help="caminho do arquivo de custos")
 
     args = parser.parse_args()
     if args.comando == "info":
@@ -161,6 +184,8 @@ def main() -> None:
         _experimento_comando(args.nome, args.tarefa, args.variantes, alias=args.provider)
     elif args.comando == "evoluir":
         _evoluir_comando(args.acao, args.arquivo, tarefa=args.tarefa)
+    elif args.comando == "economia":
+        _economia_comando(args.acao, args.arquivo, provider=getattr(args, "provider", None), tokens_entrada=getattr(args, "tokens_entrada", None), tokens_saida=getattr(args, "tokens_saida", None))
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)
