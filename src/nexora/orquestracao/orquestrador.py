@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 from nexora.comunicacao import CommunicationBus
 from nexora.core.ciclo import Executor as ExecutorCiclo, Verificador as VerificadorCiclo
@@ -9,12 +10,23 @@ from nexora.core.objetivo import Objetivo
 from nexora.core.plano import Plano, Tarefa
 from nexora.runtime.eventos import EventStore
 from nexora.runtime.verificacao import texto_nao_vazio
+from nexora.tools.registry import RegistryFerramentas
 
 
 class Orquestrador:
     """Recebe um objetivo, coordena tarefas e publica seu ciclo no barramento."""
 
-    def __init__(self, rotador, provider, planejador=None, evento_store=None, historico=None, communication_bus=None, agent_id="orchestrator"):
+    def __init__(
+        self,
+        rotador,
+        provider,
+        planejador=None,
+        evento_store=None,
+        historico=None,
+        communication_bus=None,
+        agent_id="orchestrator",
+        ferramentas: RegistryFerramentas | None = None,
+    ):
         self.rotador = rotador
         self.provider = provider
         self.planejador = planejador or self._planejar
@@ -22,6 +34,7 @@ class Orquestrador:
         self.historico = historico if historico is not None else []
         self.communication_bus = communication_bus
         self.agent_id = agent_id
+        self.ferramentas = ferramentas
 
     @staticmethod
     def _planejar(objetivo):
@@ -44,6 +57,24 @@ class Orquestrador:
 
     def _executar_tarefa(self, tarefa):
         descricao = tarefa.get("descricao", "")
+        ferramenta = tarefa.get("ferramenta")
+        if ferramenta is not None:
+            if self.ferramentas is None:
+                raise RuntimeError("Registry de ferramentas nao configurado")
+            resultado = self.ferramentas.executar(
+                ferramenta,
+                tarefa.get("parametros", {}),
+                solicitante=self.agent_id,
+                contexto={
+                    "objetivo_id": tarefa.get("objetivo_id"),
+                    "tarefa_id": tarefa.get("id"),
+                    "descricao": descricao,
+                },
+                execucao_id=tarefa.get("execucao_id"),
+            )
+            if hasattr(resultado, "resultado"):
+                return resultado.resultado
+            return resultado
         return self.provider.generate(descricao).text
 
     def _verificar(self, contexto):
@@ -62,7 +93,14 @@ class Orquestrador:
         plano_dict = self.planejador(objetivo_texto)
         plano = Plano(objetivo_id=objetivo.id)
         for item in plano_dict:
-            plano.adicionar_tarefa(Tarefa(descricao=item.get("descricao", "")))
+            plano.adicionar_tarefa(
+                Tarefa(
+                    descricao=item.get("descricao", ""),
+                    ferramenta=item.get("ferramenta"),
+                    parametros=item.get("parametros", {}),
+                    depende_de=item.get("depende_de", []),
+                )
+            )
         self._registrar("plano", plano.para_dict())
         self._publicar("orquestracao.plano", {"objetivo_id": objetivo.id, "plano_id": plano.id, "tarefas": len(plano.tarefas)})
 
@@ -73,6 +111,7 @@ class Orquestrador:
         ok_geral = True
         for tarefa in plano.tarefas:
             tarefa_dict = tarefa.para_dict()
+            tarefa_dict["objetivo_id"] = objetivo.id
             self._publicar("orquestracao.tarefa.inicio", {"objetivo_id": objetivo.id, "tarefa_id": tarefa_dict.get("id")})
             try:
                 saida = executor.executar(tarefa_dict)
@@ -83,7 +122,10 @@ class Orquestrador:
                 erro = str(exc)
             else:
                 erro = None
-            etapa = {"tarefa_id": tarefa_dict.get("id"), "ok": ok, "saida": saida, "erro": erro}
+            etapa: dict[str, Any] = {"tarefa_id": tarefa_dict.get("id"), "ok": ok, "saida": saida, "erro": erro}
+            if tarefa_dict.get("ferramenta") is not None:
+                etapa["ferramenta"] = tarefa_dict["ferramenta"]
+                etapa["parametros"] = tarefa_dict.get("parametros", {})
             etapas.append(etapa)
             self._publicar("orquestracao.tarefa.resultado", {"objetivo_id": objetivo.id, **etapa})
             if not ok:
