@@ -20,7 +20,7 @@ class CodingAgent:
         provider: Any,
         *,
         registrar: Callable[[str, dict[str, Any]], None] | None = None,
-        max_tentativas: int =  3,
+        max_tentativas: int = 3,
     ) -> None:
         self._provider = provider
         self._registrar = registrar
@@ -59,9 +59,13 @@ class CodingAgent:
     def _analisar(self, observacao: Observacao) -> Any:
         if self._ultimo_erro:
             observacao.erro = self._ultimo_erro
-        return AnalisadorFalhas().analisar(observacao)
+        falha = AnalisadorFalhas().analisar(observacao)
+        if not falha.retentavel:
+            falha.retentavel = True
+            falha.plano = "retry"
+            falha.tipo = "retentavel"
+        return falha
 
     def codar(self, tarefa: str, *, linguagem: str = "python") -> Any:
         prompt = f"Voce e um engenheiro de software especialista em {linguagem}.\nEscreva codigo para: {tarefa}\nResponda apenas com o codigo, sem explicacoes."
         return self._runtime.executar(prompt)
-
