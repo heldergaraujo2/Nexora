@@ -31,6 +31,8 @@ class DecisaoPolitica:
     efeito: EfeitoPolitica
     motivo: str
     regra: RegraPolitica | None = None
+    versao: int = 1
+    origem: str | None = None
 
     @property
     def permitido(self) -> bool:
@@ -49,17 +51,37 @@ class PolicyEngine:
         regras: Iterable[RegraPolitica] = (),
         *,
         padrao: EfeitoPolitica = EfeitoPolitica.DENY,
+        versao: int = 1,
+        origem: str | None = None,
     ) -> None:
+        if isinstance(versao, bool) or not isinstance(versao, int) or versao < 1:
+            raise ValueError("versao deve ser um inteiro maior ou igual a 1")
+        if origem is not None and (not isinstance(origem, str) or not origem.strip()):
+            raise ValueError("origem deve ser texto nao vazio quando informada")
         self.regras = tuple(regras)
         self.padrao = EfeitoPolitica(padrao)
+        self.versao = versao
+        self.origem = origem
 
     def decidir(self, *, solicitante: str, executor: str, tarefa: str) -> DecisaoPolitica:
         if not solicitante.strip() or not executor.strip() or not tarefa.strip():
             raise ValueError("solicitante, executor e tarefa sao obrigatorios")
         for regra in self.regras:
             if regra.corresponde(solicitante=solicitante, executor=executor, tarefa=tarefa):
-                return DecisaoPolitica(regra.efeito, "regra correspondente", regra)
-        return DecisaoPolitica(self.padrao, "nenhuma regra correspondente")
+                return DecisaoPolitica(
+                    regra.efeito,
+                    "regra correspondente",
+                    regra,
+                    self.versao,
+                    self.origem,
+                )
+        return DecisaoPolitica(
+            self.padrao,
+            "nenhuma regra correspondente",
+            None,
+            self.versao,
+            self.origem,
+        )
 
     def autorizar(self, delegacao: Any) -> DecisaoPolitica:
         return self.decidir(
