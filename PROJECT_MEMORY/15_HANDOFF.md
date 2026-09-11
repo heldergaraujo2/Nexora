@@ -4,10 +4,10 @@
 
 ## Estado Atual
 
-- **Versão:** v0.3.0( Fase 3 completa e pushada;Fase 4 em NEXT_COMMAND.md)
+- **Versão:** v0.4.0( Fase 4 completa e pushada;Fase 5 em NEXT_COMMAND.md)
 - **Fase atual:** Fase 3 — Orquestração de Agente(**CONCLUÍDA**:roteador,orquestrador,CLI `executar`,EventStore;51 testes unitários passando)
 - **Fase anterior:** Fase 2 — Providers & Conectores( concluída,,43 testes)(, Fase 1( Fundação,,30 testes) e Fase 0.5/0( ADRs/contratos/design/esqueleto)
-- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase 4 — Provider System: roteamento avançado, fallback,,health-check,,seleção por capacidade(, conforme 10_MODULES.md, após push da Fase 3）.
+- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase  ​ 5 — NEXORA Agent Runtime(, conforme 10_MODULES.md, após push da Fase 3）.
 
 
 
