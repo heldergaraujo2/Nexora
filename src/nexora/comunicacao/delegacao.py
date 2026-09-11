@@ -9,6 +9,7 @@ import uuid
 from ..agentes.registro import RegistroAgentes
 from ..auditoria.registro import RegistroAuditoria
 from ..experiencia.registro import RegistroExperiencias
+from ..governanca.policy import PolicyEngine
 from .bus import CommunicationBus, MensagemAgente
 
 
@@ -168,11 +169,8 @@ class ExecutorDelegacoes:
     """Liga mensagens de delegacao a handlers explicitamente registrados.
 
     Esta camada executa tarefas; o CommunicationBus continua sendo apenas transporte.
-    O executor marca a delegacao como ACEITA antes do handler e publica CONCLUIDA ou
-    FALHOU depois da execucao. O ciclo continua sincrono e em memoria neste incremento.
-
-    Quando registros sao fornecidos, o resultado terminal vai para experiencia e os
-    eventos de ciclo vao para auditoria, mantendo as duas responsabilidades separadas.
+    Quando uma PolicyEngine e fornecida, a decisao de autorizacao ocorre antes da
+    aceitacao e execucao do handler. Decisoes tambem podem ser enviadas para auditoria.
     """
 
     def __init__(
@@ -183,6 +181,7 @@ class ExecutorDelegacoes:
         max_tentativas: int = 1,
         experiencias: RegistroExperiencias | None = None,
         auditoria: RegistroAuditoria | None = None,
+        policy: PolicyEngine | None = None,
     ) -> None:
         if max_tentativas < 1:
             raise ValueError("max_tentativas deve ser maior ou igual a 1")
@@ -191,6 +190,7 @@ class ExecutorDelegacoes:
         self.max_tentativas = max_tentativas
         self.experiencias = experiencias
         self.auditoria = auditoria
+        self.policy = policy
         self._handlers: dict[str, Callable[[Delegacao], Any]] = {}
         self._inscrito = False
 
@@ -212,21 +212,24 @@ class ExecutorDelegacoes:
 
         self.registrar(agent_id, executar_runtime)
 
-    def _auditar(self, evento: str, delegacao: Delegacao) -> None:
+    def _auditar(self, evento: str, delegacao: Delegacao, dados_extra: dict[str, Any] | None = None) -> None:
         if self.auditoria is None:
             return
+        dados = {
+            "solicitante": delegacao.solicitante,
+            "executor": delegacao.executor,
+            "tarefa": delegacao.tarefa,
+            "estado": delegacao.estado.value,
+            "tentativas": delegacao.tentativas,
+            "erro": delegacao.erro,
+        }
+        if dados_extra:
+            dados.update(dados_extra)
         self.auditoria.registrar(
             evento,
             entidade="delegacao",
             entidade_id=delegacao.id,
-            dados={
-                "solicitante": delegacao.solicitante,
-                "executor": delegacao.executor,
-                "tarefa": delegacao.tarefa,
-                "estado": delegacao.estado.value,
-                "tentativas": delegacao.tentativas,
-                "erro": delegacao.erro,
-            },
+            dados=dados,
         )
 
     def _registrar_experiencia(self, delegacao: Delegacao) -> None:
@@ -258,6 +261,28 @@ class ExecutorDelegacoes:
         delegacao = self.delegador.obter(delegacao_id)
         if delegacao is None or delegacao.estado is not EstadoDelegacao.SOLICITADA:
             return
+
+        if self.policy is not None:
+            decisao = self.policy.autorizar(delegacao)
+            self._auditar(
+                "politica.decisao",
+                delegacao,
+                {
+                    "efeito": decisao.efeito.value,
+                    "permitido": decisao.permitido,
+                    "motivo": decisao.motivo,
+                },
+            )
+            if not decisao.permitido:
+                self.delegador.atualizar(
+                    delegacao_id,
+                    estado=EstadoDelegacao.FALHOU,
+                    erro=f"execucao negada pela politica: {decisao.motivo}",
+                )
+                self._auditar("delegacao.falhou", delegacao)
+                self._registrar_experiencia(delegacao)
+                return
+
         self.delegador.atualizar(delegacao_id, estado=EstadoDelegacao.ACEITA)
         self._auditar("delegacao.aceita", delegacao)
         while delegacao.tentativas < self.max_tentativas:
