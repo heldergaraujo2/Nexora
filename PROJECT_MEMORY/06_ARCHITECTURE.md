@@ -1,7 +1,6 @@
 # 06 — ARQUITETURA
 
 ## Princípio Fundamental
-
 NEXORA ≠ modelo de IA. O modelo fornece capacidade cognitiva. NEXORA fornece o sistema completo.
 
 ## Composição
@@ -10,13 +9,20 @@ NEXORA ≠ modelo de IA. O modelo fornece capacidade cognitiva. NEXORA fornece o
 - Providers
 - Memória
 - Conhecimento
+- Contexto
+- World Model
+- Objetivos
+- Estratégias
 - Experiência
 - Planejamento
 - Agentes
+- Comunicação
+- Capacidades
 - Ferramentas
 - Execução
 - Observação
 - Verificação
+- Recuperação
 - Pesquisa
 - Experimentação
 - Produtos
@@ -24,17 +30,9 @@ NEXORA ≠ modelo de IA. O modelo fornece capacidade cognitiva. NEXORA fornece o
 - Métricas
 - Evolução
 - Continuidade
+- Governança
 
-## Visão de Alto Nível
-
-```
-NEXORA
-   │
-   ├── INTELLIGENCE  (Local AI / Online AI)
-   └── RUNTIME       (Tools: WEB, CODE, FILES...)
-```
-
-## Provider System (Fase 2)
+## Provider System
 
 NEXORA deve possuir arquitetura independente de modelos:
 
@@ -49,38 +47,68 @@ ProviderManager
    └── CodingProvider / Providers especializados
 ```
 
-Groq será oficialmente suportado (acesso à API existente), porém NEXORA NÃO deve depender exclusivamente da Groq. Providers são responsáveis pela INTELIGÊNCIA — não pela execução física do computador.
+Groq é oficialmente suportado, mas NEXORA NÃO depende exclusivamente da Groq. Providers fornecem inteligência; execução física permanece nas camadas apropriadas de runtime/tools/policy.
 
+## Multi-Agent e Agent Registry
 
+O Orchestrator coordena objetivos e tarefas. A arquitetura atual possui um registry próprio para agentes e capacidades:
 
-## Multi-Agent (Fase 4.5)
+```
+Agent Registry
+   ├── agente
+   ├── capacidades
+   ├── tags
+   ├── prioridade
+   ├── disponibilidade
+   └── metadados
+          │
+          ▼
+Capability Discovery
+          │
+          ▼
+Capability Delegation
+          │
+          ▼
+CommunicationBus
+```
 
-NEXORA Orchestrator coordena agentes especializados: Coding, Research, Market Intelligence, Product, Pricing, Marketing, Sales/Distribution, Analytics, Experimentation, Evolution e Resource. O Orchestrator interpreta objetivos, divide problemas, escolhe agentes, distribui tarefas, controla dependências, verifica resultados e registra experiência.
+`RegistroAgentes` faz descoberta determinística e seleção por capacidade. `DelegadorAgentes` cria a delegação e correlaciona solicitação/resultado. O CommunicationBus apenas transporta/registra mensagens; não executa providers ou ferramentas.
 
-.
+## Limite atual
 
- O Agent Registry mantém registro de todos os agentes (nome, função, capacidades, limitações, provider preferencial, ferramentas permitidas, custo, desempenho, histórico, métricas, versão, estado e permissões).
+A infraestrutura acima ainda não constitui um ciclo multi-agente autônomo completo. A execução do agente executor, verificação do entregável, recuperação, atualização de memória e governança ainda precisam ser conectadas de forma explícita.
 
- 
+## Fases históricas canônicas
 
-## Fases
+| Fase | Escopo | Estado |
+|------|--------|--------|
+| Prévia | Capability Discovery | Concluída |
+| 0 | Continuidade e Memória | Concluída |
+| 1 | Fundação | Concluída |
+| 2 | Provider System | Concluída |
+| 3 | Contexto e Memória | Concluída |
+| 4 | Planejamento | Concluída |
+| 4.5 | Multi-Agent Orchestration | Concluída |
+| 5 | NEXORA Agent Runtime | Concluída |
+| 6 | Coding Agent | Concluída |
+| 7 | Research Engine | Concluída |
+| 8 | Experience Engine | Concluída |
+| 9 | Experimentation Engine | Concluída |
+| 10 | Evolution Engine | Concluída |
+| 11 | Economic Engine | Concluída |
+| 12 | Security Engine | Concluída |
+| 13 | Memory Engine | Concluída |
+| 14 | Resource Management | Concluída |
+| 15 | Portfolio Engine | Concluída |
+| 16 | Long-Term Autonomy | Concluída |
 
-| Fase | Escopo |
-|------|--------|
-| Prévia | Capability Discovery |
-| 0 | Continuidade e Memória |
-| 1 | Fundação |
-| 2 | Provider System |
-| 3 | Contexto e Memória |
-| 4 | Planejamento |
-| 4.5 | Multi-Agent Orchestration |
-| 5 | NEXORA Agent Runtime |
-| 6 | Coding Agent |
-| 7 | Research Engine |
-| 8 | Experience Engine |
-| 9 | Experimentation Engine |
-| 10 | Evolution Engine |
-| 11 | Economic Engine |
-| 12 | Resource Management |
-| 13 | Portfolio Engine |
-| 14 | Long-Term Autonomy |
+A numeração acima foi reconciliada com os commits reais das fases 11–16. A evolução pós-v1.0.0 não foi convertida automaticamente em uma nova fase.
+
+## Boundaries importantes
+
+- Providers conhecem apenas o contrato do Provider.
+- Runtime não conhece providers específicos.
+- Registries são a porta de extensão de agentes/capacidades.
+- CommunicationBus não executa efeitos externos.
+- Delegação não deve bypassar policy, sandbox, checkpoint, auditoria ou verificação.
+- Memória e conhecimento devem preservar provenance e governança conforme os requisitos arquiteturais.
