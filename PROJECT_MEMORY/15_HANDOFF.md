@@ -4,8 +4,8 @@
 
 ## Estado Atual
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- Último HEAD de código validado: `281bf91ef3c10c7ef7fcefdd10e9e749a545f230`.
-- CI do HEAD: workflow `34652511716`, Python 3.11, 3.12, 3.13 e 3.14 — **success**.
+- Último HEAD de código validado: `dec0bbd4430bbe5883476112704ea78c97b90be3`.
+- CI do código: workflow `34653209175`, Python 3.11, 3.12, 3.13 e 3.14 — **success**.
 - O projeto não está congelado em v1.0.0.
 - Não foi criada uma nova fase.
 
@@ -32,7 +32,9 @@ Depois dela foram implementados e validados:
 - loader declarativo TOML versionado para políticas;
 - validação estrita do schema de política;
 - rastreabilidade da decisão com versão e origem da política;
-- identidade explícita e única das regras de política.
+- identidade explícita e única das regras de política;
+- fingerprint canônico SHA-256 do conteúdo semântico da política;
+- distinção semântica entre negação de política e falha de execução por meio de `EstadoDelegacao.DENEGADA`.
 
 ## Arquitetura real da execução delegada
 `Delegação → Policy → ALLOW/DENY → Executor → Runtime/Verificação → Recovery → Experiência + Auditoria`
@@ -44,7 +46,7 @@ Depois dela foram implementados e validados:
 - `ExecutorDelegacoes` recebe solicitações, consulta a Policy, executa handlers/runtimes registrados e atualiza o estado terminal.
 - `AgenteRuntime` mantém o ciclo de execução/verificação/análise/correção/reteste.
 - Recovery de delegação trata falhas do handler até `max_tentativas`.
-- `RegistroExperiencias` registra o resultado terminal.
+- `RegistroExperiencias` registra o resultado terminal; negação política permanece explicitamente identificada pelo estado `denegada`.
 - `RegistroAuditoria` persiste eventos relevantes em JSONL append-only.
 - `PolicyEngine` aplica regras ordenadas e default DENY antes da execução.
 - `carregar_policy_toml()` fornece a entrada declarativa, mantendo parser e motor de decisão separados.
@@ -53,23 +55,30 @@ Depois dela foram implementados e validados:
 - Schema atual: `[policy]`, `version = 2`, `default = "deny"` e `[[policy.rules]]` com `id` obrigatório, `effect`, `requester`, `executor` e `task` opcionais.
 - Cada regra possui identidade explícita, não vazia e única dentro da política.
 - `DecisaoPolitica.regra_id` identifica deterministicamente a regra que venceu; decisões por default têm `regra_id = None`.
-- Auditoria de `politica.decisao` registra `regra_id`, efeito, permitido, motivo, versão e origem.
+- `PolicyEngine` calcula fingerprint SHA-256 canônico sobre versão, default e regras semânticas, preservando a ordem das regras e excluindo a origem do arquivo.
+- A mesma política semântica produz o mesmo fingerprint mesmo em caminhos de origem diferentes; qualquer mudança semântica ou de ordem altera o fingerprint.
+- Auditoria de `politica.decisao` registra `regra_id`, efeito, permitido, motivo, versão, origem e `fingerprint`.
 - Loader baseado em `tomllib`, sem dependência externa.
 - Campos desconhecidos, versão inválida, tipos ambíguos, efeitos inválidos, IDs ausentes/duplicados, regras malformadas e TOML inválido são rejeitados.
 - Default continua sendo DENY e não há execução de código proveniente da configuração.
 - YAML permanece fora do escopo atual.
 
+## Estado de delegação e governança
+- `DENEGADA` representa uma decisão de governança que impede a execução antes do handler.
+- `FALHOU` continua reservado para falhas reais de execução/verificação ou esgotamento de recovery.
+- Uma negação gera `politica.decisao` e `delegacao.denegada` na auditoria.
+- Uma delegação `DENEGADA` continua sendo publicada como `delegacao.resultado`, preservando o contrato de resposta terminal do bus.
+- O handler não é chamado e `tentativas` permanece `0` quando a política nega a execução.
+
 ## Limites / Lacunas verificadas
-- Ainda não há fingerprint/hash do conteúdo da política; a origem identifica o caminho do arquivo.
-- Não há hot reload de políticas.
-- Não há estado `DENEGADA` no enum atual; por isso uma negação de política termina como `FALHOU`, com motivo auditado.
+- Ainda não há hot reload de políticas.
 - Registry/capabilities continuam em memória.
 - Execução delegada é síncrona/in-memory; não há fila distribuída, workers persistentes ou transporte externo.
 - Ainda não existe um ciclo autônomo completo de planejamento multi-agente, execução, economia e evolução.
 
 ## Testes / CI
-- Workflow `34652511716` confirmou Python 3.11, 3.12, 3.13 e 3.14: **success** em todos os jobs.
-- `tests/unit/test_policy.py` cobre identidade, unicidade, ALLOW/DENY e auditoria da regra correspondente.
+- Workflow `34653209175` confirmou Python 3.11, 3.12, 3.13 e 3.14: **success** em todos os jobs.
+- `tests/unit/test_policy.py` cobre identidade, unicidade, fingerprint, ALLOW/DENY, distinção `DENEGADA` e auditoria da decisão.
 - `tests/unit/test_policy_loader.py` cobre versão 2, IDs obrigatórios/duplicados, schema, efeitos e TOML inválido.
 - A etapa de Policy teve uma falha histórica por ausência do pacote `nexora.experiencia`; `src/nexora/experiencia/__init__.py` foi criado/exportado e o CI posterior ficou verde.
 
@@ -80,10 +89,10 @@ Os componentes pós-release continuam classificados como **ADAPTAR/CRIAR dentro 
 **Não iniciar uma nova fase automaticamente.**
 
 Próxima evolução recomendada para análise arquitetural:
-1. fingerprint/hash canônico do conteúdo da política para rastreabilidade forte;
-2. distinção semântica entre `DENY` e `FALHOU` / eventual estado `DENEGADA`;
-3. lifecycle de carregamento e eventual reload seguro;
-4. fronteira de permissões para ações sensíveis.
+1. lifecycle de carregamento e eventual reload seguro de políticas;
+2. fronteira de permissões para ações sensíveis;
+3. integração da governança com recursos/ferramentas concretos;
+4. somente depois, avaliar políticas distribuídas e persistência/coordenação externa.
 
 Essa é uma recomendação técnica, não uma autorização automática de implementação.
 
