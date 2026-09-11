@@ -19,14 +19,20 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - [x] Regras suportam ALLOW/DENY, filtros por solicitante/executor/tarefa, ordem determinística e default DENY.
 - [x] `ExecutorDelegacoes` consulta a política antes da execução.
 - [x] A decisão de política é auditada com efeito, permitido e motivo.
+- [x] A decisão preserva `versao` e `origem` da política quando fornecidas.
+- [x] `src/nexora/governanca/policy_loader.py` implementa carregamento declarativo TOML versionado.
+- [x] Loader valida estritamente versão, campos, regras e efeitos; rejeita TOML malformado e não executa código da configuração.
+- [x] `src/nexora/config/loaders.py` adiciona carregamento TOML via `tomllib` sem dependência externa.
+- [x] `pyproject.toml` passou a exigir Python `>=3.11` para suportar `tomllib` da biblioteca padrão.
 - [x] DENY impede a execução do handler e encerra a delegação como `FALHOU`, pois o enum atual ainda não possui estado `DENEGADA`.
-- [ ] Loader declarativo TOML/YAML ainda não implementado; ADR-009 permanece como referência arquitetural para essa evolução.
+- [ ] YAML ainda não implementado; só deve ser adicionado se uma necessidade arquitetural justificar a duplicação do formato.
 
 ### Correção de empacotamento
 - [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo a importação do registro de experiências no CI.
 
 ### Validação
-- [x] CI final verde no workflow `34647078404` para Python 3.11, 3.12, 3.13 e 3.14.
+- [x] CI do commit de código `eccff2d3390807cfc0c7e839f6a055a0b1a867c5` verde no workflow `34649533683` para Python 3.11, 3.12, 3.13 e 3.14.
+- [x] Testes de loader cobrem TOML válido, ALLOW/DENY, versão inválida, campos desconhecidos, efeito inválido e TOML malformado.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
 
