@@ -30,6 +30,7 @@ class Delegacao:
     resultado: Any = None
     erro: str | None = None
     mensagem_id: str | None = None
+    tentativas: int = 0
 
     def __post_init__(self) -> None:
         if not self.solicitante.strip() or not self.executor.strip():
@@ -51,6 +52,7 @@ class Delegacao:
             "resultado": self.resultado,
             "erro": self.erro,
             "mensagem_id": self.mensagem_id,
+            "tentativas": self.tentativas,
         }
 
 
@@ -166,11 +168,16 @@ class ExecutorDelegacoes:
     Esta camada executa tarefas; o CommunicationBus continua sendo apenas transporte.
     O executor marca a delegacao como ACEITA antes do handler e publica CONCLUIDA ou
     FALHOU depois da execucao. O ciclo continua sincrono e em memoria neste incremento.
+    Falhas de execucao podem ser recuperadas com tentativas adicionais; retries internos
+    de verificacao continuam sendo responsabilidade do AgenteRuntime.
     """
 
-    def __init__(self, bus: CommunicationBus, delegador: DelegadorAgentes) -> None:
+    def __init__(self, bus: CommunicationBus, delegador: DelegadorAgentes, *, max_tentativas: int = 1) -> None:
+        if max_tentativas < 1:
+            raise ValueError("max_tentativas deve ser maior ou igual a 1")
         self.bus = bus
         self.delegador = delegador
+        self.max_tentativas = max_tentativas
         self._handlers: dict[str, Callable[[Delegacao], Any]] = {}
         self._inscrito = False
 
@@ -210,15 +217,20 @@ class ExecutorDelegacoes:
         if delegacao is None or delegacao.estado is not EstadoDelegacao.SOLICITADA:
             return
         self.delegador.atualizar(delegacao_id, estado=EstadoDelegacao.ACEITA)
-        try:
-            resultado = handler(delegacao)
-        except Exception as exc:
-            self.delegador.atualizar(
-                delegacao_id,
-                estado=EstadoDelegacao.FALHOU,
-                erro=str(exc),
-            )
-        else:
+        while delegacao.tentativas < self.max_tentativas:
+            delegacao.tentativas += 1
+            try:
+                resultado = handler(delegacao)
+            except Exception as exc:
+                delegacao.erro = str(exc)
+                if delegacao.tentativas >= self.max_tentativas:
+                    self.delegador.atualizar(
+                        delegacao_id,
+                        estado=EstadoDelegacao.FALHOU,
+                        erro=str(exc),
+                    )
+                    return
+                continue
             sucesso = getattr(resultado, "sucesso", True)
             if sucesso:
                 self.delegador.atualizar(
@@ -234,3 +246,4 @@ class ExecutorDelegacoes:
                     resultado=resultado,
                     erro=str(erro),
                 )
+            return
