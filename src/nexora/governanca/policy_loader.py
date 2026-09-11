@@ -9,23 +9,7 @@ from nexora.governanca.policy import EfeitoPolitica, PolicyEngine, RegraPolitica
 
 
 def carregar_policy_toml(caminho: Path) -> PolicyEngine:
-    """Carrega um PolicyEngine a partir de um documento TOML versionado.
-
-    Schema minimo:
-
-        [policy]
-        version = 1
-        default = "deny"
-
-        [[policy.rules]]
-        effect = "allow"
-        requester = "orchestrator"
-        executor = "research-agent"
-        task = "pesquisar"
-
-    Apenas dados declarativos sao interpretados; nenhuma expressao ou codigo
-    presente no arquivo e executado.
-    """
+    """Carrega um PolicyEngine a partir de um documento TOML versionado."""
     dados = carregar_toml(caminho)
     policy = dados.get("policy")
     if not isinstance(policy, dict):
@@ -34,9 +18,7 @@ def carregar_policy_toml(caminho: Path) -> PolicyEngine:
     desconhecidos_policy = set(policy) - {"version", "default", "rules"}
     if desconhecidos_policy:
         nomes = ", ".join(sorted(desconhecidos_policy))
-        raise ConfiguracaoInvalida(
-            f"[policy] possui campos desconhecidos: {nomes}"
-        )
+        raise ConfiguracaoInvalida(f"[policy] possui campos desconhecidos: {nomes}")
 
     version = policy.get("version")
     if not isinstance(version, int) or isinstance(version, bool) or version != 1:
@@ -79,7 +61,7 @@ def carregar_policy_toml(caminho: Path) -> PolicyEngine:
 
         regras.append(RegraPolitica(efeito=efeito, **valores))
 
-    return PolicyEngine(regras, padrao=padrao)
+    return PolicyEngine(regras, padrao=padrao, versao=version, origem=str(Path(caminho)))
 
 
 __all__ = ["carregar_policy_toml"]
