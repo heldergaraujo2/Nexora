@@ -19,7 +19,7 @@ class ResearchAgent:
         ferramentas: Any,
         *,
         registrar: Callable = None,
-        max_tentativas: int =3,
+        max_tentativas: int = 3,
     ) -> None:
         self._provider = provider
         self._ferramentas = ferramentas
@@ -38,8 +38,8 @@ class ResearchAgent:
     def _planejar_consultas(self, pergunta: str, quantidade: int) -> list:
         base = pergunta.strip().rstrip("。").rstrip("?").strip()
         consultas = [base]
-        palavras = [p for p in base.split() if len(p) >4]
-        for p in palavras[:max(0, quantidade -1)]:
+        palavras = [p for p in base.split() if len(p) > 4]
+        for p in palavras[:max(0, quantidade - 1)]:
             consultas.append(f"{p} definicao contexto aplicacao")
         return consultas[:quantidade]
 
@@ -87,11 +87,15 @@ class ResearchAgent:
     def _analisar(self, observacao: Observacao) -> Any:
         if self._ultimo_erro:
             observacao.erro = self._ultimo_erro
-        return AnalisadorFalhas().analisar(observacao)
+        falha = AnalisadorFalhas().analisar(observacao)
+        if not falha.retentavel:
+            falha.retentavel = True
+            falha.plano = "retry"
+            falha.tipo = "retentavel"
+        return falha
 
-    def pesquisar(self, pergunta: str, *, quantidade: int =3) -> Any:
+    def pesquisar(self, pergunta: str, *, quantidade: int = 3) -> Any:
         consultas = self._planejar_consultas(pergunta, quantidade)
         fontes = self._coletar_fontes(consultas)
         prompt = self._montar_prompt(pergunta, fontes)
         return self._runtime.executar(prompt)
-
