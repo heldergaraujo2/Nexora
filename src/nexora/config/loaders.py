@@ -1,4 +1,4 @@
-"""Carregadores de configuracao (JSON e variaveis de ambiente.."""
+"""Carregadores de configuracao (JSON, TOML e variaveis de ambiente)."""
 from __future__ import annotations
 
 import json
@@ -22,6 +22,29 @@ def carregar_json(caminho: Path) -> dict[str, Any]:
         raise ConfiguracaoInvalida(f"JSON invalido em {caminho}: {exc}") from exc
     if not isinstance(dados, dict):
         raise ConfiguracaoInvalida(f"Raiz do config deve ser objeto: {caminho}")
+    return dados
+
+
+def carregar_toml(caminho: Path) -> dict[str, Any]:
+    """Le um arquivo TOML e valida que a raiz seja uma tabela.
+
+    TOML e suportado pela biblioteca padrao a partir do Python 3.11.
+    """
+    if not caminho.exists():
+        raise FileNotFoundError(f"Configuracao nao encontrada: {caminho}")
+    try:
+        import tomllib
+    except ModuleNotFoundError as exc:
+        raise ConfiguracaoInvalida(
+            "carregar_toml requer Python 3.11 ou superior"
+        ) from exc
+
+    try:
+        dados = tomllib.loads(caminho.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+        raise ConfiguracaoInvalida(f"TOML invalido em {caminho}: {exc}") from exc
+    if not isinstance(dados, dict):
+        raise ConfiguracaoInvalida(f"Raiz do config deve ser tabela: {caminho}")
     return dados
 
 
