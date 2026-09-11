@@ -1,7 +1,9 @@
-"""Registro central de ferramentas executaveis (ADR-008.."""
+"""Registro central de ferramentas executaveis (ADR-008)."""
 from __future__ import annotations
 
 from typing import Any, Callable
+
+from nexora.governanca.permissoes import GerenciadorPermissoes, PedidoPermissao
 
 
 class Ferramenta:
@@ -22,10 +24,11 @@ class Ferramenta:
 
 
 class RegistryFerramentas:
-    """Mapeia nomes de ferramentas a instancias."""
+    """Mapeia ferramentas e aplica a fronteira de permissao antes da execucao."""
 
-    def __init__(self) -> None:
+    def __init__(self, permissoes: GerenciadorPermissoes | None = None) -> None:
         self._ferramentas: dict[str, Ferramenta] = {}
+        self._permissoes = permissoes
 
     def registrar(self, ferramenta: Ferramenta) -> None:
         self._ferramentas[ferramenta.nome] = ferramenta
@@ -33,8 +36,25 @@ class RegistryFerramentas:
     def obter(self, nome: str) -> Ferramenta:
         return self._ferramentas[nome.strip()]
 
-    def executar(self, nome: str, parametros: dict[str, Any]) -> Any:
-        return self.obter(nome).executar(parametros)
+    def executar(
+        self,
+        nome: str,
+        parametros: dict[str, Any],
+        *,
+        solicitante: str = "sistema",
+        contexto: dict[str, Any] | None = None,
+    ) -> Any:
+        ferramenta = self.obter(nome)
+        if self._permissoes is not None:
+            self._permissoes.exigir(
+                PedidoPermissao(
+                    solicitante=solicitante,
+                    recurso=ferramenta.nome,
+                    acao="executar",
+                    contexto=contexto or {},
+                )
+            )
+        return ferramenta.executar(parametros)
 
     def nomes(self) -> list[str]:
         return sorted(self._ferramentas)
