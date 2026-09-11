@@ -15,11 +15,11 @@ from nexora.tools.registry import Ferramenta, RegistryFerramentas
 from nexora.experiencia.registro import RegistroExperiencias
 from nexora.experimentacao.experimento import ExecutorExperimentos, Experimento
 from nexora.evolucao.registro import Aprendizado, RecomendadorEvolucao, RegistroAprendizados
-from nexora.seguranca.registro import Acao, RegistroPolitica
-from nexora.memoria.registro import ItemMemoria, RegistroMemorias
-from nexora.recursos.registro import Recurso, RegistroRecursos
-from nexora.portfolio.registro import ItemPortfolio, RegistroPortfolio
-from nexora.autonomia.registro import MetaLongoPrazo, RegistroAutonomia
+from nexora.seguranca.registro import RegistroPolitica
+from nexora.memoria.registro import RegistroMemorias
+from nexora.recursos.registro import RegistroRecursos
+from nexora.portfolio.registro import RegistroPortfolio
+from nexora.autonomia.registro import RegistroAutonomia
 from nexora.economia.registro import CustoExecucao, RegistroCustos
 
 
@@ -40,7 +40,7 @@ def _executar_comando(objetivo_texto, alias=None):
     prov = rot.obter_provider(objetivo_texto, alias=alias)
     orq = Orquestrador(rot, prov)
     res = orq.executar(objetivo_texto, alias=alias)
-    print(f"sucesso={res["sucesso"]} etapas={res["metricas"]["total"]}")
+    print("sucesso={} etapas={}".format(res["sucesso"], res["metricas"]["total"]))
     sys.exit(0 if res["sucesso"] else 1)
 
 
@@ -69,16 +69,16 @@ def _pesquisar_comando(pergunta, quantidade, alias):
 
 
 def _experiencia_comando(acao, arquivo):
-    caminho = Path(arquivo)
-    reg = RegistroExperiencias(caminho)
+    reg = RegistroExperiencias(Path(arquivo))
     if acao == "resumir":
         resumo = reg.resumir()
-        print(f"total={resumo["geral"]["total"]} sucesso={resumo["geral"]["sucesso"]} falhas={resumo["geral"]["falhas"]}")
+        geral = resumo["geral"]
+        print("total={} sucesso={} falhas={}".format(geral["total"], geral["sucesso"], geral["falhas"]))
         for tipo, dados in resumo["tipos"].items():
-            print(f"{tipo}: total={dados["total"]} sucesso={dados["sucesso"]} falhas={dados["falhas"]} taxa={dados["taxa_sucesso"]:.2f}")
+            print("{}: total={} sucesso={} falhas={} taxa={:.2f}".format(tipo, dados["total"], dados["sucesso"], dados["falhas"], dados["taxa_sucesso"]))
     else:
         for r in reg.listar():
-            print(f"{r["carimbo"]} {r["tipo_de_tarefa"]} sucesso={r["sucesso"]}")
+            print("{} {} sucesso={}".format(r["carimbo"], r["tipo_de_tarefa"], r["sucesso"]))
 
 
 def _experimento_comando(nome, tarefa, variantes, alias):
@@ -90,9 +90,9 @@ def _experimento_comando(nome, tarefa, variantes, alias):
         exp.adicionar_variante(variante)
     executor = ExecutorExperimentos(prov)
     res = executor.executar(exp)
-    print(f"experimento={res["experimento"]} variantes={res["total_variantes"]} sucessos={res["sucessos"]}")
+    print("experimento={} variantes={} sucessos={}".format(res["experimento"], res["total_variantes"], res["sucessos"]))
     for r in res["resultados"]:
-        print(f"  {r["indice"]}: sucesso={r["sucesso"]} tentativas={r["tentativas"]}")
+        print("  {}: sucesso={} tentativas={}".format(r["indice"], r["sucesso"], r["tentativas"]))
     sys.exit(0 if res["sucessos"] == res["total_variantes"] else 1)
 
 
@@ -111,7 +111,6 @@ def _evoluir_comando(acao, arquivo, tarefa=None):
             print("nenhum aprendizado encontrado")
 
 
-
 def _economia_comando(acao, arquivo, provider=None, tokens_entrada=None, tokens_saida=None):
     registro = RegistroCustos(Path(arquivo))
     if acao == "registrar":
@@ -123,6 +122,7 @@ def _economia_comando(acao, arquivo, provider=None, tokens_entrada=None, tokens_
         print("total={} tokens={}".format(resumo["total_execucoes"], resumo["total_tokens"]))
         for nome, dados in resumo["por_provider"].items():
             print("  {}: execucoes={} tokens={}".format(nome, dados["execucoes"], dados["tokens_total"]))
+
 
 def _seguranca_comando(acao, arquivo, nome=None, permitir=False):
     registro = RegistroPolitica(Path(arquivo))
@@ -136,6 +136,7 @@ def _seguranca_comando(acao, arquivo, nome=None, permitir=False):
         resumo = registro.resumir()
         print("seguranca_resumo={}".format(resumo))
 
+
 def _memoria_comando(acao, arquivo, chave=None, conteudo=None):
     registro = RegistroMemorias(Path(arquivo))
     if acao == "lembrar":
@@ -148,6 +149,7 @@ def _memoria_comando(acao, arquivo, chave=None, conteudo=None):
         resumo = registro.resumir()
         print("resumo={}".format(resumo))
 
+
 def _recursos_comando(acao, arquivo, tipo=None, quantidade=None, executor=None):
     registro = RegistroRecursos(Path(arquivo))
     if acao == "registrar":
@@ -156,6 +158,7 @@ def _recursos_comando(acao, arquivo, tipo=None, quantidade=None, executor=None):
     else:
         resumo = registro.resumir()
         print("recursos_resumo={}".format(resumo))
+
 
 def _portfolio_comando(acao, arquivo, nome=None, categoria=None, status=None, item_id=None):
     registro = RegistroPortfolio(Path(arquivo))
@@ -237,6 +240,7 @@ def main() -> None:
     p_recomendar = p_evol_sub.add_parser("recomendar", help="recomenda melhor abordagem para uma tarefa")
     p_recomendar.add_argument("--tarefa", required=True, help="tarefa a recomendar")
     p_recomendar.add_argument("--arquivo", required=True, help="caminho do arquivo de aprendizados")
+
     p_eco = sub.add_parser("economia", help="registra custos e resumo por provider")
     p_eco_sub = p_eco.add_subparsers(dest="acao", required=True)
     p_registrar = p_eco_sub.add_parser("registrar", help="registra um custo de execucao")
@@ -246,6 +250,7 @@ def main() -> None:
     p_registrar.add_argument("--arquivo", required=True, help="caminho do arquivo de custos")
     p_resumir_eco = p_eco_sub.add_parser("resumir", help="resumo por provider")
     p_resumir_eco.add_argument("--arquivo", required=True, help="caminho do arquivo de custos")
+
     p_seg = sub.add_parser("seguranca", help="politica de permissao de acoes")
     p_seg_sub = p_seg.add_subparsers(dest="acao", required=True)
     p_def_seg = p_seg_sub.add_parser("definir", help="define a politica de uma acao")
@@ -257,6 +262,7 @@ def main() -> None:
     p_aval_seg.add_argument("--arquivo", required=True, help="caminho do arquivo de politica")
     p_res_seg = p_seg_sub.add_parser("resumir", help="resumo por escopo")
     p_res_seg.add_argument("--arquivo", required=True, help="caminho do arquivo de politica")
+
     p_mem = sub.add_parser("memoria", help="memoria persistente da plataforma")
     p_mem_sub = p_mem.add_subparsers(dest="acao", required=True)
     p_lembrar = p_mem_sub.add_parser("lembrar", help="registra uma memoria")
@@ -268,6 +274,7 @@ def main() -> None:
     p_buscar.add_argument("--arquivo", required=True, help="caminho do arquivo de memoria")
     p_res_mem = p_mem_sub.add_parser("resumir", help="resumo por escopo")
     p_res_mem.add_argument("--arquivo", required=True, help="caminho do arquivo de memoria")
+
     p_rec = sub.add_parser("recursos", help="consumo de recursos por executor")
     p_rec_sub = p_rec.add_subparsers(dest="acao", required=True)
     p_reg_rec = p_rec_sub.add_parser("registrar", help="registra consumo de recurso")
@@ -277,6 +284,7 @@ def main() -> None:
     p_reg_rec.add_argument("--arquivo", required=True, help="caminho do arquivo de recursos")
     p_res_rec = p_rec_sub.add_parser("resumir", help="resumo por tipo")
     p_res_rec.add_argument("--arquivo", required=True, help="caminho do arquivo de recursos")
+
     p_pf = sub.add_parser("portfolio", help="portfolio de trabalhos")
     p_pf_sub = p_pf.add_subparsers(dest="acao", required=True)
     p_add_pf = p_pf_sub.add_parser("adicionar", help="adiciona item ao portfolio")
@@ -292,6 +300,7 @@ def main() -> None:
     p_lst_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
     p_res_pf = p_pf_sub.add_parser("resumir", help="resumo por categoria")
     p_res_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
+
     p_auto = sub.add_parser("autonomia", help="metas de longo prazo")
     p_auto_sub = p_auto.add_subparsers(dest="acao", required=True)
     p_def_auto = p_auto_sub.add_parser("definir", help="define uma meta de longo prazo")
@@ -340,4 +349,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
