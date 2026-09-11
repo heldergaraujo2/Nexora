@@ -76,10 +76,10 @@ def test_permissao_audita_decisao(tmp_path: Path) -> None:
 
     assert decisao.permitido is True
     assert len(eventos) == 1
-    assert eventos[0].dados["regra_id"] == "allow-research"
-    assert eventos[0].dados["versao"] == 2
-    assert eventos[0].dados["fingerprint"] == policy.fingerprint
-    assert eventos[0].dados["contexto"] == {"fonte": "web"}
+    assert eventos[0]["dados"]["regra_id"] == "allow-research"
+    assert eventos[0]["dados"]["versao"] == 2
+    assert eventos[0]["dados"]["fingerprint"] == policy.fingerprint
+    assert eventos[0]["dados"]["contexto"] == {"fonte": "web"}
 
 
 def test_pedido_permissao_valida_campos() -> None:
