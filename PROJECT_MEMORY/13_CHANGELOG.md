@@ -1,5 +1,24 @@
 # 13 — CHANGELOG
 
+## Fechamento do fluxo de ferramenta — 2026-09-11
+
+O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
+
+### Tool → Observation → Verification → Audit → Result
+- [x] `RegistryFerramentas` mantém a autorização antes da ação.
+- [x] Checkpoint permanece imediatamente antes da execução da ferramenta.
+- [x] `ResultadoFerramenta` consolida resultado, observação e verificação quando esses estágios estão configurados.
+- [x] `RegistryFerramentas` aceita `RegistroAuditoria` opcional.
+- [x] Execução bem-sucedida gera `ferramenta.resultado`, sem registrar parâmetros potencialmente sensíveis.
+- [x] Falha do executor gera `ferramenta.falhou` com tipo/mensagem da exceção e propaga a exceção original.
+- [x] Auditoria de resultado registra ferramenta, solicitante, sucesso, observação e verificação sem copiar o resultado bruto.
+- [x] Testes cobrem resultado bruto legado, resultado observado/verificado e falha auditada.
+
+### Limites deliberados
+- [ ] Persistência durável de checkpoints ainda não implementada.
+- [ ] Rollback de efeitos externos ainda não implementado.
+- [ ] Observação/verificação e auditoria são opcionais no Registry para preservar compatibilidade.
+
 ## Checkpoint Engine — 2026-09-11
 
 O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
@@ -16,7 +35,7 @@ O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
 ### Limites deliberados
 - [ ] Persistência durável de checkpoints ainda não implementada.
 - [ ] Rollback de efeitos externos ainda não implementado.
-- [ ] Integração automática com Tool/Sandbox ainda não implementada; o boundary permanece explícito até haver contrato que justifique acoplamento.
+- [x] Integração Tool/Sandbox com governança/checkpoint foi feita de forma explícita e mínima, sem transformar o CheckpointEngine em executor.
 
 ## Evolução multiagente e governança de execução — 2026-09-11
 
@@ -51,8 +70,8 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 
 ### Validação
 - [x] CI histórico verde para Python 3.11–3.14 nos HEADs históricos registrados neste arquivo.
-- [ ] CI do HEAD atual ainda não confirmado; não marcar como verde sem evidência.
-- [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance e Checkpoint Engine.
+- [ ] CI do HEAD atual ainda não confirmado nesta documentação.
+- [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance, Checkpoint Engine e auditoria de resultados de ferramentas.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
 
