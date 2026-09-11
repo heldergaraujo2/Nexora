@@ -2,7 +2,7 @@
 name = "nexora"
 version = "1.0.0"
 description = "Plataforma de agentes de IA model-agnostica"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
