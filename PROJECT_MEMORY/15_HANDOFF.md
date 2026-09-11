@@ -4,8 +4,8 @@
 
 ## Estado Atual
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- Último HEAD implementado nesta etapa: `5e022a6a2b9d6df031deb17fd4983b8d5860ee90`.
-- CI específico desse HEAD: ainda não confirmado; **não declarar CI verde**.
+- Último HEAD implementado nesta etapa: `20fe318b825e3b06603b44bad92208ccb6a9d539`.
+- Este HEAD contém a atualização documental do fechamento do fluxo de ferramentas; o CI desse HEAD ainda deve ser confirmado.
 - O projeto continua evoluindo após v1.0.0 sem criar nova fase.
 
 ## Onde Parou
@@ -22,6 +22,22 @@ Governança atual:
 - `GerenciadorPolitica` com reload validado e troca atômica;
 - Registry de ferramentas e Sandbox podem exigir Policy antes da execução.
 
+## Fluxo de Ferramentas Fechado
+Implementado no `RegistryFerramentas`:
+
+`Pedido → Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`
+
+Contrato:
+- autorização ocorre antes da ação;
+- checkpoint ocorre imediatamente antes da ferramenta;
+- a ferramenta é o único executor da ação registrada;
+- observação e verificação são opcionais para manter compatibilidade;
+- quando configurados, produzem `ResultadoFerramenta`;
+- `RegistroAuditoria` pode ser injetado no Registry;
+- sucesso gera `ferramenta.resultado`;
+- exceção do executor gera `ferramenta.falhou` e a exceção original é propagada;
+- auditoria não copia parâmetros nem o resultado bruto, reduzindo risco de exposição de dados sensíveis.
+
 ## Checkpoint Engine
 Implementado em `src/nexora/runtime/checkpoint.py`.
 
@@ -36,31 +52,35 @@ Contrato atual:
 - O componente é deliberadamente em memória nesta etapa; persistência durável e rollback externo ficam fora do MVP.
 
 ## Arquitetura real da execução
-`Pedido → Permission → Policy → Sandbox/Tool → Checkpoint → Observation → Verification → Audit → Result`
+Para ferramentas:
+`Pedido → Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`
 
-Para delegação, permanece:
+Para delegação:
 `Delegação → Policy → ALLOW/DENY → Executor → Runtime/Verificação → Recovery → Experiência + Auditoria`
 
-O Checkpoint Engine é um boundary de estado, não um executor. A integração automática com Tool/Sandbox ainda não foi feita para evitar acoplamento prematuro.
+O Checkpoint Engine continua sendo um boundary de estado, não um executor. A integração no Registry é explícita e mínima.
 
 ## Limites / Lacunas verificadas
-- CI não confirmado para o HEAD atual.
+- CI ainda precisa ser confirmado para o HEAD documental mais recente.
 - Checkpoints ainda são em memória.
 - Não existe rollback de efeitos externos.
 - Registry/capabilities continuam em memória.
 - Execução delegada é síncrona/in-memory.
 - Ainda não existe ciclo autônomo completo de planejamento multi-agente, economia e evolução.
+- YAML de políticas ainda não implementado.
 
 ## Testes / CI
 - Foram adicionados testes para permission boundary, policy lifecycle, tool governance, Sandbox governance e Checkpoint Engine.
-- `tests/unit/test_checkpoint.py` cobre isolamento do snapshot, recuperação sem mutação, filtro por execução, auditoria e validações.
-- A validação final do HEAD atual precisa ser obtida por CI ou ambiente local antes de marcar o estado como validado.
+- `tests/unit/test_tools_registry.py` agora cobre auditoria de resultado, auditoria de falha e o fluxo observado/verificado.
+- O próximo passo operacional é confirmar o CI do HEAD atual antes de qualquer nova alteração arquitetural.
 
 ## Classificação arquitetural
 Os componentes pós-release continuam classificados como **ADAPTAR/CRIAR dentro da arquitetura própria da NEXORA**. Não houve cópia de implementação privada externa.
 
 ## Próximo Passo
-**Validar o conjunto atual e, depois, projetar a integração do Checkpoint com o fluxo de execução somente se houver contrato claro.**
+**Validar o HEAD atual por CI e, se verde, realizar somente uma auditoria arquitetural/documental do conjunto antes de iniciar o próximo componente.**
+
+Não criar nova fase automaticamente.
 
 Antes de qualquer novo componente:
 1. confirmar o HEAD real;
