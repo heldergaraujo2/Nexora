@@ -4,56 +4,42 @@
 
 ## Versão / HEAD atual
 - Release histórica: v1.0.0, tag apontando para `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- HEAD atual de código validado: `eccff2d3390807cfc0c7e839f6a055a0b1a867c5`.
+- Último HEAD implementado nesta etapa: `5e022a6a2b9d6df031deb17fd4983b8d5860ee90`.
 - O `main` continua evoluindo após v1.0.0; a versão de pacote permanece `1.0.0`.
+- CI do HEAD atual ainda não foi confirmado.
 
 ## Estado arquitetural real
-A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, a arquitetura evoluiu com contexto, conhecimento, world model, objetivos, estratégias e uma infraestrutura multi-agente com comunicação, delegação, execução, verificação, recuperação, experiência, auditoria e governança.
+A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, a arquitetura evoluiu com contexto, conhecimento, world model, objetivos, estratégias e infraestrutura multi-agente com comunicação, delegação, execução, verificação, recuperação, experiência, auditoria e governança.
 
 ### Componentes pós-v1.0.0 verificados
-- `src/nexora/contexto/engine.py` — `Contexto` e `ContextEngine`.
-- `src/nexora/conhecimento/engine.py` — `Conhecimento` e `KnowledgeEngine`.
-- `src/nexora/mundo/engine.py` — `Observacao`, `EstadoMundo` e `WorldModelEngine`.
-- `src/nexora/objetivos/engine.py` — `ObjetivoMeta` e `GoalEngine`.
-- `src/nexora/estrategias/engine.py` — `Estrategia` e `StrategyEngine`.
-- `src/nexora/comunicacao/bus.py` — `CommunicationBus`.
-- `src/nexora/comunicacao/delegacao.py` — `Delegacao`, `DelegadorAgentes` e `ExecutorDelegacoes`.
-- `src/nexora/agentes/registro.py` — `AgenteRegistro` e `RegistroAgentes`, incluindo descoberta por capacidade.
-- `src/nexora/runtime/agente.py` — ciclo EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR e publicação opcional no Bus.
-- `src/nexora/orquestracao/orquestrador.py` — ciclo de orquestração e publicação opcional no Bus.
-- `src/nexora/experiencia/registro.py` — registro de experiências de resultados terminais de delegação.
+- Context, Knowledge, World Model, Goal e Strategy Engines.
+- `src/nexora/comunicacao/bus.py` — CommunicationBus.
+- `src/nexora/comunicacao/delegacao.py` — Delegacao, DelegadorAgentes e ExecutorDelegacoes.
+- `src/nexora/agentes/registro.py` — Agent Registry e descoberta por capacidade.
+- `src/nexora/runtime/agente.py` — ciclo de execução/verificação/análise/correção/reteste.
+- `src/nexora/orquestracao/orquestrador.py` — orquestração.
+- `src/nexora/experiencia/registro.py` — experiências de resultados terminais.
 - `src/nexora/auditoria/registro.py` — auditoria append-only em JSONL.
-- `src/nexora/governanca/policy.py` — `PolicyEngine`, `RegraPolitica`, `DecisaoPolitica` e efeitos ALLOW/DENY.
-- `src/nexora/governanca/policy_loader.py` — loader declarativo TOML versionado, com validação estrita e default DENY.
-- `src/nexora/config/loaders.py` — suporte genérico a carregamento TOML via `tomllib`.
+- `src/nexora/governanca/policy.py` — PolicyEngine ALLOW/DENY.
+- `src/nexora/governanca/policy_loader.py` — loader TOML versionado e estrito.
+- `src/nexora/governanca/permissoes.py` — fronteira explícita de autorização.
+- `src/nexora/governanca/policy_manager.py` — reload validado e troca atômica.
+- `src/nexora/tools/registry.py` — execução de ferramentas opcionalmente governada.
+- `src/nexora/runtime/sandbox.py` — allowlist + Policy opcional antes de subprocesso.
+- `src/nexora/runtime/checkpoint.py` — CheckpointEngine para snapshots lógicos em memória.
 
-## Fluxo atual de execução delegada
-`DELEGAÇÃO → POLICY → ALLOW/DENY → EXECUTOR → RUNTIME/VERIFICAÇÃO → RECOVERY → EXPERIÊNCIA + AUDITORIA`
+## Fluxo arquitetural
+`Pedido → Permission → Policy → Sandbox/Tool → Checkpoint → Observation → Verification → Audit → Result`
 
-- Com `ALLOW`, a delegação passa por `ACEITA`, execução do handler/runtime, verificações/retries e termina em `CONCLUIDA` quando bem-sucedida.
-- Com `DENY`, o handler não é executado; a delegação termina atualmente como `FALHOU`, com a decisão de política e o motivo registrados na auditoria.
-- A decisão auditada inclui efeito, permitido, motivo, versão da política e origem do arquivo quando a política foi carregada de configuração.
-- A integração é síncrona e em memória; não constitui ainda um sistema distribuído.
-
-## Política declarativa atual
-- O `PolicyEngine` mantém o motor de decisão separado do parser/configuração.
-- `carregar_policy_toml()` lê políticas declarativas com `[policy]`, `version = 1`, `default = "deny"` e `[[policy.rules]]`.
-- O loader rejeita versão inválida, campos desconhecidos, efeitos inválidos, regras malformadas e tipos incompatíveis; não executa código proveniente do TOML.
-- A política carregada preserva `versao` e `origem` na `DecisaoPolitica` e na auditoria.
-- YAML ainda não foi implementado; TOML foi adotado primeiro por usar `tomllib` da biblioteca padrão.
-- `pyproject.toml` requer Python `>=3.11` por causa do uso de `tomllib` sem dependência externa.
+O Checkpoint Engine atualmente é explícito e desacoplado: captura/recupera estado lógico, mas não executa ferramentas nem desfaz efeitos externos.
 
 ## Limites atuais verificados
-- `PolicyEngine` é um MVP determinístico: regras ordenadas, primeira correspondência vence e default `DENY`.
-- Ainda não existe identidade explícita de regra/match ID na decisão auditada.
-- Ainda não existe fingerprint/hash do conteúdo da política; a origem atualmente identifica o caminho do arquivo.
-- Não existe hot reload de políticas.
-- Não existe estado `DENEGADA` no enum de delegação; DENY termina atualmente como `FALHOU`.
-- `RegistroAgentes` e descoberta/capacidades continuam em memória.
-- `ExecutorDelegacoes` é síncrono/in-memory e depende de handlers/runtimes explicitamente registrados.
-- O runtime fornece verificação e recuperação internas; o executor fornece recovery no nível da delegação.
-- Auditoria é append-only em JSONL; experiência registra o resultado terminal da delegação.
-- Não existe ainda um ciclo autônomo completo de planejamento → múltiplos agentes → execução → economia/evolução.
+- Checkpoints ainda não possuem persistência durável.
+- Não existe rollback de efeitos externos.
+- Integração automática Checkpoint ↔ Tool/Sandbox ainda não foi acoplada.
+- Registry/capabilities continuam em memória.
+- `ExecutorDelegacoes` é síncrono/in-memory.
+- Ainda não existe ciclo autônomo completo de planejamento multi-agente, economia e evolução.
 - Não foi criada uma nova fase.
 
 ## Long-Term Autonomy
@@ -62,9 +48,9 @@ A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, 
 - CLI `nexora autonomia definir|atualizar|listar|resumir` permanece parte do sistema.
 
 ## Testes / CI
-- HEAD de código validado: `eccff2d3390807cfc0c7e839f6a055a0b1a867c5`.
-- Workflow `34649533683` confirmou Python 3.11, 3.12, 3.13 e 3.14 em **success**.
-- A suíte atual inclui cobertura para execução delegada, integração com Runtime, recovery, experiência, auditoria, PolicyEngine ALLOW/DENY, loader TOML e metadados de rastreabilidade da decisão.
+- Testes específicos de Checkpoint estão em `tests/unit/test_checkpoint.py`.
+- Cobertura inclui isolamento do snapshot, recuperação sem mutação, filtro por execução, auditoria e validações.
+- CI do HEAD atual ainda não confirmado; não marcar como verde sem evidência.
 
 ## Estado de fase
 **Fases históricas concluídas + evolução arquitetural pós-release em reconciliação.**
