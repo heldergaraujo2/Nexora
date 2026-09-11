@@ -1,7 +1,7 @@
 """Testes do registry de ferramentas."""
 from __future__ import annotations
 
-from nexora.governanca.policy import PolicyEngine, RegraPolitica
+from nexora.governanca.policy import EfeitoPolitica, PolicyEngine, RegraPolitica
 from nexora.governanca.permissoes import GerenciadorPermissoes, PermissaoNegada
 from nexora.runtime.checkpoint import CheckpointEngine
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
@@ -28,7 +28,7 @@ def test_registry_checkpoint_apos_allow_e_antes_da_execucao():
     ordem: list[str] = []
     checkpoint = CheckpointEngine()
     policy = PolicyEngine(
-        [RegraPolitica(id="allow", efeito="allow", solicitante="agente", executor="soma", tarefa="executar")],
+        [RegraPolitica(id="allow", efeito=EfeitoPolitica.ALLOW, solicitante="agente", executor="soma", tarefa="executar")],
     )
     permissoes = GerenciadorPermissoes(policy)
     repo = RegistryFerramentas(permissoes=permissoes, checkpoint=checkpoint)
