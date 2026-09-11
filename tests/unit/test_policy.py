@@ -21,6 +21,8 @@ def test_policy_engine_allow_por_regra():
     assert decisao.regra_id == "allow-research"
     assert decisao.versao == 1
     assert decisao.origem is None
+    assert decisao.fingerprint == policy.fingerprint
+    assert len(decisao.fingerprint) == 64
 
 
 def test_policy_engine_deny_por_padrao():
@@ -37,6 +39,7 @@ def test_policy_engine_deny_por_padrao():
     assert decisao.efeito is EfeitoPolitica.DENY
     assert decisao.permitido is False
     assert decisao.regra_id is None
+    assert decisao.fingerprint == policy.fingerprint
 
 
 def test_policy_engine_preserva_versao_e_origem():
@@ -51,6 +54,32 @@ def test_policy_engine_preserva_versao_e_origem():
     assert decisao.versao == 3
     assert decisao.origem == "config/policy.toml"
     assert decisao.regra_id is None
+    assert decisao.fingerprint == policy.fingerprint
+
+
+def test_policy_fingerprint_eh_deterministico_e_independe_da_origem():
+    regra = RegraPolitica("allow-research", EfeitoPolitica.ALLOW, executor="research-agent")
+    primeira = PolicyEngine([regra], versao=2, origem="a/policy.toml")
+    segunda = PolicyEngine([regra], versao=2, origem="b/outro.toml")
+
+    assert primeira.fingerprint == segunda.fingerprint
+
+
+def test_policy_fingerprint_muda_com_conteudo_semantico():
+    primeira = PolicyEngine([RegraPolitica("r1", EfeitoPolitica.ALLOW, executor="research-agent")])
+    segunda = PolicyEngine([RegraPolitica("r1", EfeitoPolitica.DENY, executor="research-agent")])
+
+    assert primeira.fingerprint != segunda.fingerprint
+
+
+def test_policy_fingerprint_respeita_ordem_das_regras():
+    allow = RegraPolitica("allow", EfeitoPolitica.ALLOW, executor="agent")
+    deny = RegraPolitica("deny", EfeitoPolitica.DENY, executor="agent")
+
+    primeira = PolicyEngine([allow, deny])
+    segunda = PolicyEngine([deny, allow])
+
+    assert primeira.fingerprint != segunda.fingerprint
 
 
 def test_policy_engine_rejeita_id_duplicado():
@@ -96,6 +125,7 @@ def test_executor_permite_execucao_e_audita_decisao(tmp_path):
     assert eventos[0]["dados"]["regra_id"] == "allow-research"
     assert eventos[0]["dados"]["versao"] == 2
     assert eventos[0]["dados"]["origem"] == "config/policy.toml"
+    assert eventos[0]["dados"]["fingerprint"] == policy.fingerprint
     assert [item["evento"] for item in eventos] == [
         "politica.decisao",
         "delegacao.aceita",
@@ -132,6 +162,7 @@ def test_executor_negar_execucao_e_audita_decisao(tmp_path):
     assert eventos[0]["dados"]["regra_id"] == "deny-coding"
     assert eventos[0]["dados"]["versao"] == 4
     assert eventos[0]["dados"]["origem"] == "governanca/policy.toml"
+    assert eventos[0]["dados"]["fingerprint"] == policy.fingerprint
     assert [item["evento"] for item in eventos] == [
         "politica.decisao",
         "delegacao.falhou",
