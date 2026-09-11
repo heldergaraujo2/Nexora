@@ -14,9 +14,10 @@ class Roteador:
         (("teste", "test", "fake", "echo"), "fake"),
     ]
 
-    def __init__(self, registry: RegistryProviders, default: str | None = None) -> None:
+    def __init__(self, registry: RegistryProviders, default: str | None = None, manager: object | None = None) -> None:
         self.registry = registry
         self._default = default or os.environ.get("NEXORA_PROVIDER_PADRAO") or "fake"
+        self._manager = manager
 
     def recomendar(self, objetivo: str) -> str:
         texto = objetivo.strip().lower()
@@ -27,4 +28,12 @@ class Roteador:
 
     def obter_provider(self, objetivo: str, alias: str | None = None):
         nome = self.recomendar(objetivo) if alias is None else alias
-        return self.registry.obter(nome)()
+        if self._manager is None:
+            return self.registry.obter(nome)()
+        candidatos = self._manager.saudaveis()
+        if nome in candidatos:
+            candidatos.remove(nome)
+            candidatos.insert(0, nome)
+        for nome_cand in candidatos:
+            return self._manager.obter(nome_cand)
+        raise RuntimeError("nenhum provider saudavel disponivel")

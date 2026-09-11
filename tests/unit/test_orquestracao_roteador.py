@@ -32,3 +32,36 @@ def test_obter_provider_com_alias():
     rot = Roteador(reg)
     prov = rot.obter_provider("qualquer", alias="fake")
     assert isinstance(prov, FakeProvider)
+
+
+def test_fallback_quando_recomendado_insaludavel():
+    from nexora.providers.manager import ProviderManager
+
+    class Insaludavel(FakeProvider):
+        def saudavel(self):
+            return False
+
+    reg = RegistryProviders()
+    mgr = ProviderManager()
+    mgr.registrar("fake", FakeProvider)
+    mgr.registrar("groq", Insaludavel)
+
+    rot = Roteador(reg, manager=mgr)
+    prov = rot.obter_provider("crie um texto")
+    assert isinstance(prov, FakeProvider)
+
+def test_fallback_todos_insaludaveis_levanta_erro():
+    from nexora.providers.manager import ProviderManager
+    import pytest
+
+    class Insaludavel(FakeProvider):
+        def saudavel(self):
+            return False
+
+    reg = RegistryProviders()
+    mgr = ProviderManager()
+    mgr.registrar("groq", Insaludavel)
+
+    rot = Roteador(reg, manager=mgr)
+    with pytest.raises(RuntimeError):
+        rot.obter_provider("crie um texto")
