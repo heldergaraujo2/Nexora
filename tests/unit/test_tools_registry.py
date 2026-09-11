@@ -1,4 +1,9 @@
 """Testes do registry de ferramentas."""
+from __future__ import annotations
+
+from nexora.governanca.policy import PolicyEngine, RegraPolitica
+from nexora.governanca.permissoes import GerenciadorPermissoes, PermissaoNegada
+from nexora.runtime.checkpoint import CheckpointEngine
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
 
 
@@ -11,8 +16,88 @@ def test_registry_ferramentas_executa():
     assert repo.obter("soma").descricao == "Soma dois numeros"
     assert repo.executar("soma", {"a": 2, "b": 3}) == 5
 
+
 def test_registry_ferramentas_nomes_ordenados():
     repo = RegistryFerramentas()
     repo.registrar(Ferramenta(nome="zeta", descricao="", executar=lambda parametros: None))
     repo.registrar(Ferramenta(nome="alfa", descricao="", executar=lambda parametros: None))
     assert repo.nomes() == ["alfa", "zeta"]
+
+
+def test_registry_checkpoint_apos_allow_e_antes_da_execucao():
+    ordem: list[str] = []
+    checkpoint = CheckpointEngine()
+    policy = PolicyEngine(
+        [RegraPolitica(id="allow", efeito="allow", solicitante="agente", executor="soma", tarefa="executar")],
+    )
+    permissoes = GerenciadorPermissoes(policy)
+    repo = RegistryFerramentas(permissoes=permissoes, checkpoint=checkpoint)
+    repo.registrar(
+        Ferramenta(
+            nome="soma",
+            descricao="",
+            executar=lambda parametros: ordem.append("tool") or 5,
+        )
+    )
+
+    assert repo.executar("soma", {}, solicitante="agente", execucao_id="exec-1") == 5
+    assert ordem == ["tool"]
+    checkpoints = checkpoint.listar(execucao_id="exec-1")
+    assert len(checkpoints) == 1
+    assert checkpoints[0].estado == {
+        "tipo": "ferramenta",
+        "ferramenta": "soma",
+        "solicitante": "agente",
+        "contexto": {},
+    }
+
+
+def test_registry_policy_deny_nao_cria_checkpoint_nem_executa():
+    executou = False
+    checkpoint = CheckpointEngine()
+    policy = PolicyEngine([])
+    permissoes = GerenciadorPermissoes(policy)
+    repo = RegistryFerramentas(permissoes=permissoes, checkpoint=checkpoint)
+    repo.registrar(
+        Ferramenta(
+            nome="soma",
+            descricao="",
+            executar=lambda parametros: None,
+        )
+    )
+
+    try:
+        repo.executar("soma", {}, solicitante="agente", execucao_id="exec-1")
+    except PermissaoNegada:
+        pass
+    else:
+        raise AssertionError("politica deny deveria impedir a ferramenta")
+
+    assert executou is False
+    assert checkpoint.listar(execucao_id="exec-1") == []
+
+
+def test_registry_checkpoint_falhando_impede_execucao():
+    executou = False
+
+    class CheckpointQueFalha:
+        def criar(self, *args, **kwargs):
+            raise RuntimeError("checkpoint indisponivel")
+
+    repo = RegistryFerramentas(checkpoint=CheckpointQueFalha())  # type: ignore[arg-type]
+    repo.registrar(
+        Ferramenta(
+            nome="soma",
+            descricao="",
+            executar=lambda parametros: globals().update(executou=True),
+        )
+    )
+
+    try:
+        repo.executar("soma", {})
+    except RuntimeError as exc:
+        assert str(exc) == "checkpoint indisponivel"
+    else:
+        raise AssertionError("falha do checkpoint deveria impedir a ferramenta")
+
+    assert executou is False
