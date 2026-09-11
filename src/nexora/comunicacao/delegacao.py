@@ -18,6 +18,7 @@ class EstadoDelegacao(str, Enum):
     ACEITA = "aceita"
     CONCLUIDA = "concluida"
     FALHOU = "falhou"
+    DENEGADA = "denegada"
     CANCELADA = "cancelada"
 
 
@@ -140,7 +141,12 @@ class DelegadorAgentes:
         delegacao.erro = erro
         tipo = (
             "delegacao.resultado"
-            if estado in {EstadoDelegacao.CONCLUIDA, EstadoDelegacao.FALHOU, EstadoDelegacao.CANCELADA}
+            if estado in {
+                EstadoDelegacao.CONCLUIDA,
+                EstadoDelegacao.FALHOU,
+                EstadoDelegacao.DENEGADA,
+                EstadoDelegacao.CANCELADA,
+            }
             else "delegacao.estado"
         )
         self.bus.publicar(
@@ -275,10 +281,10 @@ class ExecutorDelegacoes:
             if not decisao.permitido:
                 self.delegador.atualizar(
                     delegacao_id,
-                    estado=EstadoDelegacao.FALHOU,
+                    estado=EstadoDelegacao.DENEGADA,
                     erro=f"execucao negada pela politica: {decisao.motivo}",
                 )
-                self._auditar("delegacao.falhou", delegacao)
+                self._auditar("delegacao.denegada", delegacao)
                 self._registrar_experiencia(delegacao)
                 return
 
