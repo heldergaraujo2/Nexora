@@ -1,6 +1,9 @@
 """Testes do registry de ferramentas."""
 from __future__ import annotations
 
+import pytest
+
+from nexora.auditoria.registro import RegistroAuditoria
 from nexora.governanca.policy import EfeitoPolitica, PolicyEngine, RegraPolitica
 from nexora.governanca.permissoes import GerenciadorPermissoes, PermissaoNegada
 from nexora.runtime.checkpoint import CheckpointEngine
@@ -147,3 +150,60 @@ def test_registry_verificacao_reprova_sem_impedir_execucao():
     assert resultado.observacao.ok is True
     assert resultado.verificado is False
     assert resultado.sucesso is False
+
+
+def test_registry_audita_resultado_apos_execucao(tmp_path):
+    auditoria = RegistroAuditoria(tmp_path / "auditoria.jsonl")
+    repo = RegistryFerramentas(auditoria=auditoria)
+    repo.registrar(Ferramenta(nome="eco", descricao="", executar=lambda parametros: "ok"))
+
+    assert repo.executar("eco", {}, solicitante="agente", execucao_id="exec-audit") == "ok"
+
+    eventos = auditoria.listar(entidade_id="exec-audit")
+    assert len(eventos) == 1
+    assert eventos[0]["evento"] == "ferramenta.resultado"
+    assert eventos[0]["dados"] == {
+        "ferramenta": "eco",
+        "solicitante": "agente",
+        "sucesso": True,
+        "observado": False,
+        "verificado": None,
+    }
+
+
+def test_registry_audita_resultado_verificado(tmp_path):
+    auditoria = RegistroAuditoria(tmp_path / "auditoria.jsonl")
+    repo = RegistryFerramentas(
+        auditoria=auditoria,
+        verificador=Verificacao([texto_nao_vazio]),
+    )
+    repo.registrar(Ferramenta(nome="eco", descricao="", executar=lambda parametros: "ok"))
+
+    resultado = repo.executar("eco", {}, execucao_id="exec-audit-verificado")
+
+    assert resultado.sucesso is True
+    evento = auditoria.listar(entidade_id="exec-audit-verificado")[0]
+    assert evento["dados"]["observado"] is True
+    assert evento["dados"]["observacao_ok"] is True
+    assert evento["dados"]["verificado"] is True
+    assert evento["dados"]["sucesso"] is True
+
+
+def test_registry_audita_falha_da_ferramenta_e_propaga_excecao(tmp_path):
+    auditoria = RegistroAuditoria(tmp_path / "auditoria.jsonl")
+    repo = RegistryFerramentas(auditoria=auditoria)
+    repo.registrar(
+        Ferramenta(
+            nome="falha",
+            descricao="",
+            executar=lambda parametros: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        repo.executar("falha", {}, execucao_id="exec-falha")
+
+    evento = auditoria.listar(entidade_id="exec-falha")[0]
+    assert evento["evento"] == "ferramenta.falhou"
+    assert evento["dados"]["erro_tipo"] == "RuntimeError"
+    assert evento["dados"]["erro"] == "boom"
