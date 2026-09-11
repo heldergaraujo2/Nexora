@@ -1,12 +1,12 @@
-# NEXT COMMAND — Fase 13: Memory Engine
+# NEXT COMMAND — Fase 14: Resource Management
 
-> Canal de comando da coordenacao. O comando anterior( Fase  12 — Security Engine) foi concluido e pushado;; 104 testes passando..
+> Canal de comando da coordenacao. O comando anterior( Fase  13 — Memory Engine) foi concluido e pushado;; 110 testes passando..
 
-**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  12 e continuidade do roadmap..
+**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  13 e continuidade do roadmap..
 
-## COMANDO — Fase 13: Memory Engine
+## COMANDO — Fase 14: Resource Management
 
-**OBJETIVO:** Implementar o Memory Engine da NEXORA( mecanismo de memoria persistente da plataforma( conforme roadmap..
+**OBJETIVO:** Implementar o Resource Management da NEXORA( controlar e rastrear recursos usados pela plataforma( conforme roadmap..
 
 **ESCOPO (o que produzir(:**
 

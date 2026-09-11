@@ -16,6 +16,7 @@ from nexora.experiencia.registro import RegistroExperiencias
 from nexora.experimentacao.experimento import ExecutorExperimentos, Experimento
 from nexora.evolucao.registro import Aprendizado, RecomendadorEvolucao, RegistroAprendizados
 from nexora.seguranca.registro import Acao, RegistroPolitica
+from nexora.memoria.registro import ItemMemoria, RegistroMemorias
 from nexora.economia.registro import CustoExecucao, RegistroCustos
 
 
@@ -132,6 +133,18 @@ def _seguranca_comando(acao, arquivo, nome=None, permitir=False):
         resumo = registro.resumir()
         print("seguranca_resumo={}".format(resumo))
 
+def _memoria_comando(acao, arquivo, chave=None, conteudo=None):
+    registro = RegistroMemorias(Path(arquivo))
+    if acao == "lembrar":
+        registro.lembrar(chave=chave, conteudo=conteudo)
+        print("memoria registrada")
+    elif acao == "buscar":
+        valor = registro.buscar(chave=chave)
+        print("valor={}".format(valor))
+    else:
+        resumo = registro.resumir()
+        print("resumo={}".format(resumo))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="nexora", description="NEXORA plataforma de agentes de IA")
     parser.add_argument("--version", action="version", version=__about__.__version__)
@@ -196,6 +209,17 @@ def main() -> None:
     p_aval_seg.add_argument("--arquivo", required=True, help="caminho do arquivo de politica")
     p_res_seg = p_seg_sub.add_parser("resumir", help="resumo por escopo")
     p_res_seg.add_argument("--arquivo", required=True, help="caminho do arquivo de politica")
+    p_mem = sub.add_parser("memoria", help="memoria persistente da plataforma")
+    p_mem_sub = p_mem.add_subparsers(dest="acao", required=True)
+    p_lembrar = p_mem_sub.add_parser("lembrar", help="registra uma memoria")
+    p_lembrar.add_argument("--chave", required=True, help="chave da memoria")
+    p_lembrar.add_argument("--conteudo", required=True, help="corpo da memoria")
+    p_lembrar.add_argument("--arquivo", required=True, help="caminho do arquivo de memoria")
+    p_buscar = p_mem_sub.add_parser("buscar", help="busca uma memoria por chave")
+    p_buscar.add_argument("--chave", required=True, help="chave da memoria")
+    p_buscar.add_argument("--arquivo", required=True, help="caminho do arquivo de memoria")
+    p_res_mem = p_mem_sub.add_parser("resumir", help="resumo por escopo")
+    p_res_mem.add_argument("--arquivo", required=True, help="caminho do arquivo de memoria")
 
     args = parser.parse_args()
     if args.comando == "info":
@@ -212,6 +236,8 @@ def main() -> None:
         _economia_comando(args.acao, args.arquivo, provider=getattr(args, "provider", None), tokens_entrada=getattr(args, "tokens_entrada", None), tokens_saida=getattr(args, "tokens_saida", None))
     elif args.comando == "seguranca":
         _seguranca_comando(args.acao, args.arquivo, nome=getattr(args, "acao_nome", None), permitir=getattr(args, "permitir", False))
+    elif args.comando == "memoria":
+        _memoria_comando(args.acao, args.arquivo, chave=getattr(args, "chave", None), conteudo=getattr(args, "conteudo", None))
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)
