@@ -4,9 +4,9 @@
 
 ## Versão / HEAD atual
 - Release histórica: v1.0.0, tag apontando para `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- Último HEAD implementado nesta etapa: `50e2b468ca38ecb4e69ba4fefbfc1aaf3e948929`.
+- HEAD atual do `main`: `f67f270c25609559264c19ef7a2561cc359873b8`.
 - O `main` continua evoluindo após v1.0.0; a versão de pacote permanece `1.0.0`.
-- CI do HEAD mais recente ainda será confirmado após esta atualização documental.
+- CI do HEAD atual: **Run #138 (`34658836451`) — SUCCESS**, com Python 3.11, 3.12, 3.13 e 3.14 verdes.
 
 ## Estado arquitetural real
 A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, a arquitetura evoluiu com contexto, conhecimento, world model, objetivos, estratégias e infraestrutura multi-agente com comunicação, delegação, execução, verificação, recuperação, experiência, auditoria e governança.
@@ -17,7 +17,7 @@ A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, 
 - `src/nexora/comunicacao/delegacao.py` — Delegacao, DelegadorAgentes e ExecutorDelegacoes.
 - `src/nexora/agentes/registro.py` — Agent Registry e descoberta por capacidade.
 - `src/nexora/runtime/agente.py` — ciclo de execução/verificação/análise/correção/reteste.
-- `src/nexora/orquestracao/orquestrador.py` — orquestração.
+- `src/nexora/orquestracao/orquestrador.py` — orquestração e roteamento opcional de tarefas com ferramenta.
 - `src/nexora/experiencia/registro.py` — experiências de resultados terminais.
 - `src/nexora/auditoria/registro.py` — auditoria append-only em JSONL.
 - `src/nexora/governanca/policy.py` — PolicyEngine ALLOW/DENY.
@@ -30,11 +30,13 @@ A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, 
 - `src/nexora/runtime/ferramenta.py` — contrato `ResultadoFerramenta` para consolidar resultado observado/verificado.
 
 ## Fluxo arquitetural
-`Pedido → Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`
+`Goal/Plan/Task → Orchestrator → Registry → Permission/Policy → Checkpoint → Tool → Observation → Verification → Audit → Result → Orchestrator`
 
 No Registry de ferramentas, o fluxo efetivamente implementado é: autorização antes da ação; checkpoint antes da execução; execução da ferramenta; observação/verificação opcionais; auditoria do resultado ou da falha; retorno do resultado bruto quando os estágios de observação/verificação não estão configurados e `ResultadoFerramenta` quando estão configurados.
 
 O Checkpoint Engine atualmente é explícito e desacoplado: captura/recupera estado lógico, mas não executa ferramentas nem desfaz efeitos externos.
+
+A integração Orchestrator → Registry é opcional e preserva o caminho existente de Provider para tarefas sem ferramenta. O teste integrado valida o caminho completo sem chamar o Provider quando uma ferramenta está configurada.
 
 ## Limites atuais verificados
 - Checkpoints ainda não possuem persistência durável.
@@ -52,7 +54,8 @@ O Checkpoint Engine atualmente é explícito e desacoplado: captura/recupera est
 ## Testes / CI
 - Testes específicos de Checkpoint estão em `tests/unit/test_checkpoint.py`.
 - `tests/unit/test_tools_registry.py` cobre governança, checkpoint, observação, verificação, auditoria de resultado e auditoria de falha.
-- O CI do HEAD `50e2b468...` precisa ser confirmado antes de marcar este estado como validado.
+- `tests/integration/test_orquestrador_ferramentas.py` valida o fluxo integrado Orchestrator → Tool Registry.
+- CI Run #138 (`34658836451`) está verde em Python 3.11–3.14 para o HEAD `f67f270...`.
 
 ## Estado de fase
 **Fases históricas concluídas + evolução arquitetural pós-release em reconciliação.**
