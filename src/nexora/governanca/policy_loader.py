@@ -21,8 +21,8 @@ def carregar_policy_toml(caminho: Path) -> PolicyEngine:
         raise ConfiguracaoInvalida(f"[policy] possui campos desconhecidos: {nomes}")
 
     version = policy.get("version")
-    if not isinstance(version, int) or isinstance(version, bool) or version != 1:
-        raise ConfiguracaoInvalida("policy.version deve ser 1")
+    if not isinstance(version, int) or isinstance(version, bool) or version != 2:
+        raise ConfiguracaoInvalida("policy.version deve ser 2")
 
     default = policy.get("default", EfeitoPolitica.DENY.value)
     try:
@@ -38,10 +38,15 @@ def carregar_policy_toml(caminho: Path) -> PolicyEngine:
     for indice, item in enumerate(regras_raw):
         if not isinstance(item, dict):
             raise ConfiguracaoInvalida(f"policy.rules[{indice}] deve ser uma tabela")
-        desconhecidos = set(item) - {"effect", "requester", "executor", "task"}
+        desconhecidos = set(item) - {"id", "effect", "requester", "executor", "task"}
         if desconhecidos:
             nomes = ", ".join(sorted(desconhecidos))
             raise ConfiguracaoInvalida(f"policy.rules[{indice}] possui campos desconhecidos: {nomes}")
+
+        rule_id = item.get("id")
+        if not isinstance(rule_id, str) or not rule_id.strip():
+            raise ConfiguracaoInvalida(f"policy.rules[{indice}].id deve ser texto nao vazio")
+
         try:
             efeito = EfeitoPolitica(item["effect"])
         except (KeyError, TypeError, ValueError) as exc:
@@ -59,9 +64,12 @@ def carregar_policy_toml(caminho: Path) -> PolicyEngine:
                 )
             valores[destino] = valor
 
-        regras.append(RegraPolitica(efeito=efeito, **valores))
+        regras.append(RegraPolitica(id=rule_id, efeito=efeito, **valores))
 
-    return PolicyEngine(regras, padrao=padrao, versao=version, origem=str(Path(caminho)))
+    try:
+        return PolicyEngine(regras, padrao=padrao, versao=version, origem=str(Path(caminho)))
+    except ValueError as exc:
+        raise ConfiguracaoInvalida(str(exc)) from exc
 
 
 __all__ = ["carregar_policy_toml"]
