@@ -4,8 +4,9 @@
 
 ## Estado Atual
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- Último HEAD implementado nesta etapa: `20fe318b825e3b06603b44bad92208ccb6a9d539`.
-- Este HEAD contém a atualização documental do fechamento do fluxo de ferramentas; o CI desse HEAD ainda deve ser confirmado.
+- HEAD de código validado: `f67f270c25609559264c19ef7a2561cc359873b8`.
+- CI do HEAD de código: Run #138 (`34658836451`) — **SUCCESS** em Python 3.11, 3.12, 3.13 e 3.14.
+- Depois da validação foram feitas apenas atualizações documentais sequenciais; o HEAD documental final é posterior ao HEAD de código validado.
 - O projeto continua evoluindo após v1.0.0 sem criar nova fase.
 
 ## Onde Parou
@@ -27,6 +28,10 @@ Implementado no `RegistryFerramentas`:
 
 `Pedido → Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`
 
+E integrado ao Orchestrator:
+
+`Goal/Plan/Task → Orchestrator → Registry → Permission/Policy → Checkpoint → Tool → Observation → Verification → Audit → Result → Orchestrator`
+
 Contrato:
 - autorização ocorre antes da ação;
 - checkpoint ocorre imediatamente antes da ferramenta;
@@ -36,7 +41,8 @@ Contrato:
 - `RegistroAuditoria` pode ser injetado no Registry;
 - sucesso gera `ferramenta.resultado`;
 - exceção do executor gera `ferramenta.falhou` e a exceção original é propagada;
-- auditoria não copia parâmetros nem o resultado bruto, reduzindo risco de exposição de dados sensíveis.
+- auditoria não copia parâmetros nem o resultado bruto, reduzindo risco de exposição de dados sensíveis;
+- tarefas sem ferramenta continuam usando o caminho existente de Provider.
 
 ## Checkpoint Engine
 Implementado em `src/nexora/runtime/checkpoint.py`.
@@ -51,17 +57,13 @@ Contrato atual:
 - Auditoria opcional reutiliza `RegistroAuditoria`.
 - O componente é deliberadamente em memória nesta etapa; persistência durável e rollback externo ficam fora do MVP.
 
-## Arquitetura real da execução
-Para ferramentas:
-`Pedido → Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`
-
-Para delegação:
-`Delegação → Policy → ALLOW/DENY → Executor → Runtime/Verificação → Recovery → Experiência + Auditoria`
-
-O Checkpoint Engine continua sendo um boundary de estado, não um executor. A integração no Registry é explícita e mínima.
+## Validação
+- Correção do teste integrado para usar o argumento correto `origem=` no `PolicyEngine`.
+- HEAD de código `f67f270c25609559264c19ef7a2561cc359873b8` validado por CI Run #138 (`34658836451`).
+- Todos os quatro jobs do matrix Python 3.11–3.14 concluíram com `success`.
+- A atualização documental subsequente não altera código executável.
 
 ## Limites / Lacunas verificadas
-- CI ainda precisa ser confirmado para o HEAD documental mais recente.
 - Checkpoints ainda são em memória.
 - Não existe rollback de efeitos externos.
 - Registry/capabilities continuam em memória.
@@ -71,14 +73,15 @@ O Checkpoint Engine continua sendo um boundary de estado, não um executor. A in
 
 ## Testes / CI
 - Foram adicionados testes para permission boundary, policy lifecycle, tool governance, Sandbox governance e Checkpoint Engine.
-- `tests/unit/test_tools_registry.py` agora cobre auditoria de resultado, auditoria de falha e o fluxo observado/verificado.
-- O próximo passo operacional é confirmar o CI do HEAD atual antes de qualquer nova alteração arquitetural.
+- `tests/unit/test_tools_registry.py` cobre auditoria de resultado, auditoria de falha e o fluxo observado/verificado.
+- `tests/integration/test_orquestrador_ferramentas.py` cobre o caminho Orchestrator → Registry e confirma que o Provider não é chamado quando a tarefa usa ferramenta.
+- CI Run #138 (`34658836451`) está verde em Python 3.11–3.14.
 
 ## Classificação arquitetural
 Os componentes pós-release continuam classificados como **ADAPTAR/CRIAR dentro da arquitetura própria da NEXORA**. Não houve cópia de implementação privada externa.
 
 ## Próximo Passo
-**Validar o HEAD atual por CI e, se verde, realizar somente uma auditoria arquitetural/documental do conjunto antes de iniciar o próximo componente.**
+**Com o fluxo Orchestrator → Tool Registry validado, o próximo trabalho deve começar por uma auditoria arquitetural do limite entre Orchestrator, Agent Runtime e Delegation/Recovery, procurando especificamente se o caminho de ferramenta contorna sem querer o ciclo EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR.**
 
 Não criar nova fase automaticamente.
 
@@ -87,12 +90,13 @@ Antes de qualquer novo componente:
 2. verificar CI;
 3. procurar implementação existente e documentação relacionada;
 4. preservar Long-Term Autonomy e contratos atuais;
-5. evitar duplicação e acoplamento prematuro.
+5. evitar duplicação e acoplamento prematuro;
+6. só implementar depois de identificar a lacuna arquitetural concreta.
 
 ## Instruções para o próximo agente
 1. Ler este HANDOFF e `08_CURRENT_STATE.md`.
 2. Confirmar o HEAD real do `main`.
-3. Verificar o CI do HEAD real antes de alterar código.
+3. Verificar o CI do HEAD de código antes de alterar código.
 4. Não assumir que v1.0.0 é o estado atual.
 5. Não criar nova fase sem comando explícito do coordenador.
 6. Antes de alterar um arquivo, ler seu conteúdo atual e trabalhar com o SHA atual.
