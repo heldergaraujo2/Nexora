@@ -4,8 +4,8 @@
 
 ## Estado Atual
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- HEAD de código validado antes desta atualização documental: `68c93b0dc6710fc375fcff237f38737467f245a5`.
-- A documentação está sendo sincronizada com esse estado; os commits documentacionais subsequentes devem gerar novo HEAD e novo CI.
+- Último HEAD de código validado: `eccff2d3390807cfc0c7e839f6a055a0b1a867c5`.
+- A documentação está sendo sincronizada com esse estado; os commits documentacionais subsequentes gerarão novo HEAD e novo CI.
 - O projeto não está congelado em v1.0.0.
 - Não foi criada uma nova fase.
 
@@ -28,7 +28,10 @@ Depois dela foram implementados e validados:
 - recovery de delegações;
 - registro de experiências;
 - auditoria append-only;
-- `PolicyEngine` mínimo com ALLOW/DENY e auditoria da decisão.
+- `PolicyEngine` mínimo com ALLOW/DENY e auditoria da decisão;
+- loader declarativo TOML versionado para políticas;
+- validação estrita do schema de política;
+- rastreabilidade da decisão com versão e origem da política.
 
 ## Arquitetura real da execução delegada
 `Delegação → Policy → ALLOW/DENY → Executor → Runtime/Verificação → Recovery → Experiência + Auditoria`
@@ -43,20 +46,30 @@ Depois dela foram implementados e validados:
 - `RegistroExperiencias` registra o resultado terminal.
 - `RegistroAuditoria` persiste eventos relevantes em JSONL append-only.
 - `PolicyEngine` aplica regras ordenadas e default DENY antes da execução.
+- `carregar_policy_toml()` fornece a entrada declarativa, mantendo parser e motor de decisão separados.
+
+## Política declarativa
+- Schema atual: `[policy]`, `version = 1`, `default = "deny"` e `[[policy.rules]]` com `effect`, `requester`, `executor` e `task` opcionais.
+- Loader baseado em `tomllib`, sem dependência externa.
+- Campos desconhecidos, versão inválida, tipos ambíguos, efeitos inválidos, regras malformadas e TOML inválido são rejeitados.
+- Default continua sendo DENY e não há execução de código proveniente da configuração.
+- `DecisaoPolitica` preserva `versao` e `origem`; a auditoria registra esses metadados.
+- YAML permanece fora do escopo atual.
 
 ## Limites / Lacunas verificadas
-- Policy ainda é um MVP em memória, com regras construídas em código.
-- ADR-009 prevê política declarativa/versionada em TOML/YAML; ainda falta o loader declarativo e seu versionamento/validação.
+- Ainda não há identidade explícita de regra/match ID na decisão auditada.
+- Ainda não há fingerprint/hash do conteúdo da política; a origem identifica o caminho do arquivo.
+- Não há hot reload de políticas.
 - Não há estado `DENEGADA` no enum atual; por isso uma negação de política termina como `FALHOU`, com motivo auditado.
 - Registry/capabilities continuam em memória.
 - Execução delegada é síncrona/in-memory; não há fila distribuída, workers persistentes ou transporte externo.
 - Ainda não existe um ciclo autônomo completo de planejamento multi-agente, execução, economia e evolução.
 
 ## Testes / CI
-- Última evidência verde de código: workflow `34647078404`.
-- Python 3.11, 3.12, 3.13 e 3.14: **success**.
+- Workflow de código `34649533683` confirmou Python 3.11, 3.12, 3.13 e 3.14: **success** em todos os jobs.
 - A etapa de Policy teve uma falha inicial por ausência do pacote `nexora.experiencia`; `src/nexora/experiencia/__init__.py` foi criado/exportado e o CI posterior ficou verde.
-- A suíte atual cobre delegação, runtime, recovery, experiência, auditoria e Policy ALLOW/DENY além dos componentes anteriores.
+- A suíte atual cobre delegação, runtime, recovery, experiência, auditoria, Policy ALLOW/DENY, loader TOML e metadados de rastreabilidade.
+- Os commits documentacionais desta sincronização ainda precisam passar pelo CI antes de serem considerados o novo estado documental validado.
 
 ## Classificação arquitetural
 Os componentes pós-release continuam classificados como **ADAPTAR/CRIAR dentro da arquitetura própria da NEXORA**, quando aplicável. Não houve cópia de implementação privada externa.
@@ -64,7 +77,12 @@ Os componentes pós-release continuam classificados como **ADAPTAR/CRIAR dentro 
 ## Próximo Passo
 **Não iniciar uma nova fase automaticamente.**
 
-Próxima evolução recomendada para análise arquitetural: avaliar a transformação do `PolicyEngine` MVP em uma política declarativa/versionada compatível com ADR-009 (TOML/YAML), incluindo validação, carregamento seguro, versionamento e auditoria, antes de implementar.
+Próxima evolução recomendada para análise arquitetural: auditar a governança de decisão antes de implementar outro componente, especialmente:
+1. identidade explícita da regra que produziu a decisão;
+2. distinção semântica entre `DENY` e `FALHOU` / eventual estado `DENEGADA`;
+3. fingerprint/hash da política para rastreabilidade forte;
+4. lifecycle de carregamento e eventual reload seguro;
+5. fronteira de permissões para ações sensíveis.
 
 Essa é uma recomendação técnica, não uma autorização automática de implementação.
 
