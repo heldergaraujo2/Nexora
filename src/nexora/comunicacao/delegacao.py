@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any
 import uuid
 
+from ..agentes.registro import RegistroAgentes
 from .bus import CommunicationBus
 
 
@@ -48,8 +49,9 @@ class Delegacao:
 class DelegadorAgentes:
     """Coordena o contrato de delegacao sem executar a tarefa delegada."""
 
-    def __init__(self, bus: CommunicationBus) -> None:
+    def __init__(self, bus: CommunicationBus, registro: RegistroAgentes | None = None) -> None:
         self.bus = bus
+        self.registro = registro
         self._delegacoes: dict[str, Delegacao] = {}
 
     def delegar(self, *, solicitante: str, executor: str, tarefa: str,
@@ -62,6 +64,25 @@ class DelegadorAgentes:
         delegacao.mensagem_id = mensagem.id
         self._delegacoes[delegacao.id] = delegacao
         return delegacao
+
+    def delegar_por_capacidade(self, *, solicitante: str, capacidade: str, tarefa: str,
+                               prioridade: float = 0.5,
+                               contexto: dict[str, Any] | None = None) -> Delegacao:
+        """Seleciona automaticamente o agente disponivel mais bem classificado."""
+        if self.registro is None:
+            raise RuntimeError("registro de agentes nao configurado")
+        agente = self.registro.melhor_para(capacidade)
+        if agente is None:
+            raise LookupError(f"nenhum agente disponivel para a capacidade: {capacidade}")
+        contexto_final = {} if contexto is None else dict(contexto)
+        contexto_final.setdefault("capacidade_solicitada", capacidade)
+        return self.delegar(
+            solicitante=solicitante,
+            executor=agente.id,
+            tarefa=tarefa,
+            prioridade=prioridade,
+            contexto=contexto_final,
+        )
 
     def atualizar(self, delegacao_id: str, *, estado: EstadoDelegacao,
                   resultado: Any = None, erro: str | None = None) -> Delegacao:
