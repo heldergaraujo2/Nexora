@@ -32,7 +32,7 @@ def test_orquestrador_percorre_fluxo_completo_de_ferramenta(tmp_path):
                 tarefa="executar",
             )
         ],
-        origin="integration-test",
+        origem="integration-test",
     )
     permissoes = GerenciadorPermissoes(policy, auditoria=auditoria)
     ferramentas = RegistryFerramentas(
