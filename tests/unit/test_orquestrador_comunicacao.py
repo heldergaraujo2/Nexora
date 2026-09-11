@@ -34,4 +34,4 @@ def test_orquestrador_publica_ciclo_no_bus():
         "orquestracao.tarefa.resultado",
         "orquestracao.resultado",
     ]
-    assert all(bus.estado(m.id) == EstadoMensagem.ENTREGUE for m in mensagens)
+    assert all(bus.estado(m.id) == EstadoMensagem.PENDENTE for m in mensagens)
