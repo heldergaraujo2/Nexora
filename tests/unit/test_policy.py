@@ -16,6 +16,8 @@ def test_policy_engine_allow_por_regra():
 
     assert decisao.efeito is EfeitoPolitica.ALLOW
     assert decisao.permitido is True
+    assert decisao.versao == 1
+    assert decisao.origem is None
 
 
 def test_policy_engine_deny_por_padrao():
@@ -33,12 +35,27 @@ def test_policy_engine_deny_por_padrao():
     assert decisao.permitido is False
 
 
+def test_policy_engine_preserva_versao_e_origem():
+    policy = PolicyEngine(versao=3, origem="config/policy.toml")
+
+    decisao = policy.decidir(
+        solicitante="orchestrator",
+        executor="research-agent",
+        tarefa="pesquisar",
+    )
+
+    assert decisao.versao == 3
+    assert decisao.origem == "config/policy.toml"
+
+
 def test_executor_permite_execucao_e_audita_decisao(tmp_path):
     bus = CommunicationBus()
     delegador = DelegadorAgentes(bus)
     auditoria = RegistroAuditoria(tmp_path / "audit.jsonl")
     policy = PolicyEngine(
-        [RegraPolitica(EfeitoPolitica.ALLOW, solicitante="orchestrator", executor="research-agent")]
+        [RegraPolitica(EfeitoPolitica.ALLOW, solicitante="orchestrator", executor="research-agent")],
+        versao=2,
+        origem="config/policy.toml",
     )
     executor = ExecutorDelegacoes(bus, delegador, auditoria=auditoria, policy=policy)
     chamadas = []
@@ -56,6 +73,8 @@ def test_executor_permite_execucao_e_audita_decisao(tmp_path):
     assert eventos[0]["evento"] == "politica.decisao"
     assert eventos[0]["dados"]["efeito"] == "allow"
     assert eventos[0]["dados"]["permitido"] is True
+    assert eventos[0]["dados"]["versao"] == 2
+    assert eventos[0]["dados"]["origem"] == "config/policy.toml"
     assert [item["evento"] for item in eventos] == [
         "politica.decisao",
         "delegacao.aceita",
@@ -68,7 +87,9 @@ def test_executor_negar_execucao_e_audita_decisao(tmp_path):
     delegador = DelegadorAgentes(bus)
     auditoria = RegistroAuditoria(tmp_path / "audit.jsonl")
     policy = PolicyEngine(
-        [RegraPolitica(EfeitoPolitica.DENY, solicitante="orchestrator", executor="coding-agent")]
+        [RegraPolitica(EfeitoPolitica.DENY, solicitante="orchestrator", executor="coding-agent")],
+        versao=4,
+        origem="governanca/policy.toml",
     )
     executor = ExecutorDelegacoes(bus, delegador, auditoria=auditoria, policy=policy)
     chamadas = []
@@ -87,6 +108,8 @@ def test_executor_negar_execucao_e_audita_decisao(tmp_path):
     assert eventos[0]["evento"] == "politica.decisao"
     assert eventos[0]["dados"]["efeito"] == "deny"
     assert eventos[0]["dados"]["permitido"] is False
+    assert eventos[0]["dados"]["versao"] == 4
+    assert eventos[0]["dados"]["origem"] == "governanca/policy.toml"
     assert [item["evento"] for item in eventos] == [
         "politica.decisao",
         "delegacao.falhou",
