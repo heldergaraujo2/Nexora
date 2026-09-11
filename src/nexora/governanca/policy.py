@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+import hashlib
+import json
 from typing import Any, Iterable
 
 
@@ -31,6 +33,15 @@ class RegraPolitica:
             and (self.tarefa is None or self.tarefa == tarefa)
         )
 
+    def para_fingerprint(self) -> dict[str, str | None]:
+        return {
+            "id": self.id,
+            "efeito": self.efeito.value,
+            "solicitante": self.solicitante,
+            "executor": self.executor,
+            "tarefa": self.tarefa,
+        }
+
 
 @dataclass(frozen=True)
 class DecisaoPolitica:
@@ -39,6 +50,7 @@ class DecisaoPolitica:
     regra: RegraPolitica | None = None
     versao: int = 1
     origem: str | None = None
+    fingerprint: str | None = None
 
     @property
     def permitido(self) -> bool:
@@ -75,6 +87,22 @@ class PolicyEngine:
         self.padrao = EfeitoPolitica(padrao)
         self.versao = versao
         self.origem = origem
+        self.fingerprint = self._calcular_fingerprint()
+
+    def _calcular_fingerprint(self) -> str:
+        """Calcula SHA-256 do conteudo semantico da politica, sem incluir a origem."""
+        documento = {
+            "version": self.versao,
+            "default": self.padrao.value,
+            "rules": [regra.para_fingerprint() for regra in self.regras],
+        }
+        canonico = json.dumps(
+            documento,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hashlib.sha256(canonico).hexdigest()
 
     def decidir(self, *, solicitante: str, executor: str, tarefa: str) -> DecisaoPolitica:
         if not solicitante.strip() or not executor.strip() or not tarefa.strip():
@@ -87,6 +115,7 @@ class PolicyEngine:
                     regra,
                     self.versao,
                     self.origem,
+                    self.fingerprint,
                 )
         return DecisaoPolitica(
             self.padrao,
@@ -94,6 +123,7 @@ class PolicyEngine:
             None,
             self.versao,
             self.origem,
+            self.fingerprint,
         )
 
     def autorizar(self, delegacao: Any) -> DecisaoPolitica:
