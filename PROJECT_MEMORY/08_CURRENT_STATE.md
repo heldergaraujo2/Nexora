@@ -4,46 +4,55 @@
 
 ## Versão / HEAD atual
 - Release histórica: v1.0.0, tag apontando para `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- HEAD atual: `16a425a8c2dacdaa841b9678f6f6651155adee07`.
-- O `main` está 41 commits à frente do commit da tag v1.0.0: 39 commits de evolução pós-release + 2 commits de correção dos testes de integração do CommunicationBus.
-- A versão de pacote continua `1.0.0`; isso não significa que a arquitetura esteja congelada.
+- HEAD atual verificado: `68c93b0dc6710fc375fcff237f38737467f245a5`.
+- O `main` continua evoluindo após v1.0.0; a versão de pacote permanece `1.0.0`.
 
 ## Estado arquitetural real
-A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, o código evoluiu com uma camada transversal de contexto, conhecimento, world model, objetivos, estratégias, comunicação e arquitetura multi-agente.
+A Fase 16 — Long-Term Autonomy continua concluída e preservada. Depois dela, a arquitetura evoluiu com contexto, conhecimento, world model, objetivos, estratégias e uma infraestrutura multi-agente com comunicação, delegação, execução, verificação, recuperação, experiência, auditoria e governança.
 
 ### Componentes pós-v1.0.0 verificados
-- `src/nexora/contexto/engine.py` — `Contexto` e `ContextEngine`, montagem determinística de contexto.
-- `src/nexora/conhecimento/engine.py` — `Conhecimento` e `KnowledgeEngine`, conhecimento com fonte, evidências, confiança e validação; busca lexical no MVP.
-- `src/nexora/mundo/engine.py` — `Observacao`, `EstadoMundo` e `WorldModelEngine`, registro de evidências e resolução determinística por confiança.
-- `src/nexora/objetivos/engine.py` — `ObjetivoMeta` e `GoalEngine`, criação, priorização e progresso de metas.
-- `src/nexora/estrategias/engine.py` — `Estrategia` e `StrategyEngine`, avaliação e ranking determinístico de estratégias.
-- `src/nexora/comunicacao/bus.py` — `CommunicationBus`, mensagens tipadas em memória, assinatura, correlação e estados PENDENTE/ENTREGUE/LIDA.
-- `src/nexora/comunicacao/delegacao.py` — `Delegacao` e `DelegadorAgentes`, solicitação/atualização de delegações e correlação de respostas.
-- `src/nexora/agentes/registro.py` — `AgenteRegistro` e `RegistroAgentes`, catálogo de agentes, capacidades, tags, prioridade, disponibilidade e descoberta determinística.
-- `src/nexora/runtime/agente.py` — publicação opcional do ciclo do runtime no bus.
-- `src/nexora/orquestracao/orquestrador.py` — publicação opcional do ciclo de orquestração no bus.
+- `src/nexora/contexto/engine.py` — `Contexto` e `ContextEngine`.
+- `src/nexora/conhecimento/engine.py` — `Conhecimento` e `KnowledgeEngine`.
+- `src/nexora/mundo/engine.py` — `Observacao`, `EstadoMundo` e `WorldModelEngine`.
+- `src/nexora/objetivos/engine.py` — `ObjetivoMeta` e `GoalEngine`.
+- `src/nexora/estrategias/engine.py` — `Estrategia` e `StrategyEngine`.
+- `src/nexora/comunicacao/bus.py` — `CommunicationBus`.
+- `src/nexora/comunicacao/delegacao.py` — `Delegacao`, `DelegadorAgentes` e `ExecutorDelegacoes`.
+- `src/nexora/agentes/registro.py` — `AgenteRegistro` e `RegistroAgentes`, incluindo descoberta por capacidade.
+- `src/nexora/runtime/agente.py` — ciclo EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR e publicação opcional no Bus.
+- `src/nexora/orquestracao/orquestrador.py` — ciclo de orquestração e publicação opcional no Bus.
+- `src/nexora/experiencia/registro.py` — registro de experiências de resultados terminais de delegação.
+- `src/nexora/auditoria/registro.py` — auditoria append-only em JSONL.
+- `src/nexora/governanca/policy.py` — `PolicyEngine`, `RegraPolitica`, `DecisaoPolitica` e efeitos ALLOW/DENY.
+
+## Fluxo atual de execução delegada
+`DELEGAÇÃO → POLICY → ALLOW/DENY → EXECUTOR → RUNTIME/VERIFICAÇÃO → RECOVERY → EXPERIÊNCIA + AUDITORIA`
+
+- Com `ALLOW`, a delegação passa por `ACEITA`, execução do handler/runtime, verificações/retries e termina em `CONCLUIDA` quando bem-sucedida.
+- Com `DENY`, o handler não é executado; a delegação termina atualmente como `FALHOU`, com a decisão de política e o motivo registrados na auditoria.
+- A integração é síncrona e em memória; não constitui ainda um sistema distribuído.
 
 ## Limites atuais verificados
-- Registry de agentes/capacidades é em memória; não há persistência/versionamento completo do registry.
-- Descoberta por capacidade é exata após normalização e seleciona pelo maior `prioridade`, com desempate por `id`.
-- `DelegadorAgentes` envia a solicitação e publica o resultado quando `atualizar()` é chamado; ele não executa automaticamente a tarefa delegada.
-- O CommunicationBus é infraestrutura de transporte/registro; não chama providers nem executa ferramentas.
-- Runtime e Orchestrator publicam eventos, mas a integração atual não constitui ainda um ciclo autônomo completo de execução entre múltiplos agentes.
-- Os engines de Context, Knowledge, World Model, Goals e Strategy são MVPs determinísticos e em memória, sem afirmar capacidades semânticas, persistência ou autonomia que ainda não existem.
+- `PolicyEngine` é um MVP em memória: regras ordenadas, primeira correspondência vence e default `DENY`.
+- ADR-009 prevê política declarativa e versionada em TOML/YAML; ainda não existe loader declarativo. Isso é evolução futura, não implementada nesta etapa.
+- `RegistroAgentes` e descoberta/capacidades continuam em memória.
+- `ExecutorDelegacoes` é síncrono/in-memory e depende de handlers/runtimes explicitamente registrados.
+- O runtime fornece verificação e recuperação internas; o executor fornece recovery no nível da delegação.
+- Auditoria é append-only em JSONL; experiência registra o resultado terminal da delegação.
+- Não existe ainda um ciclo autônomo completo de planejamento → múltiplos agentes → execução → economia/evolução.
+- Não foi criada uma nova fase.
 
 ## Long-Term Autonomy
 - `src/nexora/autonomia/registro.py` permanece preservado.
 - `MetaLongoPrazo` e `RegistroAutonomia` continuam responsáveis por metas de longo prazo e persistência JSONL append-only.
 - CLI `nexora autonomia definir|atualizar|listar|resumir` permanece parte do sistema.
 
-## Testes
-- Última execução CI observada no HEAD anterior à correção: `163 passed, 2 failed`.
-- As duas falhas estavam em `test_runtime_comunicacao.py` e `test_orquestrador_comunicacao.py`: os testes esperavam `ENTREGUE` sem assinante, enquanto o CommunicationBus define `ENTREGUE` quando há entrega a callbacks e mantém `PENDENTE` quando não há assinantes.
-- Os dois testes foram corrigidos de forma mínima para refletir o contrato existente, sem alterar o CommunicationBus.
-- Nova execução CI foi disparada pelo commit `836ade6...`; resultado final deve ser registrado no próximo refresh do Handoff antes do commit de documentação.
+## Testes / CI
+- Última evidência verde: workflow `34647078404`, com Python 3.11, 3.12, 3.13 e 3.14 em sucesso.
+- A suíte atual inclui cobertura para execução delegada, integração com Runtime, recovery, experiência, auditoria e PolicyEngine ALLOW/DENY.
+- Uma falha inicial do CI da etapa de Policy foi corrigida pela criação/exportação de `src/nexora/experiencia/__init__.py`; a execução posterior ficou verde.
 
 ## Estado de fase
-Não foi criada uma nova fase. O estado correto é:
 **Fases históricas concluídas + evolução arquitetural pós-release em reconciliação.**
 
 Não iniciar um novo componente/fase automaticamente.
