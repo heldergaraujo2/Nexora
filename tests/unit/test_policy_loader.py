@@ -18,16 +18,18 @@ def test_carregar_policy_toml_allow_e_deny(tmp_path):
     caminho = tmp_path / "policy.toml"
     caminho.write_text(
         """[policy]
-version = 1
+version = 2
 default = "deny"
 
 [[policy.rules]]
+id = "allow-research"
 effect = "allow"
 requester = "orchestrator"
 executor = "research-agent"
 task = "pesquisar"
 
 [[policy.rules]]
+id = "deny-research"
 effect = "deny"
 executor = "research-agent"
 """,
@@ -48,12 +50,15 @@ executor = "research-agent"
     )
 
     assert allow.efeito is EfeitoPolitica.ALLOW
+    assert allow.regra_id == "allow-research"
     assert deny.efeito is EfeitoPolitica.DENY
+    assert deny.regra_id == "deny-research"
+    assert policy.versao == 2
 
 
-def test_carregar_policy_toml_exige_versao_1(tmp_path):
+def test_carregar_policy_toml_exige_versao_2(tmp_path):
     caminho = tmp_path / "policy.toml"
-    caminho.write_text('[policy]\nversion = 2\n', encoding="utf-8")
+    caminho.write_text('[policy]\nversion = 1\n', encoding="utf-8")
 
     with pytest.raises(ConfiguracaoInvalida, match="policy.version"):
         carregar_policy_toml(caminho)
@@ -71,7 +76,7 @@ def test_carregar_policy_toml_rejeita_campo_desconhecido_no_policy(tmp_path):
     caminho = tmp_path / "policy.toml"
     caminho.write_text(
         """[policy]
-version = 1
+version = 2
 unknown = "valor"
 """,
         encoding="utf-8",
@@ -85,9 +90,10 @@ def test_carregar_policy_toml_rejeita_campo_desconhecido(tmp_path):
     caminho = tmp_path / "policy.toml"
     caminho.write_text(
         """[policy]
-version = 1
+version = 2
 
 [[policy.rules]]
+id = "allow-research"
 effect = "allow"
 requester = "orchestrator"
 unknown = "valor"
@@ -99,13 +105,52 @@ unknown = "valor"
         carregar_policy_toml(caminho)
 
 
+def test_carregar_policy_toml_rejeita_id_ausente(tmp_path):
+    caminho = tmp_path / "policy.toml"
+    caminho.write_text(
+        """[policy]
+version = 2
+
+[[policy.rules]]
+effect = "allow"
+executor = "research-agent"
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfiguracaoInvalida, match="\.id"):
+        carregar_policy_toml(caminho)
+
+
+def test_carregar_policy_toml_rejeita_id_duplicado(tmp_path):
+    caminho = tmp_path / "policy.toml"
+    caminho.write_text(
+        """[policy]
+version = 2
+
+[[policy.rules]]
+id = "duplicada"
+effect = "allow"
+
+[[policy.rules]]
+id = "duplicada"
+effect = "deny"
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfiguracaoInvalida, match="ids de regras devem ser unicos"):
+        carregar_policy_toml(caminho)
+
+
 def test_carregar_policy_toml_rejeita_efeito_invalido(tmp_path):
     caminho = tmp_path / "policy.toml"
     caminho.write_text(
         """[policy]
-version = 1
+version = 2
 
 [[policy.rules]]
+id = "invalid-effect"
 effect = "execute"
 """,
         encoding="utf-8",
@@ -117,7 +162,7 @@ effect = "execute"
 
 def test_carregar_policy_toml_rejeita_toml_invalido(tmp_path):
     caminho = tmp_path / "policy.toml"
-    caminho.write_text('[policy\nversion = 1\n', encoding="utf-8")
+    caminho.write_text('[policy\nversion = 2\n', encoding="utf-8")
 
     with pytest.raises(ConfiguracaoInvalida, match="TOML invalido"):
         carregar_policy_toml(caminho)
