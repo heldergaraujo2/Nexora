@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -53,8 +54,8 @@ def test_sandbox_allowlist_continua_negando_antes_da_policy() -> None:
         executar.assert_not_called()
 
 
-def test_sandbox_policy_deny_audita_decisao() -> None:
-    auditoria = RegistroAuditoria()
+def test_sandbox_policy_deny_audita_decisao(tmp_path: Path) -> None:
+    auditoria = RegistroAuditoria(tmp_path / "audit.jsonl")
     sandbox = Sandbox(["echo"], permissoes=_permissoes(EfeitoPolitica.DENY, auditoria), solicitante="agente")
     with pytest.raises(PermissaoNegada):
         sandbox.executar("echo segredo")
