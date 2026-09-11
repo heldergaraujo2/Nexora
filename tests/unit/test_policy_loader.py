@@ -59,6 +59,28 @@ def test_carregar_policy_toml_exige_versao_1(tmp_path):
         carregar_policy_toml(caminho)
 
 
+def test_carregar_policy_toml_rejeita_versao_boolean(tmp_path):
+    caminho = tmp_path / "policy.toml"
+    caminho.write_text('[policy]\nversion = true\n', encoding="utf-8")
+
+    with pytest.raises(ConfiguracaoInvalida, match="policy.version"):
+        carregar_policy_toml(caminho)
+
+
+def test_carregar_policy_toml_rejeita_campo_desconhecido_no_policy(tmp_path):
+    caminho = tmp_path / "policy.toml"
+    caminho.write_text(
+        """[policy]
+version = 1
+unknown = "valor"
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfiguracaoInvalida, match="\[policy\].*campos desconhecidos"):
+        carregar_policy_toml(caminho)
+
+
 def test_carregar_policy_toml_rejeita_campo_desconhecido(tmp_path):
     caminho = tmp_path / "policy.toml"
     caminho.write_text(
