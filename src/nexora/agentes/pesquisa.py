@@ -6,6 +6,7 @@ from typing import Any, Callable
 from nexora.runtime.agente import AgenteRuntime
 from nexora.runtime.analise import AnalisadorFalhas
 from nexora.runtime.correcao import Corrector
+from nexora.runtime.observacao import Observacao
 from nexora.runtime.verificacao import texto_nao_vazio
 
 
@@ -83,9 +84,9 @@ class ResearchAgent:
             return False
         return True
 
-    def _analisar(self, observacao: dict) -> Any:
+    def _analisar(self, observacao: Observacao) -> Any:
         if self._ultimo_erro:
-            observacao["erro"] = self._ultimo_erro
+            observacao.erro = self._ultimo_erro
         return AnalisadorFalhas().analisar(observacao)
 
     def pesquisar(self, pergunta: str, *, quantidade: int =3) -> Any:
