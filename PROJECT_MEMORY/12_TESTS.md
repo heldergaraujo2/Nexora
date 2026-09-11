@@ -6,37 +6,45 @@
 - `python3 -m pytest tests/ -q`
 
 ## Estado verificado
-- HEAD de código validado: `dec0bbd4430bbe5883476112704ea78c97b90be3`.
-- Workflow `34653209175`: Python 3.11, 3.12, 3.13 e 3.14 — todos os jobs em **success**.
-- A versão da release v1.0.0 tinha 128 testes; o estado atual é superior e não deve usar 128 como contagem corrente.
+- Último HEAD implementado: `8745681cb21a71690a2360f0b7851ca2d3e50027`.
+- Não há workflow associado retornado para esse HEAD; portanto ele ainda não está marcado como validado por CI.
+- Última matriz CI comprovadamente verde: workflow `34653209175`, Python 3.11, 3.12, 3.13 e 3.14, no HEAD histórico `dec0bbd4430bbe5883476112704ea78c97b90be3`.
 
 ## Cobertura dos componentes pós-release
-- Context Engine: `tests/unit/test_contexto.py` — 4 testes.
-- Knowledge Engine: `tests/unit/test_conhecimento.py` — 5 testes.
-- World Model: `tests/unit/test_mundo.py` — 5 testes.
-- Goal Engine: `tests/unit/test_objetivos.py` — 3 testes.
-- Strategy Engine: `tests/unit/test_estrategias.py` — 3 testes.
-- Communication Bus: `tests/unit/test_comunicacao.py` — 5 testes.
-- Delegation: `tests/unit/test_delegacao.py` — cobertura do fluxo básico.
-- Capability Delegation: `tests/unit/test_delegacao_capacidade.py` — cobertura de seleção por capacidade.
-- Agent Registry: `tests/unit/test_registro_agentes.py` — 4 testes.
-- Runtime ↔ Bus: `tests/unit/test_runtime_comunicacao.py` — 2 testes.
-- Orchestrator ↔ Bus: `tests/unit/test_orquestrador_comunicacao.py` — 1 teste.
-- Delegated Runtime: `tests/unit/test_delegacao_runtime.py` — integração do executor com `AgenteRuntime`.
-- Delegated Recovery: `tests/unit/test_delegacao_recovery.py` — retry transitório, falha permanente e validação de tentativas.
-- Experience: `tests/unit/test_delegacao_experiencia.py` — registro do resultado terminal.
-- Audit: `tests/unit/test_auditoria.py` — persistência/filtros e auditoria de sucesso/falha de delegação.
-- Policy: `tests/unit/test_policy.py` — ALLOW, DENY por padrão, identidade de regra, unicidade, fingerprint canônico, integração ALLOW/DENY, distinção `DENEGADA`, auditoria e metadados de versão/origem.
-- Policy Loader: `tests/unit/test_policy_loader.py` — TOML válido, versão 2, IDs obrigatórios/duplicados, campos desconhecidos, efeito inválido e TOML malformado.
+- Context Engine: `tests/unit/test_contexto.py`.
+- Knowledge Engine: `tests/unit/test_conhecimento.py`.
+- World Model: `tests/unit/test_mundo.py`.
+- Goal Engine: `tests/unit/test_objetivos.py`.
+- Strategy Engine: `tests/unit/test_estrategias.py`.
+- Communication Bus: `tests/unit/test_comunicacao.py`.
+- Delegation: `tests/unit/test_delegacao.py`.
+- Capability Delegation: `tests/unit/test_delegacao_capacidade.py`.
+- Agent Registry: `tests/unit/test_registro_agentes.py`.
+- Runtime ↔ Bus: `tests/unit/test_runtime_comunicacao.py`.
+- Orchestrator ↔ Bus: `tests/unit/test_orquestrador_comunicacao.py`.
+- Delegated Runtime: `tests/unit/test_delegacao_runtime.py`.
+- Delegated Recovery: `tests/unit/test_delegacao_recovery.py`.
+- Experience: `tests/unit/test_delegacao_experiencia.py`.
+- Audit: `tests/unit/test_auditoria.py`.
+- Policy: `tests/unit/test_policy.py`.
+- Policy Loader: `tests/unit/test_policy_loader.py`.
+- Permission boundary: `tests/unit/test_permissoes.py`.
+- Policy lifecycle: `tests/unit/test_policy_manager.py`.
+- Tool governance: `tests/unit/test_ferramentas_governanca.py`.
+- Sandbox governance: `tests/unit/test_sandbox_governanca.py` — compatibilidade sem política, ALLOW, DENY sem subprocesso, precedência da allowlist e auditoria.
 
 ## Correções relevantes
-- Os testes de runtime e orquestração foram alinhados ao contrato do CommunicationBus: sem assinantes, mensagens permanecem `PENDENTE`; `ENTREGUE` ocorre quando há entrega observada.
-- A primeira execução CI da etapa de Policy falhou por ausência de `src/nexora/experiencia/__init__.py`; o pacote foi corrigido e a execução seguinte ficou totalmente verde.
-- O loader declarativo foi endurecido para rejeitar campos desconhecidos e tipos ambíguos, incluindo `version=true` como substituto inválido de uma versão inteira.
-- A evolução do schema para versão 2 tornou o `id` das regras obrigatório e explicitamente único, permitindo rastrear qual regra produziu cada decisão.
-- O fingerprint de política é calculado de forma canônica com SHA-256 sobre a semântica da política, incluindo ordem das regras e excluindo a origem do arquivo.
-- A negação de governança deixou de ser modelada como falha de execução: `EstadoDelegacao.DENEGADA` possui evento de auditoria próprio e mantém a resposta terminal `delegacao.resultado`.
+- Runtime/orquestração seguem o contrato do CommunicationBus.
+- O pacote `nexora.experiencia` foi corrigido após falha histórica de CI.
+- Loader declarativo rejeita campos desconhecidos e tipos ambíguos.
+- Schema de política versão 2 exige IDs únicos nas regras.
+- Fingerprint de política usa SHA-256 canônico sobre a semântica, incluindo ordem e excluindo origem.
+- `EstadoDelegacao.DENEGADA` separa negação de governança de falha de execução.
+- `GerenciadorPermissoes` cria uma fronteira explícita de autorização sem executar ações.
+- `GerenciadorPolitica` troca políticas atomicamente somente após validação bem-sucedida.
+- Registry de ferramentas e Sandbox podem exigir permissão antes da execução, preservando compatibilidade quando o componente de governança não é configurado.
+- Sandbox não coloca o comando completo no contexto de auditoria de permissão, reduzindo risco de exposição de argumentos sensíveis.
 
 ## Histórico
 - Fase 16 / v1.0.0: 128 testes passando.
-- O número atual é superior a 128; a evidência principal de qualidade é a matriz CI verde em Python 3.11–3.14.
+- O número atual é superior a 128; a contagem corrente deve ser obtida executando a suite, não inferida deste documento.
