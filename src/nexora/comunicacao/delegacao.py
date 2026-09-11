@@ -269,6 +269,7 @@ class ExecutorDelegacoes:
                     "regra_id": decisao.regra_id,
                     "versao": decisao.versao,
                     "origem": decisao.origem,
+                    "fingerprint": decisao.fingerprint,
                 },
             )
             if not decisao.permitido:
