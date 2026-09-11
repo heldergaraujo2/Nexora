@@ -13,10 +13,16 @@ class EfeitoPolitica(str, Enum):
 
 @dataclass(frozen=True)
 class RegraPolitica:
+    id: str
     efeito: EfeitoPolitica
     solicitante: str | None = None
     executor: str | None = None
     tarefa: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.id, str) or not self.id.strip():
+            raise ValueError("id deve ser texto nao vazio")
+        object.__setattr__(self, "id", self.id.strip())
 
     def corresponde(self, *, solicitante: str, executor: str, tarefa: str) -> bool:
         return (
@@ -37,6 +43,10 @@ class DecisaoPolitica:
     @property
     def permitido(self) -> bool:
         return self.efeito is EfeitoPolitica.ALLOW
+
+    @property
+    def regra_id(self) -> str | None:
+        return self.regra.id if self.regra is not None else None
 
 
 class PolicyEngine:
@@ -59,6 +69,9 @@ class PolicyEngine:
         if origem is not None and (not isinstance(origem, str) or not origem.strip()):
             raise ValueError("origem deve ser texto nao vazio quando informada")
         self.regras = tuple(regras)
+        ids = [regra.id for regra in self.regras]
+        if len(ids) != len(set(ids)):
+            raise ValueError("ids de regras devem ser unicos dentro da politica")
         self.padrao = EfeitoPolitica(padrao)
         self.versao = versao
         self.origem = origem
