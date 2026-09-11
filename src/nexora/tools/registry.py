@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, Callable
 from uuid import uuid4
 
+from nexora.auditoria.registro import RegistroAuditoria
 from nexora.governanca.permissoes import GerenciadorPermissoes, PedidoPermissao
 from nexora.runtime.checkpoint import CheckpointEngine
 from nexora.runtime.ferramenta import ResultadoFerramenta
@@ -29,7 +30,7 @@ class Ferramenta:
 
 
 class RegistryFerramentas:
-    """Mapeia ferramentas e aplica permissao, checkpoint e observacao/verificacao opcionais."""
+    """Mapeia ferramentas e aplica governanca, checkpoint e observacao/verificacao opcionais."""
 
     def __init__(
         self,
@@ -38,12 +39,14 @@ class RegistryFerramentas:
         *,
         observador: Callable[[dict[str, Any]], Observacao] | None = None,
         verificador: Verificacao | None = None,
+        auditoria: RegistroAuditoria | None = None,
     ) -> None:
         self._ferramentas: dict[str, Ferramenta] = {}
         self._permissoes = permissoes
         self._checkpoint = checkpoint
         self._observador = observador
         self._verificador = verificador
+        self._auditoria = auditoria
 
     def registrar(self, ferramenta: Ferramenta) -> None:
         self._ferramentas[ferramenta.nome] = ferramenta
@@ -86,9 +89,37 @@ class RegistryFerramentas:
                 motivo="antes_da_acao",
             )
 
-        resultado = ferramenta.executar(parametros)
+        try:
+            resultado = ferramenta.executar(parametros)
+        except Exception as exc:
+            if self._auditoria is not None:
+                self._auditoria.registrar(
+                    "ferramenta.falhou",
+                    entidade="ferramenta",
+                    entidade_id=identificador,
+                    dados={
+                        "ferramenta": ferramenta.nome,
+                        "solicitante": solicitante,
+                        "erro_tipo": type(exc).__name__,
+                        "erro": str(exc),
+                    },
+                )
+            raise
 
         if self._observador is None and self._verificador is None:
+            if self._auditoria is not None:
+                self._auditoria.registrar(
+                    "ferramenta.resultado",
+                    entidade="ferramenta",
+                    entidade_id=identificador,
+                    dados={
+                        "ferramenta": ferramenta.nome,
+                        "solicitante": solicitante,
+                        "sucesso": True,
+                        "observado": False,
+                        "verificado": None,
+                    },
+                )
             return resultado
 
         dados_observacao = {
@@ -121,13 +152,30 @@ class RegistryFerramentas:
             }
             verificado = self._verificador.verificar(contexto_verificacao)
 
-        return ResultadoFerramenta(
+        resultado_estruturado = ResultadoFerramenta(
             ferramenta=ferramenta.nome,
             execucao_id=identificador,
             resultado=resultado,
             observacao=observacao,
             verificado=verificado,
         )
+
+        if self._auditoria is not None:
+            self._auditoria.registrar(
+                "ferramenta.resultado",
+                entidade="ferramenta",
+                entidade_id=identificador,
+                dados={
+                    "ferramenta": ferramenta.nome,
+                    "solicitante": solicitante,
+                    "sucesso": resultado_estruturado.sucesso,
+                    "observado": True,
+                    "observacao_ok": observacao.ok,
+                    "verificado": verificado,
+                },
+            )
+
+        return resultado_estruturado
 
     def nomes(self) -> list[str]:
         return sorted(self._ferramentas)
