@@ -31,8 +31,15 @@ def carregar_policy_toml(caminho: Path) -> PolicyEngine:
     if not isinstance(policy, dict):
         raise ConfiguracaoInvalida("seção [policy] obrigatoria")
 
+    desconhecidos_policy = set(policy) - {"version", "default", "rules"}
+    if desconhecidos_policy:
+        nomes = ", ".join(sorted(desconhecidos_policy))
+        raise ConfiguracaoInvalida(
+            f"[policy] possui campos desconhecidos: {nomes}"
+        )
+
     version = policy.get("version")
-    if version != 1:
+    if not isinstance(version, int) or isinstance(version, bool) or version != 1:
         raise ConfiguracaoInvalida("policy.version deve ser 1")
 
     default = policy.get("default", EfeitoPolitica.DENY.value)
