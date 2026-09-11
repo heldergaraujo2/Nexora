@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from nexora.comunicacao import CommunicationBus
+from nexora.runtime.observacao import Observacao
 
 
 @dataclass
@@ -66,14 +67,27 @@ class AgenteRuntime:
         while tentativas < self._max_tentativas:
             tentativas += 1
             saida = self._executar(objetivo)
-            observacao = {"tentativa": tentativas, "saida": saida, "erro": None}
             ok = self._verificar(saida)
-            historico.append(observacao)
+            observacao = Observacao(
+                etapa_id=f"{self._agent_id}:{tentativas}",
+                ok=ok,
+                saida=saida,
+                erro=None,
+                metadados={"tentativa": tentativas},
+            )
+            observacao_dict = {
+                "tentativa": tentativas,
+                "saida": observacao.saida,
+                "erro": observacao.erro,
+                "ok": observacao.ok,
+                "etapa_id": observacao.etapa_id,
+            }
+            historico.append(observacao_dict)
 
             if not ok:
                 if self._registrar is not None:
-                    self._registrar("observacao", observacao)
-                self._publicar("agente.observacao", observacao)
+                    self._registrar("observacao", observacao_dict)
+                self._publicar("agente.observacao", observacao_dict)
                 falha = self._analisar(observacao)
                 falha_dict = falha.para_dict() if hasattr(falha, "para_dict") else {"plano": str(falha)}
                 if self._registrar is not None:
