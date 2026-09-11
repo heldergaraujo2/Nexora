@@ -1,7 +1,7 @@
-"""Communication Bus da NEXORA para comunicacao e delegacao entre agentes."""
+"""Communication Bus da NEXORA para comunicacao, delegacao e execucao."""
 
 from .bus import CommunicationBus, EstadoMensagem, MensagemAgente
-from .delegacao import Delegacao, DelegadorAgentes, EstadoDelegacao
+from .delegacao import Delegacao, DelegadorAgentes, EstadoDelegacao, ExecutorDelegacoes
 
 __all__ = [
     "CommunicationBus",
@@ -10,4 +10,5 @@ __all__ = [
     "Delegacao",
     "DelegadorAgentes",
     "EstadoDelegacao",
+    "ExecutorDelegacoes",
 ]
