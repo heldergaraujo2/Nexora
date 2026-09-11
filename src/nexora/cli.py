@@ -13,6 +13,7 @@ from nexora.providers.groq import ProviderGroq
 from nexora.providers.registry import RegistryProviders
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
 from nexora.experiencia.registro import RegistroExperiencias
+from nexora.experimentacao.experimento import ExecutorExperimentos, Experimento
 
 
 def _montar_registry():
@@ -57,7 +58,7 @@ def _pesquisar_comando(pergunta, quantidade, alias):
     res = ag.pesquisar(pergunta, quantidade=quantidade)
     print(f"sucesso={res.sucesso} tentativas={res.tentativas}")
     print(res.saida_final)
-    sys.exit(0 if res.sucesso else  1)
+    sys.exit(0 if res.sucesso else 1)
 
 
 def _experiencia_comando(acao, arquivo):
@@ -71,6 +72,21 @@ def _experiencia_comando(acao, arquivo):
     else:
         for r in reg.listar():
             print(f"{r["carimbo"]} {r["tipo_de_tarefa"]} sucesso={r["sucesso"]}")
+
+
+def _experimento_comando(nome, tarefa, variantes, alias):
+    reg = _montar_registry()
+    rot = Roteador(reg)
+    prov = rot.obter_provider(tarefa, alias=alias)
+    exp = Experimento(nome=nome, tarefa=tarefa)
+    for variante in variantes:
+        exp.adicionar_variante(variante)
+    executor = ExecutorExperimentos(prov)
+    res = executor.executar(exp)
+    print(f"experimento={res["experimento"]} variantes={res["total_variantes"]} sucessos={res["sucessos"]}")
+    for r in res["resultados"]:
+        print(f"  {r["indice"]}: sucesso={r["sucesso"]} tentativas={r["tentativas"]}")
+    sys.exit(0 if res["sucessos"] == res["total_variantes"] else 1)
 
 
 def main() -> None:
@@ -101,6 +117,14 @@ def main() -> None:
     p_listar = p_exp_sub.add_parser("listar", help="lista experiencias")
     p_listar.add_argument("--arquivo", required=True, help="caminho do arquivo de experiencias")
 
+    p_expm = sub.add_parser("experimento", help="define e roda experimentos de abordagem")
+    p_expm_sub = p_expm.add_subparsers(dest="acao", required=True)
+    p_rodar = p_expm_sub.add_parser("rodar", help="roda um experimento com variantes")
+    p_rodar.add_argument("--nome", required=True, help="nome do experimento")
+    p_rodar.add_argument("--tarefa", required=True, help="tarefa em linguagem natural")
+    p_rodar.add_argument("--variante", dest="variantes", action="append", required=True, help="variante de abordagem (repetivel)")
+    p_rodar.add_argument("--provider", dest="provider", default=None, help="alias do provider")
+
     args = parser.parse_args()
     if args.comando == "info":
         print(f"NEXORA {__about__.__version__} — plataforma de agentes de IA model-agnostica")
@@ -108,6 +132,8 @@ def main() -> None:
         _executar_comando(args.objetivo, alias=args.provider)
     elif args.comando == "experiencia":
         _experiencia_comando(args.acao, arquivo=args.arquivo)
+    elif args.comando == "experimento":
+        _experimento_comando(args.nome, args.tarefa, args.variantes, alias=args.provider)
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)

@@ -3,10 +3,10 @@
 > **Arquivo principal de continuidade do projeto.** Todo novo agente/engenheiro/coordenador deve comecar por este documento.
 
 ## Estado Atual
-- **Versão:** v0.8.0( Fase 8 completa e pushada; Fase 9 em NEXT_COMMAND.md.
-- **Fase atual:** Fase 8 — Experience Engine(**CONCLUÍDA**: RegistroExperiencias append-only JSONL com registrar/listar/resumir deterministico e CLI nexora experiencia; 84 testes unitários passando.
-- **Fase anterior:** Fase 7 — Research Engine( concluída, 79 testes)(;; Fase 6 — Coding Agent( ,74 testes)(, etc.
-- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase 9 — Experimentation Engine(, conforme roadmap, após push da Fase 8.
+- **Versão:** v0.9.0( Fase 9 completa e pushada; Fase 10 em NEXT_COMMAND.md.
+- **Fase atual:** Fase 9 — Experimentation Engine(**CONCLUÍDA**: Experimento com variantes e ExecutorExperimentos determinístico com sucesso/tentativas/saida; CLI nexora experimento; 89 testes unitários passando.
+- **Fase anterior:** Fase 8 — Experience Engine( concluída, 84 testes)(; Fase 7 — Research Engine( ,79 testes)(, etc.
+- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase 10 — Evolution Engine(, conforme roadmap, após push da Fase 9.
 
 ## Como ler este repositorio
 
@@ -35,18 +35,19 @@
 - [x] Fase 6 — Coding Agent( concluida:CodingAgent com verificacao de sintaxe,CLI agente codar,regressao executar:74 verdes.
 - [x] Fase 7 — Research Engine( concluida:ResearchAgent com planejamento/busca/sintese,CLI agente pesquisar:79 verdes.
 - [x] Fase 8 — Experience Engine( concluida:RegistroExperiencias com registrar/listar/resumir,CLI nexora experiencia:84 verdes.
+- [x] Fase 9 — Experimentation Engine( concluida:Experimento + ExecutorExperimentos,CLI nexora experimento:89 verdes.
 
-## Tarefa Atual( Fase 9 — Experimentation Engine,apos push da Fase 8:
+## Tarefa Atual( Fase 10 — Evolution Engine,apos push da Fase 9:
 
 - [ ] Executar o comando em `NEXT_COMMAND.md`( pre-requisitos,escopo,criterios de aceitacao,e protocolo.
 - [ ] Atualizar 08_CURRENT_STATE,11_TASKS,e este arquivo ao concluir.
 
-## Proxima Fase( Fase 10 — Evolution Engine(,so apos Fase 9:
+## Proxima Fase( Fase 11 — Economic Engine(,so apos Fase 10:
 
-Conforme roadmap,**Cada etapa requer aprovacao explicita do criador/coordenador e segue o protocolo do 14_AGENT_PROTOCOL.—— — *Nota:* Fases 3→14 + WORKSPACE aprovadas em lote pelo Analista; usuario reforcou execucao continua com push por fase.
+Conforme roadmap,**Cada etapa requer aprovacao explicita do criador/coordenador e segue o protocolo do 14_AGENT_PROTOCOL.—— — *Nota:* Fases 3→14 + WORKSPACE aprovadas em lote pelo Analista;, usuario reforcou execucao continua com push por fase.
 
 ## Relatorio do Último Teste
 
-- **Data:**itude 2026-09-11
-- **Resultado:** 84 passed,0 falhas( `pytest tests/ -q`);CLI `nexora executar`, `nexora agente codar`, `nexora agente pesquisar` e `nexora experiencia resumir` validados com exit 0.
+- **Data:** 2026-09-11
+- **Resultado:** 89 passed,0 falhas( `python3 -m pytest tests/ -q`);CLI `nexora executar`, `nexora agente codar`, `nexora agente pesquisar`, `nexora experiencia resumir` e `nexora experimento` validados com exit 0.
 

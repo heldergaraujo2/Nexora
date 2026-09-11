@@ -5,7 +5,6 @@
 - Testar antes de concluir qualquer tarefa.
 - Registrar o último teste e seu resultado no PROJECT_MEMORY.
 
-
 ## Estado dos Testes
 
 | Teste | Escopo | Resultado |
@@ -18,14 +17,13 @@
 | Fase 6 (unit)| Coding Agent: CodingAgent + CLI agente codar + regressao executar |74 passed( 2026-09-10) |
 | Fase 7 (unit)| Research Engine: ResearchAgent + CLI agente pesquisar + ferramenta fake buscar |79 passed( 2026-09-10) |
 | Fase 8 (unit)| Experience Engine: RegistroExperiencias + CLI nexora experiencia + regressao completa |84 passed( 2026-09-11) |
-
+| Fase 9 (unit)| Experimentation Engine: Experimento + ExecutorExperimentos + CLI nexora experimento + regressao completa |89 passed( 2026-09-11) |
 
 ## Último Teste
 
 - **Data:**itude 2026-09-11
-- **Escopo:** Suíte completa após Fase  8( Experience Engine.
-- **Resultado:** 84 passed,0 falhas( `pytest tests/ -q`);CLI `nexora executar`, `nexora agente codar`, `nexora agente pesquisar` e `nexora experiencia resumir` validados com exit  0.
-
+- **Escopo:** Suíte completa após Fase  9( Experimentation Engine.
+- **Resultado:** 89 passed,0 falhas( `pytest tests/ -q`);CLI `nexora experimento` validado com exit  0; demais CLIs regressao ok.
 
 ## Regra
 
