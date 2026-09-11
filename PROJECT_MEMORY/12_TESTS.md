@@ -6,9 +6,8 @@
 - `python3 -m pytest tests/ -q`
 
 ## Estado verificado
-- HEAD de código atualmente validado: `68c93b0dc6710fc375fcff237f38737467f245a5`.
-- Última evidência CI verde: workflow `34647078404`.
-- Matriz validada: Python 3.11, 3.12, 3.13 e 3.14 — todos os jobs em **success**.
+- HEAD de código validado: `eccff2d3390807cfc0c7e839f6a055a0b1a867c5`.
+- Workflow de código `34649533683`: Python 3.11, 3.12, 3.13 e 3.14 — todos os jobs em **success**.
 - A versão da release v1.0.0 tinha 128 testes; o estado atual é superior e não deve usar 128 como contagem corrente.
 
 ## Cobertura dos componentes pós-release
@@ -27,11 +26,13 @@
 - Delegated Recovery: `tests/unit/test_delegacao_recovery.py` — retry transitório, falha permanente e validação de tentativas.
 - Experience: `tests/unit/test_delegacao_experiencia.py` — registro do resultado terminal.
 - Audit: `tests/unit/test_auditoria.py` — persistência/filtros e auditoria de sucesso/falha de delegação.
-- Policy: `tests/unit/test_policy.py` — ALLOW, DENY por padrão, integração ALLOW e DENY com auditoria.
+- Policy: `tests/unit/test_policy.py` — ALLOW, DENY por padrão, integração ALLOW/DENY, auditoria e metadados de versão/origem.
+- Policy Loader: `tests/unit/test_policy_loader.py` — TOML válido, ALLOW/DENY, versão inválida, campos desconhecidos, efeito inválido e TOML malformado.
 
 ## Correções relevantes
 - Os testes de runtime e orquestração foram alinhados ao contrato do CommunicationBus: sem assinantes, mensagens permanecem `PENDENTE`; `ENTREGUE` ocorre quando há entrega observada.
 - A primeira execução CI da etapa de Policy falhou por ausência de `src/nexora/experiencia/__init__.py`; o pacote foi corrigido e a execução seguinte ficou totalmente verde.
+- O loader declarativo foi endurecido para rejeitar campos desconhecidos e tipos ambíguos, incluindo `version=true` como substituto inválido de `version=1`.
 
 ## Histórico
 - Fase 16 / v1.0.0: 128 testes passando.
