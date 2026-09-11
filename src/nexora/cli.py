@@ -18,6 +18,7 @@ from nexora.evolucao.registro import Aprendizado, RecomendadorEvolucao, Registro
 from nexora.seguranca.registro import Acao, RegistroPolitica
 from nexora.memoria.registro import ItemMemoria, RegistroMemorias
 from nexora.recursos.registro import Recurso, RegistroRecursos
+from nexora.portfolio.registro import ItemPortfolio, RegistroPortfolio
 from nexora.economia.registro import CustoExecucao, RegistroCustos
 
 
@@ -155,6 +156,24 @@ def _recursos_comando(acao, arquivo, tipo=None, quantidade=None, executor=None):
         resumo = registro.resumir()
         print("recursos_resumo={}".format(resumo))
 
+def _portfolio_comando(acao, arquivo, nome=None, categoria=None, status=None, item_id=None):
+    registro = RegistroPortfolio(Path(arquivo))
+    if acao == "adicionar":
+        registro.adicionar(nome=nome, categoria=categoria or "geral", status=status or "ativo")
+        print("item adicionado")
+    elif acao == "atualizar":
+        registro.atualizar_status(item_id, status)
+        print("status atualizado")
+    elif acao == "listar":
+        itens = registro.listar()
+        for item in itens:
+            print("{}".format(item.nome))
+        print("portfolio_itens={}".format(len(itens)))
+    else:
+        resumo = registro.resumir()
+        print("portfolio_resumo={}".format(resumo))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="nexora", description="NEXORA plataforma de agentes de IA")
     parser.add_argument("--version", action="version", version=__about__.__version__)
@@ -239,6 +258,21 @@ def main() -> None:
     p_reg_rec.add_argument("--arquivo", required=True, help="caminho do arquivo de recursos")
     p_res_rec = p_rec_sub.add_parser("resumir", help="resumo por tipo")
     p_res_rec.add_argument("--arquivo", required=True, help="caminho do arquivo de recursos")
+    p_pf = sub.add_parser("portfolio", help="portfolio de trabalhos")
+    p_pf_sub = p_pf.add_subparsers(dest="acao", required=True)
+    p_add_pf = p_pf_sub.add_parser("adicionar", help="adiciona item ao portfolio")
+    p_add_pf.add_argument("--nome", required=True, help="nome do trabalho")
+    p_add_pf.add_argument("--categoria", default="geral", help="categoria")
+    p_add_pf.add_argument("--status", default="ativo", help="status inicial")
+    p_add_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
+    p_upd_pf = p_pf_sub.add_parser("atualizar", help="atualiza status de um item")
+    p_upd_pf.add_argument("--id", dest="item_id", required=True, help="id do item")
+    p_upd_pf.add_argument("--status", required=True, help="novo status")
+    p_upd_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
+    p_lst_pf = p_pf_sub.add_parser("listar", help="lista itens")
+    p_lst_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
+    p_res_pf = p_pf_sub.add_parser("resumir", help="resumo por categoria")
+    p_res_pf.add_argument("--arquivo", required=True, help="caminho do arquivo de portfolio")
 
     args = parser.parse_args()
     if args.comando == "info":
@@ -259,6 +293,8 @@ def main() -> None:
         _memoria_comando(args.acao, args.arquivo, chave=getattr(args, "chave", None), conteudo=getattr(args, "conteudo", None))
     elif args.comando == "recursos":
         _recursos_comando(args.acao, args.arquivo, tipo=getattr(args, "tipo", None), quantidade=getattr(args, "quantidade", None), executor=getattr(args, "executor", None))
+    elif args.comando == "portfolio":
+        _portfolio_comando(args.acao, args.arquivo, nome=getattr(args, "nome", None), categoria=getattr(args, "categoria", None), status=getattr(args, "status", None), item_id=getattr(args, "item_id", None))
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)
