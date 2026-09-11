@@ -182,6 +182,21 @@ class ExecutorDelegacoes:
             self.bus.assinar("*", self._receber)
             self._inscrito = True
 
+    def registrar_runtime(self, agent_id: str, runtime: Any) -> None:
+        """Registra um AgenteRuntime como executor da delegacao.
+
+        O runtime recebe a tarefa e executa seu proprio ciclo
+        EXECUTAR -> VERIFICAR -> ANALISAR -> CORRIGIR -> RETESTAR.
+        O resultado completo do runtime e preservado na delegacao.
+        """
+        if not hasattr(runtime, "executar") or not callable(runtime.executar):
+            raise TypeError("runtime deve expor um metodo executar(objetivo)")
+
+        def executar_runtime(delegacao: Delegacao) -> Any:
+            return runtime.executar(delegacao.tarefa)
+
+        self.registrar(agent_id, executar_runtime)
+
     def _receber(self, mensagem: MensagemAgente) -> None:
         if mensagem.tipo != "delegacao.solicitada":
             return
@@ -204,8 +219,18 @@ class ExecutorDelegacoes:
                 erro=str(exc),
             )
         else:
-            self.delegador.atualizar(
-                delegacao_id,
-                estado=EstadoDelegacao.CONCLUIDA,
-                resultado=resultado,
-            )
+            sucesso = getattr(resultado, "sucesso", True)
+            if sucesso:
+                self.delegador.atualizar(
+                    delegacao_id,
+                    estado=EstadoDelegacao.CONCLUIDA,
+                    resultado=resultado,
+                )
+            else:
+                erro = getattr(resultado, "saida_final", "verificacao da tarefa falhou")
+                self.delegador.atualizar(
+                    delegacao_id,
+                    estado=EstadoDelegacao.FALHOU,
+                    resultado=resultado,
+                    erro=str(erro),
+                )
