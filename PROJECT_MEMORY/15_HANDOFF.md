@@ -3,10 +3,10 @@
 > **Arquivo principal de continuidade do projeto.** Todo novo agente/engenheiro/coordenador deve comecar por este documento.
 
 ## Estado Atual
-- **Versão:** v0.7.0( Fase 7 completa e pushada; Fase  8 em NEXT_COMMAND.md.
-- **Fase atual:** Fase 7 — Research Engine(**CONCLUÍDA**: ResearchAgent wraps do AgenteRuntime com planejamento,busca via ferramentas,sintese com fontes e CLI agente pesquisar; 79 testes unitários passando.
-- **Fase anterior:** Fase 6 — Coding Agent( concluída,, 74 testes)(;; Fase  5 — Agent Runtime( ,69 testes)(, etc.
-- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase  8 — Experience Engine(, conforme 10_MODULES.md, após push da Fase  7.
+- **Versão:** v0.8.0( Fase 8 completa e pushada; Fase 9 em NEXT_COMMAND.md.
+- **Fase atual:** Fase 8 — Experience Engine(**CONCLUÍDA**: RegistroExperiencias append-only JSONL com registrar/listar/resumir deterministico e CLI nexora experiencia; 84 testes unitários passando.
+- **Fase anterior:** Fase 7 — Research Engine( concluída, 79 testes)(;; Fase 6 — Coding Agent( ,74 testes)(, etc.
+- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase 9 — Experimentation Engine(, conforme roadmap, após push da Fase 8.
 
 ## Como ler este repositorio
 
@@ -22,40 +22,31 @@
 | 8 | `07_ROADMAP.md` | Roadmap v1(origem:criador) |
 | 9 | `14_AGENT_PROTOCOL.md` | Protocolo obrigatorio de todo agente |
 
-## Contexto da Integracao( importante!
-
-Duas linhas de historia foram unificadas neste repositorio:
-
-1. **Fase 0( coordenacao)::**estrutura,README,,.gitignore,PROJECT_MEMORY 00–11 original...
-2. **Capability Discovery( agent construtor):** pesquisa de 60+ capacidades( 02–05) — originalmente com numeracao propria conflitante( 02=ARCHITECTURE vs 02=CAPABILITY_DISCOVERY,etc.,.
-
-**Resolucao aplicada:** numeracao canonica unica( 00–15),com Discovery em  02–05 e infraestrutura em  06–15;00/01 fundidos( a versao do agente continha principios valiosos preservados**.
-
-
 ## Itens Concluídos
 
-- [x] Fase 0(Continuidade e Memoria)— esqueleto,README,,gitignore,commits,e push
-- [x] Capability Discovery( do agent construtor)— 02–05 integrados ao fluxo canonico**
-- [x] Integracao de repositorio( numeracao unica,fusao 00/01,,README,handoff atualizado,remoto origin configurado.
-- [x] Fase 1 — Fundacao( concluida: nucleo do agente,CLI minimo,tests,,30 verdes.
-- [x] Fase 2 — Providers & Conectores( concluida::contrato tipado,,registry,,FakeProvider,,ProviderGroq via stdlib::43 verdes.
-- [x] Fase 3 — Orquestracao( concluida::roteador,,orquestrador,,CLI executar,,EventStore::51 verdes.
-- [x] Fase 4 — Provider System( concluida::ProviderManager,,fallback do Roteador::58 verdes.
-- [x] Fase 5 — NEXORA Agent Runtime( concluida::runtime do agente generalista com observacao/analise/correcao/agente::69 verdes.
-- [x] Fase 6 — Coding Agent( concluida::CodingAgent com verificacao de sintaxe,CLI agente codar,regressao executar::74 verdes.
-- [x] Fase 7 — Research Engine( concluida::ResearchAgent com planejamento/busca/sintese,CLI agente pesquisar::79 verdes.
+- [x] Fase 0(Continuidade e Memoria)— esqueleto,README,gitignore,commits,e push
+- [x] Capability Discovery( do agent construtor)— 02–05 integrados ao fluxo canonico
+- [x] Integracao de repositorio( numeracao unica,fusao 00/01,README,handoff atualizado,remoto origin configurado.
+- [x] Fase 1 — Fundacao( concluida: nucleo do agente,CLI minimo,tests,30 verdes.
+- [x] Fase 2 — Providers & Conectores( concluida:contrato tipado,registry,FakeProvider,ProviderGroq via stdlib:43 verdes.
+- [x] Fase 3 — Orquestracao( concluida:roteador,orquestrador,CLI executar,EventStore:51 verdes.
+- [x] Fase 4 — Provider System( concluida:ProviderManager,fallback do Roteador:58 verdes.
+- [x] Fase 5 — NEXORA Agent Runtime( concluida:runtime do agente generalista com observacao/analise/correcao/agente:69 verdes.
+- [x] Fase 6 — Coding Agent( concluida:CodingAgent com verificacao de sintaxe,CLI agente codar,regressao executar:74 verdes.
+- [x] Fase 7 — Research Engine( concluida:ResearchAgent com planejamento/busca/sintese,CLI agente pesquisar:79 verdes.
+- [x] Fase 8 — Experience Engine( concluida:RegistroExperiencias com registrar/listar/resumir,CLI nexora experiencia:84 verdes.
 
-## Tarefa Atual( Fase  8 — Experience Engine,,apos push da Fase  7:
+## Tarefa Atual( Fase 9 — Experimentation Engine,apos push da Fase 8:
 
-- [ ] Executar o comando em `NEXT_COMMAND.md`( pre-requisitos,,escopo,,criterios de aceitacao,e protocolo→
-- [ ] Atualizar 08_CURRENT_STATE,,11_TASKS,e este arquivo ao concluir.
+- [ ] Executar o comando em `NEXT_COMMAND.md`( pre-requisitos,escopo,criterios de aceitacao,e protocolo.
+- [ ] Atualizar 08_CURRENT_STATE,11_TASKS,e este arquivo ao concluir.
 
-## Proxima Fase( Fase  9 — ...(,so apos Fase  8:
+## Proxima Fase( Fase 10 — Evolution Engine(,so apos Fase 9:
 
-Conforme 10_MODULES.md e roadmap,**Cada etapa requer aprovacao explicita do criador/coordenador e segue o protocolo do 14_AGENT_PROTOCOL.—— — *Nota:* Fases  3→14 + WORKSPACE aprovadas em lote pelo Analista; usuario reforcou execucao continua com push por fase.
+Conforme roadmap,**Cada etapa requer aprovacao explicita do criador/coordenador e segue o protocolo do 14_AGENT_PROTOCOL.—— — *Nota:* Fases 3→14 + WORKSPACE aprovadas em lote pelo Analista; usuario reforcou execucao continua com push por fase.
 
 ## Relatorio do Último Teste
 
-- **Data:**itude 2026-09-10
-- **Resultado:** 79 passed,0 falhas( `pytest tests/ -q`);CLI `nexora executar`, `nexora agente codar` e `nexora agente pesquisar` validados com exit 0.
+- **Data:**itude 2026-09-11
+- **Resultado:** 84 passed,0 falhas( `pytest tests/ -q`);CLI `nexora executar`, `nexora agente codar`, `nexora agente pesquisar` e `nexora experiencia resumir` validados com exit 0.
 
