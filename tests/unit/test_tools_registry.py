@@ -4,6 +4,8 @@ from __future__ import annotations
 from nexora.governanca.policy import EfeitoPolitica, PolicyEngine, RegraPolitica
 from nexora.governanca.permissoes import GerenciadorPermissoes, PermissaoNegada
 from nexora.runtime.checkpoint import CheckpointEngine
+from nexora.runtime.ferramenta import ResultadoFerramenta
+from nexora.runtime.verificacao import Verificacao, sem_erros, texto_nao_vazio
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
 
 
@@ -101,3 +103,47 @@ def test_registry_checkpoint_falhando_impede_execucao():
         raise AssertionError("falha do checkpoint deveria impedir a ferramenta")
 
     assert executou == []
+
+
+def test_registry_observa_e_verifica_resultado_com_sucesso():
+    observacoes: list[dict] = []
+    verificador = Verificacao([texto_nao_vazio, sem_erros])
+
+    def observar(contexto: dict) -> object:
+        observacoes.append(contexto)
+        from nexora.runtime.observacao import Observacao
+
+        return Observacao(
+            etapa_id=contexto["etapa_id"],
+            ok=True,
+            saida=contexto["saida"],
+            metadados={"origem": "teste"},
+        )
+
+    repo = RegistryFerramentas(observador=observar, verificador=verificador)
+    repo.registrar(Ferramenta(nome="eco", descricao="", executar=lambda parametros: "ok"))
+
+    resultado = repo.executar("eco", {}, execucao_id="exec-observado")
+
+    assert isinstance(resultado, ResultadoFerramenta)
+    assert resultado.ferramenta == "eco"
+    assert resultado.execucao_id == "exec-observado"
+    assert resultado.resultado == "ok"
+    assert resultado.observacao.ok is True
+    assert resultado.verificado is True
+    assert resultado.sucesso is True
+    assert observacoes[0]["resultado"] == "ok"
+
+
+def test_registry_verificacao_reprova_sem_impedir_execucao():
+    verificador = Verificacao([texto_nao_vazio])
+    repo = RegistryFerramentas(verificador=verificador)
+    repo.registrar(Ferramenta(nome="vazio", descricao="", executar=lambda parametros: "   "))
+
+    resultado = repo.executar("vazio", {}, execucao_id="exec-verificacao")
+
+    assert isinstance(resultado, ResultadoFerramenta)
+    assert resultado.resultado == "   "
+    assert resultado.observacao.ok is True
+    assert resultado.verificado is False
+    assert resultado.sucesso is False
