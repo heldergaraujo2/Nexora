@@ -24,19 +24,23 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - [x] Loader valida estritamente versão, campos, regras e efeitos; rejeita TOML malformado e não executa código da configuração.
 - [x] `src/nexora/config/loaders.py` adiciona carregamento TOML via `tomllib` sem dependência externa.
 - [x] `pyproject.toml` passou a exigir Python `>=3.11` para suportar `tomllib` da biblioteca padrão.
-- [x] DENY impede a execução do handler e encerra a delegação como `FALHOU`, pois o enum atual ainda não possui estado `DENEGADA`.
 - [x] Schema de política evoluiu para `version = 2` com `id` obrigatório em cada regra.
 - [x] `RegraPolitica` valida ID não vazio e `PolicyEngine` rejeita IDs duplicados dentro da mesma política.
 - [x] `DecisaoPolitica.regra_id` expõe a regra correspondente; decisões por default não possuem `regra_id`.
 - [x] Auditoria de `politica.decisao` passou a registrar `regra_id` junto de efeito, permitido, motivo, versão e origem.
+- [x] `PolicyEngine` calcula fingerprint canônico SHA-256 sobre versão, default e regras semânticas, preservando a ordem das regras e excluindo a origem do arquivo.
+- [x] Auditoria de `politica.decisao` registra o `fingerprint` da política efetivamente usada na decisão.
+- [x] `DENEGADA` foi adicionado ao `EstadoDelegacao` para separar negação de governança de falha de execução.
+- [x] DENY impede a execução do handler, termina a delegação como `DENEGADA`, publica `delegacao.resultado` e registra `delegacao.denegada` na auditoria.
 - [ ] YAML ainda não implementado; só deve ser adicionado se uma necessidade arquitetural justificar a duplicação do formato.
 
 ### Correção de empacotamento
 - [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo a importação do registro de experiências no CI.
 
 ### Validação
-- [x] CI do commit de código `281bf91ef3c10c7ef7fcefdd10e9e749a545f230` verde no workflow `34652511716` para Python 3.11, 3.12, 3.13 e 3.14.
+- [x] CI do código `dec0bbd4430bbe5883476112704ea78c97b90be3` verde no workflow `34653209175` para Python 3.11, 3.12, 3.13 e 3.14.
 - [x] Testes de loader cobrem TOML válido, versão 2, IDs obrigatórios/duplicados, campos desconhecidos, efeito inválido e TOML malformado.
+- [x] Testes de Policy cobrem fingerprint determinístico, alteração semântica/ordem e distinção entre `DENEGADA` e `FALHOU`.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
 
