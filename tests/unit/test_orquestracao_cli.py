@@ -17,3 +17,15 @@ def test_cli_info():
     )
     assert resultado.returncode == 0
     assert "NEXORA" in resultado.stdout
+
+def test_cli_executar():
+    env = {**os.environ, "PYTHONPATH": str(Path.cwd() / "src")}
+    resultado = subprocess.run(
+        [sys.executable, "-m", "nexora", "executar", "teste rapido", "--provider", "fake"],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=30,
+    )
+    assert resultado.returncode ==0
+    assert "sucesso=True" in resultado.stdout
