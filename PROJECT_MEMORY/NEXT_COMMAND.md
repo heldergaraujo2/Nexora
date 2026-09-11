@@ -1,39 +1,32 @@
-# NEXT COMMAND — Fase 4 — Provider System (roteamento avançado)
+# NEXT COMMAND — Fase 6: Coding Agent
 
-> Protocolo: seguir o `14_AGENT_PROTOCOL.md`; implementar,testar,atualizar memória( 08/09/11/13/15),commit e push ao concluir。
+> Canal de comando da coordenacao. Este arquivo contem o comando atual,, a ser executado pelo agente construtor ( OpenHands). Ao concluir,, o agente deve atualizar PROJECT_MEMORY/15_HANDOFF.md e marcar esta secao como executada;; entao,, o coordenador redigira o proximo comando aqui. O comando anterior( Fase  5 — NEXORA Agent Runtime) foi concluido e pushado;; 69 testes passando.
 
-## Pré-requisitos
+**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  5 e aprovacao do analista.
 
-- Fase 3 concluída e pushada( roteador, orquestrador, CLI executar;51 testes verdes)
+## COMANDO — Fase 6: Coding Agent
 
- 
-## Escopo
+**OBJETIVO:** Implementar o Coding Agent da NEXORA( agente especializado em geracao e edicao de codigo,, integrado ao runtime da Fase  5), com planejamento de tarefas,, execucao controlada e verificacao por testes.
 
-Provider System/roteamento avançado( conforme 10_MODULES.md):
+**ESCOPO (o que produzir(:
 
-1. **Fallback por health-check**:`Roteador.obter_provider` deve tentar o provider recomendado e, envão disponível, tentar o próximo por ordem do registry( registrando o evento de fallback)。
-2. **Seleção por capacidade**:método `listar_por_capacidade(tool_calling=..., streaming=...)` no `RegistryProviders`( filtrando por `ProviderCapability`)。
-3. **Ordenação e prioridade**:registro mantém ordem de prioridade( `registrar(nome, fabrica, prioridade=...)` opcional);`recomendar` pode receber `preferencias`。
-4o **Registro de latência/erro**:`ProviderManager` é responsável por medir tempo de `generate` e registrar falhas（ expondo `estatisticas()` com contagem de chamadas,erros e latência média）。
-5。 **Health-check**:`saudavel()` já existe no contrato;**novo** `obter_healthcheck(nome)` que retorna o resultado detalhado do health-check sem instanciar o provider necessariamente。
- 
-## Critérios de Aceitação
+1. `src/nexora/agentes/coding.py` — CodingAgent( wraps AgenteRuntime com prompt de engenharia( tarefa,, linguagem,, contexto) e verificador de codigo( testa sintaxe e heurísticas basicas).
+2. `src/nexora/agentes/__init__.py` — exportes publica do pacote.
+3. Integracao com Provider System( usa ProviderManager ou FakeProvider via CLI).
+4. CLI( `nexora agente codar "<tarefa>"` no clipy,( ou subcomando `codar`)。。
+5. Testes unitarios em tests/unit/test_agentes_coding.py( geracao chamando o runtime,, correcao por verificacao falhando,, limite de tentativas).
+6. Documentacao e memoria( atualizar 08_CURRENT_STATE,,12_TESTS.md,,13_CHANGELOG.md,,15_HANDOFF.md e NEXT_COMMAND.md( trocar para Fase  7 — Research Engine).
 
-- [ ] `Roteador` tenta fallback automático quando provider recomendado não está saudável
-- [ ] `RegistryProviders.listar_por_capacidade` filtra corretamente
-- [ ] `ProviderManager` expõe `estatisticas()` com chamadas,erros,latência média
-- [ ] `obter_healthcheck(nome)` retorna detalhes( saudavel,motivo,ultima_falha)
-)
-- [ ] Todos os 51 testes anteriores continuam verdes
-- [ ] Novos testes unitários para cada capacidade implementada
-- [ ] Memória atualizada( 08/09/11/13/15)e NEXT_COMMAND.md reescrito para a Fase 5
-- [ ] Commit e push da Fase 4
- 
-## Protocolo
+**FORA DE ESCOPO:** NAO implementar ferramentas/plugins reais( alem do registry vazio);NAO multi-agente;;NAO adicionar dependencias pip.
 
-1. Auditar estado atual( `git status`,,suíte de testes)
-2. Implementar por incrementos pequenos com testes
-3. Rodar suíte completa ao final( `python3 -m pytest tests/ -q`)
-4. Atualizar memória( 08_CURRENT_STATE,09_DECISIONS,11_TASKS,13_CHANGELOG,15_HANDOFF)
+**CRITERIOS DE ACEITACAO:**
 
-5o Commit(e push com mensagem descritiva do tipo `feat(fase-4): ...`
+- [ ] `python3 -m nexora agente codar "escreva um oi em python"` executou( com FakeProvider, sem rede)。
+- [ ] CodingAgent corrige codigo invalido( sintaxe) ate  2 tentativas( usando AnalisadorFalhas)。
+- [ ] Suite completa verde( esperado:  69 + novos,, sem regressoes)。
+- [ ] Tudo commitado e pushado com mensagem descritiva.
+- [ ] 15_HANDOFF.md atualizado com novo ponto de continuacao( Fase  7 — Research Engine,, aguardando comando)。
+
+**PROTOCOLO:** seguir PROJECT_MEMORY/14_AGENT_PROTOCOL.md( sem excecoes: veracidade,,rastreabilidade,,autorizacao,,comunicacao por eventos/arquivos,,escrever em PT-BR,,usar git com mensagens descritivas,,etapas pequenas verificaveis)。
+
+**DATA DE VALIDADE:** v0.5.0 — valido ate a conclusao desta Fase  6;apos isso,, aguardar novo comando do coordenador.

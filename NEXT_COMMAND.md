@@ -1,33 +1,32 @@
-# NEXT COMMAND — Fase 5: NEXORA Agent Runtime
+# NEXT COMMAND — Fase 6: Coding Agent
 
-> Canal de comando da coordenacao. Este arquivo contem o comando atual, a ser executado pelo agente construtor( OpenHands). Ao concluir,, o agente deve atualizar PROJECT_MEMORY/15_HANDOFF.md e marcar esta secao como executada; entao,, o coordenador redigira o proximo comando aqui.. O comando anterior( Fase  4 — Provider System) foi concluido e pushado;; 58 testes passando.
+> Canal de comando da coordenacao. Este arquivo contem o comando atual,, a ser executado pelo agente construtor ( OpenHands). Ao concluir,, o agente deve atualizar PROJECT_MEMORY/15_HANDOFF.md e marcar esta secao como executada;; entao,, o coordenador redigira o proximo comando aqui. O comando anterior( Fase  5 — NEXORA Agent Runtime) foi concluido e pushado;; 69 testes passando.
 
-**Origem:** Coordenador/Arquiteto( Arena agent central) — apos conclusao da Fase  4 e aprovacao do analista..
+**Origem:** Coordenador/Arquiteto( Arena agent central, apos conclusao da Fase  5 e aprovacao do analista.
 
+## COMANDO — Fase 6: Coding Agent
 
-## COMANDO — Fase 5: NEXORA Agent Runtime
+**OBJETIVO:** Implementar o Coding Agent da NEXORA( agente especializado em geracao e edicao de codigo,, integrado ao runtime da Fase  5), com planejamento de tarefas,, execucao controlada e verificacao por testes.
 
-**OBJETIVO:** Implementar o runtime de agente generalista com ciclo completo OBJECTIVE->PLAN->EXECUTE->OBSERVE->VERIFY->ANALYZE->CORRECT->RETEST, integrando memoria, observacao, analise e correcao em um loop unico controlado.
+**ESCOPO (o que produzir(:
 
-**ESCOPO ( o que produzir:**
+1. `src/nexora/agentes/coding.py` — CodingAgent( wraps AgenteRuntime com prompt de engenharia( tarefa,, linguagem,, contexto) e verificador de codigo( testa sintaxe e heurísticas basicas).
+2. `src/nexora/agentes/__init__.py` — exportes publica do pacote.
+3. Integracao com Provider System( usa ProviderManager ou FakeProvider via CLI).
+4. CLI( `nexora agente codar "<tarefa>"` no clipy,( ou subcomando `codar`)。。
+5. Testes unitarios em tests/unit/test_agentes_coding.py( geracao chamando o runtime,, correcao por verificacao falhando,, limite de tentativas).
+6. Documentacao e memoria( atualizar 08_CURRENT_STATE,,12_TESTS.md,,13_CHANGELOG.md,,15_HANDOFF.md e NEXT_COMMAND.md( trocar para Fase  7 — Research Engine).
 
-1. Orchestrator de ciclo autonomo em src/nexora/runtime/agente.py: loop com observacao da saida, analise de falha,e correcao antes de reverificar( com limite de iteracoes e orcamento).
-2. Observador em src/nexora/runtime/observacao.py: captura saidas e resultados de forma estruturada( para alimentar analise e memoria).
-3. Analisador de falhas em src/nexora/runtime/analise.py: classifica falhas( retry/replan/abort) com base em regras declarativas.
-4. Corrector em src/nexora/runtime/correcao.py: aplica acoes corretivas(rerun, ajuste de prompt, troca de provider) registrando eventos.
-5. Limites/seguranca: iteracoes maximas, orcamento de custo/tempo,sempre logados; paragem elegante.
-6. Testes unitarios em tests/unit/: test_runtime_agente.py( ciclo completo com FakeProvider), test_runtime_observacao.py, test_runtime_analise.py, test_runtime_correcao.py.
-
-**FORA DE ESCOPO:** NAO implementar ferramentas reais alem do registry vazio;NAO multi-agente;NAO adicionar dependencias pip.
+**FORA DE ESCOPO:** NAO implementar ferramentas/plugins reais( alem do registry vazio);NAO multi-agente;;NAO adicionar dependencias pip.
 
 **CRITERIOS DE ACEITACAO:**
 
-- [ ] python3 -m nexora executar "escreva um oi" continua funcionando( FakeProvider sem rede)
-- [ ] Ciclo autonomo corrige saida vazia ate 2 tentativas antes de abortar
-- [ ] Suite completa verde( esperado: 58 + novos, sem regressoes)
-- [ ] Tudo commitado e pushado com mensagem descritiva
-- [ ] 15_HANDOFF.md atualizado com novo ponto de continuacao( Fase  6 — Coding Agent,, aguardando comando)
+- [ ] `python3 -m nexora agente codar "escreva um oi em python"` executou( com FakeProvider, sem rede)。
+- [ ] CodingAgent corrige codigo invalido( sintaxe) ate  2 tentativas( usando AnalisadorFalhas)。
+- [ ] Suite completa verde( esperado:  69 + novos,, sem regressoes)。
+- [ ] Tudo commitado e pushado com mensagem descritiva.
+- [ ] 15_HANDOFF.md atualizado com novo ponto de continuacao( Fase  7 — Research Engine,, aguardando comando)。
 
-**PROTOCOLO:** seguir PROJECT_MEMORY/14_AGENT_PROTOCOL.md( sem excecoes: veracidade,rastreabilidade,autorizacao,comunicacao por eventos/arquivos,escrever em PT-BR,usar git com mensagens descritivas,etapas pequenas verificaveis)
+**PROTOCOLO:** seguir PROJECT_MEMORY/14_AGENT_PROTOCOL.md( sem excecoes: veracidade,,rastreabilidade,,autorizacao,,comunicacao por eventos/arquivos,,escrever em PT-BR,,usar git com mensagens descritivas,,etapas pequenas verificaveis)。
 
-**DATA DE VALIDADE:** v0.4.0 — valido ate a conclusao desta Fase  5;apos isso,, aguardar novo comando do coordenador..
+**DATA DE VALIDADE:** v0.5.0 — valido ate a conclusao desta Fase  6;apos isso,, aguardar novo comando do coordenador.

@@ -3,14 +3,10 @@
 > **Arquivo principal de continuidade do projeto.** Todo novo agente/engenheiro/coordenador deve começar por este documento.
 
 ## Estado Atual
-
-- **Versão:** v0.4.0( Fase 4 completa e pushada;Fase 5 em NEXT_COMMAND.md)
-- **Fase atual:** Fase 3 — Orquestração de Agente(**CONCLUÍDA**:roteador,orquestrador,CLI `executar`,EventStore;51 testes unitários passando)
-- **Fase anterior:** Fase 2 — Providers & Conectores( concluída,,43 testes)(, Fase 1( Fundação,,30 testes) e Fase 0.5/0( ADRs/contratos/design/esqueleto)
-- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase  ​ 5 — NEXORA Agent Runtime(, conforme 10_MODULES.md, após push da Fase 3）.
-
-
-
+- **Versão:** v0.5.0( Fase 5 completa e pushada; Fase 6 em NEXT_COMMAND.md)
+- **Fase atual:** Fase 5 — NEXORA Agent Runtime(**CONCLUÍDA**: runtime do agente generalista com observacao/analise/correcao/agente; 69 testes unitários passando)
+- **Fase anterior:** Fase 4 — Provider System( concluída,, 58 testes)(;; Fase  ​3 — Orquestração( ,51 testes)(, etc)
+- **Ponto de continuação:** executar o comando em `NEXT_COMMAND.md`( Fase 6 — Coding Agent(, conforme 10_MODULES.md, após push da Fase 5)
 ## Como ler este repositório
 
 | Ordem | Arquivo | Por quê |

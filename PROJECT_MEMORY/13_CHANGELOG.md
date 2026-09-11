@@ -1,4 +1,12 @@
 # 13 — CHANGELOG
+## v0.5.0 — Fase 5 (NEXORA Agent Runtime) — 2026-09-10
+
+- [x] `feat(runtime: observacao)`: Observacao dataclass ( etapa_id,, saida,, ok,, erro,, metadados,, carimbo)
+- [x] `feat(runtime: analise)`: AnalisadorFalhas classifica falhas por marcadores declarativos ( 429/500/timeout,, retentavel/irreversivel,, plano retry/abort
+- [x] `feat(runtime: correcao)`: Corrector aplica acoes correivas ( rerun/troca_provider/ajuste_prompt,, registrando eventos)
+- [x] `feat(runtime: agente)`: AgenteRuntime loop completo com max_tentativas,, break em sucesso/abort/troca_provider,, correção só para ajuste_prompt;; retry/rerun re-executam no loop
+- [x] `test(runtime: observacao,analise,correcao,agente)`:  11 novos testes ( 58 →69)
+
 
 ## v0.4.0 — Fase 4 (Provider System) — 2026-09-10
 
