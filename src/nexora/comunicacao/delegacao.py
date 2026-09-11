@@ -7,6 +7,7 @@ from typing import Any, Callable
 import uuid
 
 from ..agentes.registro import RegistroAgentes
+from ..auditoria.registro import RegistroAuditoria
 from ..experiencia.registro import RegistroExperiencias
 from .bus import CommunicationBus, MensagemAgente
 
@@ -169,12 +170,9 @@ class ExecutorDelegacoes:
     Esta camada executa tarefas; o CommunicationBus continua sendo apenas transporte.
     O executor marca a delegacao como ACEITA antes do handler e publica CONCLUIDA ou
     FALHOU depois da execucao. O ciclo continua sincrono e em memoria neste incremento.
-    Falhas de execucao podem ser recuperadas com tentativas adicionais; retries internos
-    de verificacao continuam sendo responsabilidade do AgenteRuntime.
 
-    Quando um RegistroExperiencias e fornecido, somente o resultado terminal da
-    delegacao e registrado como experiencia, preservando tentativas e erro sem
-    duplicar registros para falhas transitorias.
+    Quando registros sao fornecidos, o resultado terminal vai para experiencia e os
+    eventos de ciclo vao para auditoria, mantendo as duas responsabilidades separadas.
     """
 
     def __init__(
@@ -184,6 +182,7 @@ class ExecutorDelegacoes:
         *,
         max_tentativas: int = 1,
         experiencias: RegistroExperiencias | None = None,
+        auditoria: RegistroAuditoria | None = None,
     ) -> None:
         if max_tentativas < 1:
             raise ValueError("max_tentativas deve ser maior ou igual a 1")
@@ -191,6 +190,7 @@ class ExecutorDelegacoes:
         self.delegador = delegador
         self.max_tentativas = max_tentativas
         self.experiencias = experiencias
+        self.auditoria = auditoria
         self._handlers: dict[str, Callable[[Delegacao], Any]] = {}
         self._inscrito = False
 
@@ -203,12 +203,7 @@ class ExecutorDelegacoes:
             self._inscrito = True
 
     def registrar_runtime(self, agent_id: str, runtime: Any) -> None:
-        """Registra um AgenteRuntime como executor da delegacao.
-
-        O runtime recebe a tarefa e executa seu proprio ciclo
-        EXECUTAR -> VERIFICAR -> ANALISAR -> CORRIGIR -> RETESTAR.
-        O resultado completo do runtime e preservado na delegacao.
-        """
+        """Registra um AgenteRuntime como executor da delegacao."""
         if not hasattr(runtime, "executar") or not callable(runtime.executar):
             raise TypeError("runtime deve expor um metodo executar(objetivo)")
 
@@ -216,6 +211,23 @@ class ExecutorDelegacoes:
             return runtime.executar(delegacao.tarefa)
 
         self.registrar(agent_id, executar_runtime)
+
+    def _auditar(self, evento: str, delegacao: Delegacao) -> None:
+        if self.auditoria is None:
+            return
+        self.auditoria.registrar(
+            evento,
+            entidade="delegacao",
+            entidade_id=delegacao.id,
+            dados={
+                "solicitante": delegacao.solicitante,
+                "executor": delegacao.executor,
+                "tarefa": delegacao.tarefa,
+                "estado": delegacao.estado.value,
+                "tentativas": delegacao.tentativas,
+                "erro": delegacao.erro,
+            },
+        )
 
     def _registrar_experiencia(self, delegacao: Delegacao) -> None:
         if self.experiencias is None:
@@ -247,6 +259,7 @@ class ExecutorDelegacoes:
         if delegacao is None or delegacao.estado is not EstadoDelegacao.SOLICITADA:
             return
         self.delegador.atualizar(delegacao_id, estado=EstadoDelegacao.ACEITA)
+        self._auditar("delegacao.aceita", delegacao)
         while delegacao.tentativas < self.max_tentativas:
             delegacao.tentativas += 1
             try:
@@ -259,6 +272,7 @@ class ExecutorDelegacoes:
                         estado=EstadoDelegacao.FALHOU,
                         erro=str(exc),
                     )
+                    self._auditar("delegacao.falhou", delegacao)
                     self._registrar_experiencia(delegacao)
                     return
                 continue
@@ -269,6 +283,7 @@ class ExecutorDelegacoes:
                     estado=EstadoDelegacao.CONCLUIDA,
                     resultado=resultado,
                 )
+                self._auditar("delegacao.concluida", delegacao)
             else:
                 erro = getattr(resultado, "saida_final", "verificacao da tarefa falhou")
                 self.delegador.atualizar(
@@ -277,5 +292,6 @@ class ExecutorDelegacoes:
                     resultado=resultado,
                     erro=str(erro),
                 )
+                self._auditar("delegacao.falhou", delegacao)
             self._registrar_experiencia(delegacao)
             return
