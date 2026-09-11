@@ -14,6 +14,7 @@ from nexora.providers.registry import RegistryProviders
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
 from nexora.experiencia.registro import RegistroExperiencias
 from nexora.experimentacao.experimento import ExecutorExperimentos, Experimento
+from nexora.evolucao.registro import Aprendizado, RecomendadorEvolucao, RegistroAprendizados
 
 
 def _montar_registry():
@@ -89,6 +90,21 @@ def _experimento_comando(nome, tarefa, variantes, alias):
     sys.exit(0 if res["sucessos"] == res["total_variantes"] else 1)
 
 
+def _evoluir_comando(acao, arquivo, tarefa=None):
+    registro = RegistroAprendizados(Path(arquivo))
+    if acao == "aprender":
+        aprendizado = Aprendizado(tarefa=tarefa, melhor_variante="manual", taxa_sucesso=1.0, total_execucoes=1)
+        registro.registrar(aprendizado)
+        print(f"aprendizado registrado para: {tarefa}")
+    else:
+        recom = RecomendadorEvolucao(registro)
+        melhor = recom.recomendar(tarefa) if tarefa else None
+        if melhor:
+            print(f"recomendado={melhor.melhor_variante} taxa={melhor.taxa_sucesso:.2f}")
+        else:
+            print("nenhum aprendizado encontrado")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="nexora", description="NEXORA plataforma de agentes de IA")
     parser.add_argument("--version", action="version", version=__about__.__version__)
@@ -125,6 +141,15 @@ def main() -> None:
     p_rodar.add_argument("--variante", dest="variantes", action="append", required=True, help="variante de abordagem (repetivel)")
     p_rodar.add_argument("--provider", dest="provider", default=None, help="alias do provider")
 
+    p_evol = sub.add_parser("evoluir", help="registra aprendizados e recomenda evolucao")
+    p_evol_sub = p_evol.add_subparsers(dest="acao", required=True)
+    p_aprender = p_evol_sub.add_parser("aprender", help="registra um aprendizado")
+    p_aprender.add_argument("--tarefa", required=True, help="tarefa do aprendizado")
+    p_aprender.add_argument("--arquivo", required=True, help="caminho do arquivo de aprendizados")
+    p_recomendar = p_evol_sub.add_parser("recomendar", help="recomenda melhor abordagem para uma tarefa")
+    p_recomendar.add_argument("--tarefa", required=True, help="tarefa a recomendar")
+    p_recomendar.add_argument("--arquivo", required=True, help="caminho do arquivo de aprendizados")
+
     args = parser.parse_args()
     if args.comando == "info":
         print(f"NEXORA {__about__.__version__} — plataforma de agentes de IA model-agnostica")
@@ -134,6 +159,8 @@ def main() -> None:
         _experiencia_comando(args.acao, arquivo=args.arquivo)
     elif args.comando == "experimento":
         _experimento_comando(args.nome, args.tarefa, args.variantes, alias=args.provider)
+    elif args.comando == "evoluir":
+        _evoluir_comando(args.acao, args.arquivo, tarefa=args.tarefa)
     elif args.comando == "agente":
         if args.subcomando == "pesquisar":
             _pesquisar_comando(args.pergunta, quantidade=args.quantidade, alias=args.provider)
