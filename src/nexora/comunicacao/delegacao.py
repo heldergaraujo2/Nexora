@@ -7,6 +7,7 @@ from typing import Any, Callable
 import uuid
 
 from ..agentes.registro import RegistroAgentes
+from ..experiencia.registro import RegistroExperiencias
 from .bus import CommunicationBus, MensagemAgente
 
 
@@ -170,14 +171,26 @@ class ExecutorDelegacoes:
     FALHOU depois da execucao. O ciclo continua sincrono e em memoria neste incremento.
     Falhas de execucao podem ser recuperadas com tentativas adicionais; retries internos
     de verificacao continuam sendo responsabilidade do AgenteRuntime.
+
+    Quando um RegistroExperiencias e fornecido, somente o resultado terminal da
+    delegacao e registrado como experiencia, preservando tentativas e erro sem
+    duplicar registros para falhas transitorias.
     """
 
-    def __init__(self, bus: CommunicationBus, delegador: DelegadorAgentes, *, max_tentativas: int = 1) -> None:
+    def __init__(
+        self,
+        bus: CommunicationBus,
+        delegador: DelegadorAgentes,
+        *,
+        max_tentativas: int = 1,
+        experiencias: RegistroExperiencias | None = None,
+    ) -> None:
         if max_tentativas < 1:
             raise ValueError("max_tentativas deve ser maior ou igual a 1")
         self.bus = bus
         self.delegador = delegador
         self.max_tentativas = max_tentativas
+        self.experiencias = experiencias
         self._handlers: dict[str, Callable[[Delegacao], Any]] = {}
         self._inscrito = False
 
@@ -204,6 +217,23 @@ class ExecutorDelegacoes:
 
         self.registrar(agent_id, executar_runtime)
 
+    def _registrar_experiencia(self, delegacao: Delegacao) -> None:
+        if self.experiencias is None:
+            return
+        self.experiencias.registrar(
+            "delegacao",
+            delegacao.estado is EstadoDelegacao.CONCLUIDA,
+            metadados={
+                "delegacao_id": delegacao.id,
+                "solicitante": delegacao.solicitante,
+                "executor": delegacao.executor,
+                "tarefa": delegacao.tarefa,
+                "estado": delegacao.estado.value,
+                "tentativas": delegacao.tentativas,
+                "erro": delegacao.erro,
+            },
+        )
+
     def _receber(self, mensagem: MensagemAgente) -> None:
         if mensagem.tipo != "delegacao.solicitada":
             return
@@ -229,6 +259,7 @@ class ExecutorDelegacoes:
                         estado=EstadoDelegacao.FALHOU,
                         erro=str(exc),
                     )
+                    self._registrar_experiencia(delegacao)
                     return
                 continue
             sucesso = getattr(resultado, "sucesso", True)
@@ -246,4 +277,5 @@ class ExecutorDelegacoes:
                     resultado=resultado,
                     erro=str(erro),
                 )
+            self._registrar_experiencia(delegacao)
             return
