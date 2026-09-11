@@ -6,8 +6,8 @@
 - `python3 -m pytest tests/ -q`
 
 ## Estado verificado
-- HEAD de código validado: `281bf91ef3c10c7ef7fcefdd10e9e749a545f230`.
-- Workflow `34652511716`: Python 3.11, 3.12, 3.13 e 3.14 — todos os jobs em **success**.
+- HEAD de código validado: `dec0bbd4430bbe5883476112704ea78c97b90be3`.
+- Workflow `34653209175`: Python 3.11, 3.12, 3.13 e 3.14 — todos os jobs em **success**.
 - A versão da release v1.0.0 tinha 128 testes; o estado atual é superior e não deve usar 128 como contagem corrente.
 
 ## Cobertura dos componentes pós-release
@@ -26,7 +26,7 @@
 - Delegated Recovery: `tests/unit/test_delegacao_recovery.py` — retry transitório, falha permanente e validação de tentativas.
 - Experience: `tests/unit/test_delegacao_experiencia.py` — registro do resultado terminal.
 - Audit: `tests/unit/test_auditoria.py` — persistência/filtros e auditoria de sucesso/falha de delegação.
-- Policy: `tests/unit/test_policy.py` — ALLOW, DENY por padrão, identidade de regra, unicidade, integração ALLOW/DENY, auditoria e metadados de versão/origem.
+- Policy: `tests/unit/test_policy.py` — ALLOW, DENY por padrão, identidade de regra, unicidade, fingerprint canônico, integração ALLOW/DENY, distinção `DENEGADA`, auditoria e metadados de versão/origem.
 - Policy Loader: `tests/unit/test_policy_loader.py` — TOML válido, versão 2, IDs obrigatórios/duplicados, campos desconhecidos, efeito inválido e TOML malformado.
 
 ## Correções relevantes
@@ -34,6 +34,8 @@
 - A primeira execução CI da etapa de Policy falhou por ausência de `src/nexora/experiencia/__init__.py`; o pacote foi corrigido e a execução seguinte ficou totalmente verde.
 - O loader declarativo foi endurecido para rejeitar campos desconhecidos e tipos ambíguos, incluindo `version=true` como substituto inválido de uma versão inteira.
 - A evolução do schema para versão 2 tornou o `id` das regras obrigatório e explicitamente único, permitindo rastrear qual regra produziu cada decisão.
+- O fingerprint de política é calculado de forma canônica com SHA-256 sobre a semântica da política, incluindo ordem das regras e excluindo a origem do arquivo.
+- A negação de governança deixou de ser modelada como falha de execução: `EstadoDelegacao.DENEGADA` possui evento de auditoria próprio e mantém a resposta terminal `delegacao.resultado`.
 
 ## Histórico
 - Fase 16 / v1.0.0: 128 testes passando.
