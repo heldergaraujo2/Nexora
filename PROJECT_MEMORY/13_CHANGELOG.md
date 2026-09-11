@@ -25,14 +25,18 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - [x] `src/nexora/config/loaders.py` adiciona carregamento TOML via `tomllib` sem dependência externa.
 - [x] `pyproject.toml` passou a exigir Python `>=3.11` para suportar `tomllib` da biblioteca padrão.
 - [x] DENY impede a execução do handler e encerra a delegação como `FALHOU`, pois o enum atual ainda não possui estado `DENEGADA`.
+- [x] Schema de política evoluiu para `version = 2` com `id` obrigatório em cada regra.
+- [x] `RegraPolitica` valida ID não vazio e `PolicyEngine` rejeita IDs duplicados dentro da mesma política.
+- [x] `DecisaoPolitica.regra_id` expõe a regra correspondente; decisões por default não possuem `regra_id`.
+- [x] Auditoria de `politica.decisao` passou a registrar `regra_id` junto de efeito, permitido, motivo, versão e origem.
 - [ ] YAML ainda não implementado; só deve ser adicionado se uma necessidade arquitetural justificar a duplicação do formato.
 
 ### Correção de empacotamento
 - [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo a importação do registro de experiências no CI.
 
 ### Validação
-- [x] CI do commit de código `eccff2d3390807cfc0c7e839f6a055a0b1a867c5` verde no workflow `34649533683` para Python 3.11, 3.12, 3.13 e 3.14.
-- [x] Testes de loader cobrem TOML válido, ALLOW/DENY, versão inválida, campos desconhecidos, efeito inválido e TOML malformado.
+- [x] CI do commit de código `281bf91ef3c10c7ef7fcefdd10e9e749a545f230` verde no workflow `34652511716` para Python 3.11, 3.12, 3.13 e 3.14.
+- [x] Testes de loader cobrem TOML válido, versão 2, IDs obrigatórios/duplicados, campos desconhecidos, efeito inválido e TOML malformado.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
 
