@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 from typing import Any, Callable
+from uuid import uuid4
 
 from nexora.governanca.permissoes import GerenciadorPermissoes, PedidoPermissao
+from nexora.runtime.checkpoint import CheckpointEngine
 
 
 class Ferramenta:
@@ -24,11 +26,16 @@ class Ferramenta:
 
 
 class RegistryFerramentas:
-    """Mapeia ferramentas e aplica a fronteira de permissao antes da execucao."""
+    """Mapeia ferramentas e aplica permissao e checkpoint antes da execucao."""
 
-    def __init__(self, permissoes: GerenciadorPermissoes | None = None) -> None:
+    def __init__(
+        self,
+        permissoes: GerenciadorPermissoes | None = None,
+        checkpoint: CheckpointEngine | None = None,
+    ) -> None:
         self._ferramentas: dict[str, Ferramenta] = {}
         self._permissoes = permissoes
+        self._checkpoint = checkpoint
 
     def registrar(self, ferramenta: Ferramenta) -> None:
         self._ferramentas[ferramenta.nome] = ferramenta
@@ -43,17 +50,34 @@ class RegistryFerramentas:
         *,
         solicitante: str = "sistema",
         contexto: dict[str, Any] | None = None,
+        execucao_id: str | None = None,
     ) -> Any:
         ferramenta = self.obter(nome)
+        contexto_seguro = dict(contexto or {})
+
         if self._permissoes is not None:
             self._permissoes.exigir(
                 PedidoPermissao(
                     solicitante=solicitante,
                     recurso=ferramenta.nome,
                     acao="executar",
-                    contexto=contexto or {},
+                    contexto=contexto_seguro,
                 )
             )
+
+        if self._checkpoint is not None:
+            identificador = (execucao_id or uuid4().hex).strip()
+            self._checkpoint.criar(
+                identificador,
+                {
+                    "tipo": "ferramenta",
+                    "ferramenta": ferramenta.nome,
+                    "solicitante": solicitante,
+                    "contexto": contexto_seguro,
+                },
+                motivo="antes_da_acao",
+            )
+
         return ferramenta.executar(parametros)
 
     def nomes(self) -> list[str]:
