@@ -15,9 +15,10 @@
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - O roadmap pós-v1.0 está formalizado em `PROJECT_MEMORY/07_ROADMAP.md` nas Fases 17–25.
-- Incremento funcional atual de roteamento/trace: `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
-- CI run #243 (`34702264099`) passou em Python 3.11, 3.12, 3.13 e 3.14 para esse incremento funcional.
-- Commits posteriores apenas atualizaram documentação de continuidade/changelog; o CI do HEAD documental ainda deve ser confirmado antes do próximo checkpoint.
+- Incremento funcional de roteamento/trace: `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
+- Incremento de persistência do histórico: `b78eb29f41491c2437556ff4c6f7af49ff065d96`.
+- CI run `34702844025` passou em Python 3.11, 3.12, 3.13 e 3.14 para o incremento de persistência.
+- Documentação de continuidade posterior foi atualizada em commits separados; confirmar sempre o HEAD atual antes do próximo checkpoint.
 
 ## 3. Arquitetura canônica atual
 
@@ -81,6 +82,9 @@ Detecção inicial de hardware é conservadora, somente leitura e não presume G
 ### ADR-017
 Roteamento inteligente é provider/modelo agnóstico, determinístico e explicável. Considera adequação do modelo, hardware, capabilities, health opcional e histórico operacional medido. O roteador decide; o AgentRuntime executa.
 
+### ADR-018
+Histórico do `ProviderManager` possui persistência JSON opcional, versionada, configurável por caminho explícito ou `NEXORA_PROVIDER_HISTORY_PATH`, com escrita atômica e tolerância a dados inválidos.
+
 ## 5. Trabalho implementado e preservado
 - AgentRuntime é o proprietário do ciclo `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
 - ExecutionTrace transporta contexto estruturado sem inventar métricas.
@@ -118,13 +122,15 @@ Implementado:
 - `Orquestrador` pode executar a decisão inteligente e instanciar o modelo selecionado via `ProviderManager.obter_com_modelo()`.
 - `ExecutionTrace` recebe `provider`, `model` e `metadata.routing_decision` da execução real.
 - Teste de integração cobre `RoteadorInteligente → Orquestrador → AgentRuntime → ExecutionTrace`.
-- CI run #243 passou em Python 3.11–3.14 no commit funcional `386e810...`.
+- Histórico do `ProviderManager` pode ser persistido/recarregado por JSON versionado e caminho configurável.
+- CI run `34702844025` passou em Python 3.11–3.14 no incremento de persistência.
 
 Próximo incremento:
-1. confirmar CI do HEAD documental;
-2. estudar persistência das métricas do `ProviderManager` sem quebrar o desenho in-memory;
-3. adicionar custo/tokens apenas com telemetria real e confiável;
-4. avançar a descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo.
+1. fazer a execução real de provider no `Orquestrador → AgentRuntime` alimentar as métricas do `ProviderManager` sem duplicar chamadas;
+2. criar teste de integração que prove execução única + métricas atualizadas + trace correto;
+3. confirmar CI verde antes de fechar o checkpoint;
+4. depois adicionar tokens/custo somente quando houver telemetria real e confiável;
+5. avançar a descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -181,7 +187,8 @@ Para cada funcionalidade nova:
 - Não existe rollback de efeitos externos.
 - Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
 - Não existe estratégia completa de recuperação de operações `IN_PROGRESS` após crash.
-- Registry/capabilities e histórico atual de ProviderManager são em memória.
+- Registry/capabilities continuam em memória.
+- Histórico do ProviderManager agora pode sobreviver a reinicializações, mas ainda não é distribuído e depende do caminho real de execução alimentar as métricas.
 - ExecutorDelegacoes é síncrono/in-memory.
 - YAML de política não existe.
 - World Model/Knowledge ainda são infraestrutura, não inteligência mundial completa.
