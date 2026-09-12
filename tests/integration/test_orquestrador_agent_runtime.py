@@ -1,4 +1,4 @@
-"""Integracao do Orquestrator com o ciclo canonico do AgentRuntime."""
+"""Integracao do Orchestrator com o ciclo canonico do AgentRuntime."""
 
 from __future__ import annotations
 
@@ -52,6 +52,27 @@ def test_orquestrador_delega_ciclo_de_provider_ao_runtime() -> None:
         evento["tipo"] == "observacao"
         for evento in orquestrador.historico
     )
+
+
+def test_orquestrador_execution_trace_recebe_contexto_real_da_tarefa_e_provider() -> None:
+    provider = _SequenceProvider(["resultado valido"])
+    provider.name = "provider-teste"
+    orquestrador = Orquestrador(
+        rotador=_Rotador(provider),
+        provider=provider,
+        planejador=lambda _: [{"id": "t1", "descricao": "gerar resultado"}],
+    )
+
+    resultado = orquestrador.executar("concluir tarefa")
+    trace = resultado["etapas"][0]["trace"]
+
+    assert trace["task_id"] == "t1"
+    assert trace["provider"] == "provider-teste"
+    assert trace["agent_id"] == "orchestrator:runtime"
+    assert trace["metadata"]["objetivo_id"] == resultado["objetivo_id"]
+    assert trace["metadata"]["executor"] == "orchestrator"
+    assert trace["status"] == "success"
+    assert trace["retry_count"] == 0
 
 
 def test_orquestrador_nao_deixa_excecao_de_provider_escapar() -> None:
@@ -129,6 +150,9 @@ def test_orquestrador_ferramenta_passa_uma_vez_pela_governanca() -> None:
     assert resultado["etapas"][0]["saida"] == "ok:42"
     assert resultado["etapas"][0]["tentativas"] == 1
     assert resultado["etapas"][0]["ferramenta"] == "ferramenta_teste"
+    assert resultado["etapas"][0]["trace"]["task_id"] == "t1"
+    assert resultado["etapas"][0]["trace"]["provider"] == ""
+    assert resultado["etapas"][0]["trace"]["metadata"]["ferramenta"] == "ferramenta_teste"
     assert chamadas == 1
     assert provider.chamadas == 0
     assert len(checkpoint.listar()) == 1
