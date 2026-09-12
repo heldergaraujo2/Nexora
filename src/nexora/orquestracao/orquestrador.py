@@ -168,8 +168,10 @@ class Orquestrador:
             etapa: dict[str, Any] = {"tarefa_id": tarefa_dict.get("id"), "tipo": self._tipo_tarefa(tarefa_dict), "ok": resultado_runtime.sucesso, "saida": resultado_runtime.saida_final, "erro": resultado_runtime.etapas[-1].get("erro") if resultado_runtime.etapas else None, "tentativas": resultado_runtime.tentativas, "historico_runtime": resultado_runtime.historico, "trace": resultado_runtime.trace}
             if resultado_runtime.avaliacao:
                 etapa["avaliacao"] = resultado_runtime.avaliacao
-                if self.historico_avaliacao is not None and resultado_runtime.trace is not None:
-                    self.historico_avaliacao.registrar(resultado_runtime.trace.provider, resultado_runtime.trace.model, etapa["tipo"], resultado_runtime.avaliacao)
+                if self.historico_avaliacao is not None and isinstance(resultado_runtime.trace, dict):
+                    provider_trace = resultado_runtime.trace.get("provider", "")
+                    model_trace = resultado_runtime.trace.get("model", "")
+                    self.historico_avaliacao.registrar(provider_trace, model_trace, etapa["tipo"], resultado_runtime.avaliacao)
             if tarefa_dict.get("ferramenta") is not None:
                 etapa["ferramenta"] = tarefa_dict["ferramenta"]
                 etapa["parametros"] = tarefa_dict.get("parametros", {})
