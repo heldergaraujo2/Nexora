@@ -9,6 +9,7 @@
 - O Orquestrador usa `AgenteRuntime` como proprietário do ciclo de execução de cada tarefa.
 - A idempotência mínima foi integrada ao caminho governado de ferramentas.
 - O roadmap pós-v1.0.0 foi formalizado nas Fases 17–25.
+- A Fase 17 já iniciou com o primeiro Provider local oficial da arquitetura: `ProviderOllama`.
 
 ## Estado arquitetural real
 A Fase 16 — Long-Term Autonomy continua concluída e preservada. A arquitetura evoluiu com Context, Knowledge, World Model, Objetivos, Strategy, comunicação, delegação, runtime, recuperação, experiência, auditoria, governança e idempotência.
@@ -25,7 +26,27 @@ A Fase 16 — Long-Term Autonomy continua concluída e preservada. A arquitetura
 - `src/nexora/runtime/ferramenta.py` — contrato `ResultadoFerramenta`.
 - `src/nexora/orquestracao/orquestrador.py` — coordenação de objetivos/tarefas com AgentRuntime.
 - Experience, Audit, Policy, Permission, Tool Registry e Sandbox.
-- Providers existentes incluem base, Fake e Groq; o próximo incremento operacional planejado é o Provider local via Ollama.
+- Providers: base, Fake, Groq e agora Ollama local.
+
+## Fase 17 — Local Intelligence Foundation
+### Implementado neste incremento
+- [x] `src/nexora/providers/ollama.py` criado como Provider oficial local.
+- [x] Endpoint configurável por `NEXORA_OLLAMA_URL`, padrão `http://localhost:11434`.
+- [x] Modelo configurável por `NEXORA_OLLAMA_MODEL`.
+- [x] Perfil padrão inicial `qwen2.5-coder:7b-instruct-q4_K_M`.
+- [x] Geração via `/api/chat` usando stdlib, sem dependências pip adicionais.
+- [x] Health check via `/api/tags`, sem consumir geração.
+- [x] Indisponibilidade HTTP/rede normalizada em `ProviderIndisponivel`.
+- [x] Streaming e tool-calling não foram declarados até existir implementação/teste específicos.
+- [x] Testes unitários do ProviderOllama.
+- [x] Teste de integração RegistryProviders → ProviderManager → ProviderOllama com HTTP mockado.
+- [x] ADR-015 formaliza o Provider local.
+
+### Ainda pendente na Fase 17
+- [ ] Validar o Provider contra uma instalação real do Ollama.
+- [ ] Descobrir/listar modelos locais de forma estruturada para a futura camada de seleção.
+- [ ] Definir perfis de modelo por capacidade/hardware sem fixar o hardware do criador na arquitetura.
+- [ ] Preparar a futura detecção de CPU/RAM/GPU/VRAM/OS.
 
 ## Governança de execução
 Fluxo canônico:
@@ -40,8 +61,7 @@ A idempotência é aplicada quando configurada para a operação. O Orchestrator
 - CLI `nexora autonomia definir|atualizar|listar|resumir` permanece parte do sistema.
 
 ## Próxima direção formal
-O roadmap pós-v1.0 passa a priorizar, nesta ordem arquitetural inicial:
-1. **Fase 17 — Local Intelligence Foundation:** `OllamaProvider`, configuração de modelos locais e testes de integração HTTP mockada.
+1. **Fase 17 — Local Intelligence Foundation:** concluir validação/descoberta/configuração local.
 2. **Fase 18 — Coding Workspace Agent:** ferramentas governadas para trabalhar em workspace real.
 3. **Fase 19 — Dev Loop + Programming Experience:** ciclo automático de código/teste/erro/correção e aprendizado por experiências.
 4. **Fase 20 — Code Knowledge + RAG:** recuperação contextual sobre código, testes, docs e histórico.
@@ -51,14 +71,12 @@ O roadmap pós-v1.0 passa a priorizar, nesta ordem arquitetural inicial:
 8. **Fase 24 — Autonomous Product Engine:** fechamento progressivo do loop econômico do North Star.
 9. **Fase 25 — Continuous Evolution:** evolução contínua com identidade, testes, proveniência e governança.
 
-A ordem pode ser ajustada por evidência técnica, mas a direção está formalizada.
-
 ## Testes / CI
 - A política operacional exige testes para toda funcionalidade nova.
 - Mudanças que atravessam componentes exigem testes de integração.
 - Testes escritos não são considerados equivalentes a testes aprovados.
-- CI só pode ser marcado como OK quando o run correspondente ao HEAD concluir com sucesso.
-- Antes de iniciar a Fase 17, o estado exato do HEAD e seu CI correspondente deve ser confirmado.
+- O CI correspondente ao commit anterior `f8fb7919...` passou em Python 3.11–3.14.
+- O CI do novo HEAD desta etapa está em execução; portanto este incremento **ainda não é um checkpoint validado por CI**.
 
 ## Limites atuais verificados
 - `core/ciclo.py` ainda existe como caminho legado e não deve ser removido até consumidores/testes serem migrados com segurança.
@@ -74,6 +92,7 @@ A ordem pode ser ajustada por evidência técnica, mas a direção está formali
 - Autonomia econômica completa ainda não existe.
 - Groq ainda requer validação real HTTP/tool-calling antes de ser tratado como integração de produção validada.
 - `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
+- Ollama foi integrado por contrato, mas a validação real em máquina com daemon/modelo instalado ainda está pendente.
 
 ## Estado de fase
-**Roadmap pós-v1.0 formalizado; próxima fase planejada: Fase 17 — Local Intelligence Foundation.**
+**Fase 17 iniciada — ProviderOllama implementado e coberto por testes; CI do HEAD atual pendente.**
