@@ -6,6 +6,7 @@ from nexora.governanca.permissoes import GerenciadorPermissoes
 from nexora.governanca.policy import EfeitoPolitica, PolicyEngine, RegraPolitica
 from nexora.providers.fake import FakeProvider
 from nexora.runtime.checkpoint import CheckpointEngine
+from nexora.runtime.idempotencia import StatusIdempotencia, StoreIdempotenciaMemoria
 from nexora.runtime.verificacao import Verificacao, texto_nao_vazio
 from nexora.orquestracao.orquestrador import Orquestrador
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
@@ -85,3 +86,61 @@ def test_orquestrador_percorre_fluxo_completo_de_ferramenta(tmp_path):
     ferramenta = next(evento for evento in eventos if evento["evento"] == "ferramenta.resultado")
     assert ferramenta["dados"]["sucesso"] is True
     assert ferramenta["dados"]["verificado"] is True
+
+
+def test_orquestrador_reutiliza_idempotencia_automatica_da_tarefa():
+    store = StoreIdempotenciaMemoria()
+    ferramentas = RegistryFerramentas(idempotencia=store)
+    chamadas: list[dict] = []
+    ferramentas.registrar(
+        Ferramenta(
+            nome="efeito",
+            descricao="",
+            executar=lambda parametros: chamadas.append(parametros.copy()) or "ok",
+        )
+    )
+    provider = FakeProvider()
+    orquestrador = Orquestrador(_Rotador(provider), provider, ferramentas=ferramentas)
+    tarefa = {
+        "id": "tarefa-estavel",
+        "objetivo_id": "objetivo-estavel",
+        "descricao": "efeito externo",
+        "ferramenta": "efeito",
+        "parametros": {"valor": 9},
+    }
+
+    primeira = orquestrador._executar_tarefa(tarefa, provider)
+    segunda = orquestrador._executar_tarefa(tarefa, provider)
+
+    assert primeira == "ok"
+    assert segunda == "ok"
+    assert chamadas == [{"valor": 9}]
+    chave = "objetivo-estavel:tarefa-estavel:efeito"
+    assert store.obter(chave).status == StatusIdempotencia.SUCCEEDED
+
+
+def test_orquestrador_preserva_chave_de_idempotencia_declarada_pelo_planner():
+    store = StoreIdempotenciaMemoria()
+    ferramentas = RegistryFerramentas(idempotencia=store)
+    ferramentas.registrar(Ferramenta(nome="efeito", descricao="", executar=lambda p: "ok"))
+    provider = FakeProvider()
+    orquestrador = Orquestrador(
+        _Rotador(provider),
+        provider,
+        planejador=lambda objetivo: [
+            {
+                "id": "t1",
+                "descricao": "efeito",
+                "ferramenta": "efeito",
+                "parametros": {},
+                "idempotencia_chave": "chave-explicita",
+            }
+        ],
+        ferramentas=ferramentas,
+    )
+
+    resultado = orquestrador.executar("objetivo")
+
+    assert resultado["sucesso"] is True
+    assert resultado["etapas"][0]["idempotencia_chave"] == "chave-explicita"
+    assert store.obter("chave-explicita").status == StatusIdempotencia.SUCCEEDED
