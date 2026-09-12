@@ -101,3 +101,15 @@ def test_manager_persistencia_ignora_arquivo_invalido(tmp_path):
     manager = ProviderManager(persistencia_path=caminho)
     manager.registrar("saudavel", ProviderSaudavel)
     assert manager.estatisticas_provider("saudavel")["chamadas"] == 0
+
+
+def test_manager_persistencia_pode_ser_configurada_por_variavel_de_ambiente(tmp_path, monkeypatch):
+    caminho = tmp_path / "env-history.json"
+    monkeypatch.setenv("NEXORA_PROVIDER_HISTORY_PATH", str(caminho))
+    manager = ProviderManager()
+    manager.registrar("saudavel", ProviderSaudavel)
+    manager.executar("saudavel", "oi")
+
+    assert caminho.exists()
+    dados = json.loads(caminho.read_text(encoding="utf-8"))
+    assert dados["providers"]["saudavel"]["sucessos"] == 1
