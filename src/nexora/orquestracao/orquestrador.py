@@ -54,8 +54,8 @@ class Orquestrador:
             self.communication_bus.publicar(remetente=self.agent_id, destinatario="*", tipo=tipo, payload=payload)
 
     @staticmethod
-    def _aplicar_telemetria_trace(trace: ExecutionTrace, resultado: Any) -> Any:
-        """Propaga somente tokens explicitamente medidos pelo provider."""
+    def _aplicar_telemetria_trace(trace: ExecutionTrace, resultado: Any) -> str:
+        """Converte resposta de provider em texto e propaga telemetria medida."""
         if isinstance(resultado, GenerationResult):
             usage = resultado.usage
             if isinstance(usage, dict):
@@ -64,7 +64,13 @@ class Orquestrador:
                     trace.tokens = total
                 if usage:
                     trace.metadata["token_usage"] = dict(usage)
-        return resultado.text if isinstance(resultado, GenerationResult) else resultado
+            return resultado.text
+        texto = getattr(resultado, "text", None)
+        if isinstance(texto, str):
+            return texto
+        if isinstance(resultado, str):
+            return resultado
+        return str(resultado)
 
     def _executar_tarefa(self, tarefa, provider, *, trace: ExecutionTrace | None = None):
         descricao = tarefa.get("descricao", "")
@@ -83,9 +89,9 @@ class Orquestrador:
         provider_name = getattr(provider, "name", "")
         if self.provider_manager is not None and isinstance(provider_name, str) and provider_name.strip().lower() in self.provider_manager.nomes():
             resultado = self.provider_manager.executar_instancia(provider_name, provider, descricao)
-            return self._aplicar_telemetria_trace(trace, resultado) if trace is not None else (resultado.text if isinstance(resultado, GenerationResult) else resultado)
+            return self._aplicar_telemetria_trace(trace, resultado) if trace is not None else (resultado.text if isinstance(resultado, GenerationResult) else getattr(resultado, "text", resultado))
         resultado = provider.generate(descricao)
-        return self._aplicar_telemetria_trace(trace, resultado) if trace is not None else (resultado.text if isinstance(resultado, GenerationResult) else resultado)
+        return self._aplicar_telemetria_trace(trace, resultado) if trace is not None else getattr(resultado, "text", resultado)
 
     @staticmethod
     def _verificar(saida):
