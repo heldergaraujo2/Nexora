@@ -1,5 +1,26 @@
 # 13 — CHANGELOG
 
+## Fase 21 — Execução real alimentando métricas do ProviderManager — 2026-09-12
+
+O caminho real do Orchestrator passou a registrar métricas da instância de provider efetivamente selecionada, sem executar o provider duas vezes.
+
+### Implementação
+- [x] Adicionado `ProviderManager.executar_instancia()` para envolver uma instância já selecionada.
+- [x] `ProviderManager.executar()` reutiliza o mesmo caminho de métricas.
+- [x] `Orquestrador` usa `executar_instancia()` quando o provider está registrado no manager.
+- [x] O modelo selecionado pelo roteador continua sendo a instância realmente executada.
+- [x] Retry do `AgentRuntime` continua sendo o único mecanismo de repetição; cada tentativa real gera sua própria métrica.
+- [x] Sem `ProviderManager` ou provider não registrado, o caminho legado permanece preservado.
+
+### Testes / CI
+- [x] Teste unitário confirma que `executar_instancia()` não cria nem executa uma segunda instância.
+- [x] Teste de integração confirma execução única, chamadas/sucesso/latência no manager, persistência e `ExecutionTrace` correto.
+- [x] Uma falha inicial do CI foi diagnosticada: o health check padrão do `Provider` também chama `generate`; o teste foi isolado com health check explícito, sem alterar a semântica de produção.
+- [x] CI run `34703807547` passou em Python 3.11, 3.12, 3.13 e 3.14.
+
+### Próximo limite
+- [ ] Incorporar custo/tokens somente quando houver telemetria real e confiável.
+
 ## Fase 21 — Persistência opcional do histórico do ProviderManager — 2026-09-12
 
 O histórico operacional do `ProviderManager` passou a poder sobreviver a reinicializações sem transformar o componente em um banco de dados ou alterar o comportamento in-memory padrão.
@@ -19,7 +40,7 @@ O histórico operacional do `ProviderManager` passou a poder sobreviver a reinic
 - [x] CI run `34702844025` passou em Python 3.11, 3.12, 3.13 e 3.14.
 
 ### Limite preservado
-- [ ] O caminho real do `Orquestrador` ainda executa diretamente a instância selecionada; o próximo incremento deve fazer essa execução alimentar as métricas do `ProviderManager` sem duplicar chamadas.
+- [x] O caminho real do `Orquestrador` passou posteriormente a alimentar essas métricas sem duplicar chamadas.
 - [ ] Tokens/custo permanecem pendentes até existir telemetria real e confiável.
 
 ## Fase 21 — Integração real do roteamento com ExecutionTrace — 2026-09-12
