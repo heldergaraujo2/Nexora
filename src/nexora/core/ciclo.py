@@ -1,4 +1,11 @@
-"""Ciclo de execucao do agente (ADR-010: planejar, executar, verificar, registrar.."""
+"""Ciclo de execução legado/compatibilidade (ADR-012/013).
+
+Este módulo preserva o contrato histórico do ciclo simples enquanto a NEXORA
+consolida o ``AgenteRuntime`` como proprietário do ciclo avançado de execução.
+Novos caminhos de produção devem preferir ``nexora.runtime.agente.AgenteRuntime``.
+A remoção deste contrato depende de evidência de que consumidores legítimos não
+existem mais e de uma migração orientada por testes.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -7,7 +14,7 @@ from typing import Any, Callable, Protocol
 
 @dataclass
 class ResultadoCiclo:
-    """Resultado de uma execucao unica do ciclo agente."""
+    """Resultado de uma execução única do ciclo agente."""
 
     objetivo_id: str
     plano_id: str | None = None
@@ -34,7 +41,7 @@ class Executor:
 
 
 class Verificador:
-    """Valida resultados de execucao."""
+    """Valida resultados de execução."""
 
     def __init__(self, criterio: Callable[[dict[str, Any], bool]]) -> None:
         self._criterio = criterio
@@ -52,7 +59,7 @@ def executar_ciclo(
     registrar: Callable[[dict[str, Any], None]],
     max_tarefas: int = 10,
 ) -> ResultadoCiclo:
-    """Executa o ciclo completo e retorna o resultado consolidado."""
+    """Executa o ciclo simples legado e retorna o resultado consolidado."""
 
     plano = planejador.planejar(objetivo)
     etapas: list[dict[str, Any]] = []
@@ -83,7 +90,7 @@ def executar_ciclo(
             }
         )
         if ok:
-            metricas["concluidas"] +=  1
+            metricas["concluidas"] += 1
         else:
             metricas["falhas"] += 1
     metricas["etapas_executadas"] = len(etapas)
