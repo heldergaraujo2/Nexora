@@ -11,6 +11,7 @@ from nexora.runtime.agente import AgenteRuntime, ResultadoAgente
 from nexora.runtime.analise import AnalisadorFalhas
 from nexora.runtime.correcao import Corrector
 from nexora.runtime.eventos import EventStore
+from nexora.runtime.trace import ExecutionTrace
 from nexora.runtime.verificacao import texto_nao_vazio
 from nexora.tools.registry import RegistryFerramentas
 
@@ -100,6 +101,17 @@ class Orquestrador:
         # Retentativas de ferramentas/efeitos externos sao deliberadamente desabilitadas
         # nesta primeira integracao; providers sem efeitos externos podem usar recovery.
         tentativas = 1 if tarefa_dict.get("ferramenta") is not None else self.max_tentativas
+        provider_name = getattr(provider, "name", "")
+        trace = ExecutionTrace(
+            agent_id=f"{self.agent_id}:runtime",
+            task_id=str(tarefa_dict.get("id") or ""),
+            provider=provider_name if isinstance(provider_name, str) else "",
+            metadata={
+                "objetivo_id": tarefa_dict.get("objetivo_id"),
+                "executor": self.agent_id,
+                "ferramenta": tarefa_dict.get("ferramenta") or "",
+            },
+        )
         runtime = AgenteRuntime(
             executar=executar,
             verificar=verificar,
@@ -109,6 +121,7 @@ class Orquestrador:
             max_tentativas=tentativas,
             communication_bus=self.communication_bus,
             agent_id=f"{self.agent_id}:runtime",
+            trace=trace,
         )
         return runtime.executar(tarefa_dict.get("descricao", ""))
 
@@ -150,6 +163,7 @@ class Orquestrador:
                 "erro": resultado_runtime.etapas[-1].get("erro") if resultado_runtime.etapas else None,
                 "tentativas": resultado_runtime.tentativas,
                 "historico_runtime": resultado_runtime.historico,
+                "trace": resultado_runtime.trace,
             }
             if tarefa_dict.get("ferramenta") is not None:
                 etapa["ferramenta"] = tarefa_dict["ferramenta"]
