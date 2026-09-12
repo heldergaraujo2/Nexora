@@ -27,7 +27,9 @@ class ProviderManager:
         self._tempo_total: float = 0.0
         self._ultimas_falhas: dict[str, str] = {}
         self._metricas_provider: dict[str, dict[str, Any]] = {}
-        self._persistencia_path = Path(persistencia_path) if persistencia_path is not None else None
+        caminho_env = os.getenv("NEXORA_PROVIDER_HISTORY_PATH")
+        caminho = persistencia_path if persistencia_path is not None else caminho_env
+        self._persistencia_path = Path(caminho) if caminho else None
         self._carregar_historico()
 
     def registrar(self, nome: str, fabrica: Any) -> None:
