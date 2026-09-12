@@ -6,10 +6,12 @@
 - Release histórica: `v1.0.0`, tag apontando para `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - O `main` continua evoluindo após `v1.0.0`; a versão de pacote permanece `1.0.0`.
 - O runtime interno foi reforçado para transformar exceções de execução/verificação em observações controladas.
-- O Orquestrador agora usa `AgenteRuntime` como proprietário do ciclo de execução de cada tarefa.
+- O Orquestrador usa `AgenteRuntime` como proprietário do ciclo de execução de cada tarefa.
+- A idempotência mínima foi integrada ao caminho governado de ferramentas.
+- O roadmap pós-v1.0.0 foi formalizado nas Fases 17–25.
 
 ## Estado arquitetural real
-A Fase 16 — Long-Term Autonomy continua concluída e preservada. A arquitetura evoluiu com Context, Knowledge, World Model, Objetivos, Strategy, comunicação, delegação, runtime, recuperação, experiência, auditoria e governança.
+A Fase 16 — Long-Term Autonomy continua concluída e preservada. A arquitetura evoluiu com Context, Knowledge, World Model, Objetivos, Strategy, comunicação, delegação, runtime, recuperação, experiência, auditoria, governança e idempotência.
 
 ### Componentes principais verificados
 - Context, Knowledge, World Model, Goal e Strategy Engines.
@@ -19,50 +21,59 @@ A Fase 16 — Long-Term Autonomy continua concluída e preservada. A arquitetura
 - `src/nexora/runtime/analise.py` — AnalisadorFalhas existente.
 - `src/nexora/runtime/correcao.py` — Corrector.
 - `src/nexora/runtime/checkpoint.py` — CheckpointEngine para snapshots lógicos em memória.
+- `src/nexora/runtime/idempotencia.py` — barreira de idempotência em memória.
 - `src/nexora/runtime/ferramenta.py` — contrato `ResultadoFerramenta`.
 - `src/nexora/orquestracao/orquestrador.py` — coordenação de objetivos/tarefas com AgentRuntime.
 - Experience, Audit, Policy, Permission, Tool Registry e Sandbox.
-
-## Reconciliação Orchestrator ↔ AgentRuntime — EM IMPLEMENTAÇÃO
-A ADR-012 define o limite arquitetural: Orchestrator coordena; AgentRuntime executa o ciclo avançado. `core/ciclo.py` permanece legado/compatibilidade até migração segura.
-
-Implementado neste checkpoint:
-- [x] `Orquestrador` deixou de importar/instanciar `ExecutorCiclo` e `VerificadorCiclo` para execução normal.
-- [x] Cada tarefa é encaminhada a uma instância do `AgenteRuntime`.
-- [x] Provider continua sendo usado para tarefas sem ferramenta.
-- [x] Tarefas com ferramenta continuam atravessando `RegistryFerramentas`.
-- [x] Retry implícito de ferramentas foi deliberadamente limitado a uma tentativa nesta primeira integração, evitando repetir efeitos externos sem uma camada explícita de idempotência.
-- [x] Resultado do runtime é normalizado para o resultado de tarefa do Orchestrator, preservando tentativas e histórico.
-- [x] Exceções de execução/verificação do AgentRuntime viram `Observacao` e podem ser analisadas pelo fluxo de falha, em vez de escaparem diretamente.
-- [x] Testes de integração adicionados para sucesso após retry de provider e para falha de provider sem exceção escapar do Orchestrator.
+- Providers existentes incluem base, Fake e Groq; o próximo incremento operacional planejado é o Provider local via Ollama.
 
 ## Governança de execução
-Fluxo preservado:
+Fluxo canônico:
 
-`Pedido → Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`
+`Pedido → Permission → Policy → Checkpoint → Idempotency → Tool → Observation → Verification → Audit → Result`
 
-O Orchestrator não executa ferramentas diretamente: delega ao Registry existente. A integração com AgentRuntime não contorna Permission/Policy/Checkpoint.
+A idempotência é aplicada quando configurada para a operação. O Orchestrator não executa ferramentas diretamente: delega ao Registry existente. A integração com AgentRuntime não contorna Permission/Policy/Checkpoint.
 
 ## Long-Term Autonomy
 - `src/nexora/autonomia/registro.py` permanece preservado.
 - `MetaLongoPrazo` e `RegistroAutonomia` continuam responsáveis por metas de longo prazo e persistência JSONL append-only.
 - CLI `nexora autonomia definir|atualizar|listar|resumir` permanece parte do sistema.
 
+## Próxima direção formal
+O roadmap pós-v1.0 passa a priorizar, nesta ordem arquitetural inicial:
+1. **Fase 17 — Local Intelligence Foundation:** `OllamaProvider`, configuração de modelos locais e testes de integração HTTP mockada.
+2. **Fase 18 — Coding Workspace Agent:** ferramentas governadas para trabalhar em workspace real.
+3. **Fase 19 — Dev Loop + Programming Experience:** ciclo automático de código/teste/erro/correção e aprendizado por experiências.
+4. **Fase 20 — Code Knowledge + RAG:** recuperação contextual sobre código, testes, docs e histórico.
+5. **Fase 21 — Intelligent Model Routing:** escolha de Provider/modelo por dificuldade, custo, risco e contexto.
+6. **Fase 22 — Hardware & NEXORA Setup:** preparação para instalação/configuração simples conforme hardware.
+7. **Fase 23 — NEXORA UI / Experience Layer:** interface extremamente tecnológica, futurista e inovadora, porém simples de usar.
+8. **Fase 24 — Autonomous Product Engine:** fechamento progressivo do loop econômico do North Star.
+9. **Fase 25 — Continuous Evolution:** evolução contínua com identidade, testes, proveniência e governança.
+
+A ordem pode ser ajustada por evidência técnica, mas a direção está formalizada.
+
 ## Testes / CI
-- O último CI previamente validado foi o Run #157 no HEAD `52ef09f...`.
-- Este checkpoint adicionou testes de integração para a nova fronteira Orchestrator ↔ AgentRuntime.
-- O novo HEAD deve ser validado pelo CI antes de ser considerado checkpoint de código validado.
+- A política operacional exige testes para toda funcionalidade nova.
+- Mudanças que atravessam componentes exigem testes de integração.
+- Testes escritos não são considerados equivalentes a testes aprovados.
+- CI só pode ser marcado como OK quando o run correspondente ao HEAD concluir com sucesso.
+- Antes de iniciar a Fase 17, o estado exato do HEAD e seu CI correspondente deve ser confirmado.
 
 ## Limites atuais verificados
-- `core/ciclo.py` ainda existe como caminho legado e não deve ser removido até consumidores/testes serem migrados.
+- `core/ciclo.py` ainda existe como caminho legado e não deve ser removido até consumidores/testes serem migrados com segurança.
 - Checkpoints não possuem persistência durável.
 - Não existe rollback de efeitos externos.
-- Retry/idempotência para efeitos externos ainda requer uma camada própria.
-- Registry/capabilities continuam em memória.
+- Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
+- Não existe estratégia completa de recuperação de operações `IN_PROGRESS` após crash.
+- Registry/capabilities são em memória.
 - ExecutorDelegacoes é síncrono/in-memory.
 - YAML de políticas não foi implementado.
-- O ciclo autônomo completo de planejamento multi-agente, economia e evolução ainda não está fechado.
-- Groq ainda requer validação real da integração HTTP/tool-calling antes de ser tratado como validado em produção.
+- World Model/Knowledge ainda são infraestrutura, não inteligência mundial completa.
+- Economic Engine ainda não fecha o loop oportunidade → produto → mercado → receita → reinvestimento.
+- Autonomia econômica completa ainda não existe.
+- Groq ainda requer validação real HTTP/tool-calling antes de ser tratado como integração de produção validada.
+- `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
 
 ## Estado de fase
-**Reconciliação Orchestrator ↔ AgentRuntime em implementação incremental; não foi criada nova fase.**
+**Roadmap pós-v1.0 formalizado; próxima fase planejada: Fase 17 — Local Intelligence Foundation.**
