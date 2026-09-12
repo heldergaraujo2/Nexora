@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from nexora.comunicacao import CommunicationBus
 from nexora.runtime.observacao import Observacao
+from nexora.runtime.trace import ExecutionTrace
 
 
 @dataclass
@@ -17,6 +18,7 @@ class ResultadoAgente:
     etapas: list[dict[str, Any]] = field(default_factory=list)
     metricas: dict[str, Any] = field(default_factory=dict)
     historico: list[dict[str, Any]] = field(default_factory=list)
+    trace: dict[str, Any] = field(default_factory=dict)
 
 
 class AgenteRuntime:
@@ -33,6 +35,7 @@ class AgenteRuntime:
         max_tentativas: int = 3,
         communication_bus: CommunicationBus | None = None,
         agent_id: str = "agent",
+        trace: ExecutionTrace | None = None,
     ) -> None:
         if max_tentativas < 1:
             raise ValueError("max_tentativas deve ser >= 1")
@@ -46,6 +49,7 @@ class AgenteRuntime:
         self._max_tentativas = max_tentativas
         self._communication_bus = communication_bus
         self._agent_id = agent_id
+        self._trace = trace
 
     def _publicar(self, tipo: str, payload: dict[str, Any], *, destinatario: str = "*") -> None:
         if self._communication_bus is not None:
@@ -57,15 +61,18 @@ class AgenteRuntime:
             )
 
     def executar(self, objetivo: str) -> ResultadoAgente:
+        trace = self._trace or ExecutionTrace(agent_id=self._agent_id)
         historico: list[dict[str, Any]] = []
         saida = ""
         tentativas = 0
         ultimo_erro = None
         ok = False
-        self._publicar("agente.inicio", {"objetivo": objetivo})
+        self._publicar("agente.inicio", {"objetivo": objetivo, "execution_id": trace.execution_id, "trace_id": trace.trace_id})
 
         while tentativas < self._max_tentativas:
             tentativas += 1
+            if tentativas > 1:
+                trace.incrementar_retry()
             erro_execucao: str | None = None
             try:
                 saida = self._executar(objetivo)
@@ -89,7 +96,7 @@ class AgenteRuntime:
                 ok=ok,
                 saida=saida,
                 erro=erro_execucao,
-                metadados={"tentativa": tentativas},
+                metadados={"tentativa": tentativas, "execution_id": trace.execution_id, "trace_id": trace.trace_id},
             )
             observacao_dict = {
                 "tentativa": tentativas,
@@ -130,6 +137,7 @@ class AgenteRuntime:
                 continue
             break
 
+        trace.finalizar(status="success" if ok else "failed", failure_type="" if ok else (ultimo_erro or "verification_failed"))
         resultado = ResultadoAgente(
             objetivo=objetivo,
             sucesso=ok,
@@ -138,11 +146,15 @@ class AgenteRuntime:
             etapas=[{"tentativa": tentativas, "ok": ok, "saida": saida, "erro": ultimo_erro}],
             metricas={"tentativas": tentativas, "max_tentativas": self._max_tentativas},
             historico=historico,
+            trace=trace.para_dict(),
         )
         self._publicar("agente.resultado", {
             "objetivo": objetivo,
             "sucesso": ok,
             "tentativas": tentativas,
             "saida": saida,
+            "execution_id": trace.execution_id,
+            "trace_id": trace.trace_id,
+            "status": trace.status,
         })
         return resultado
