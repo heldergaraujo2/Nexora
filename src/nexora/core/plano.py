@@ -13,12 +13,13 @@ class Tarefa:
         self,
         descricao: str,
         *,
+        id: str | None = None,
         ferramenta: str | None = None,
         parametros: dict[str, Any] | None = None,
         depende_de: list[str] | None = None,
         idempotencia_chave: str | None = None,
     ) -> None:
-        self.id = uuid.uuid4().hex
+        self.id = id.strip() if id and id.strip() else uuid.uuid4().hex
         self.descricao = descricao.strip()
         self.ferramenta = ferramenta
         self.parametros = parametros if parametros is not None else {}
