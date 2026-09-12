@@ -55,7 +55,7 @@ class Orquestrador:
 
     @staticmethod
     def _aplicar_telemetria_trace(trace: ExecutionTrace, resultado: Any) -> str:
-        """Converte resposta de provider em texto e propaga telemetria medida."""
+        """Converte resposta de provider e propaga telemetria medida."""
         if isinstance(resultado, GenerationResult):
             usage = resultado.usage
             if isinstance(usage, dict):
@@ -89,7 +89,12 @@ class Orquestrador:
         provider_name = getattr(provider, "name", "")
         if self.provider_manager is not None and isinstance(provider_name, str) and provider_name.strip().lower() in self.provider_manager.nomes():
             resultado = self.provider_manager.executar_instancia(provider_name, provider, descricao)
-            return self._aplicar_telemetria_trace(trace, resultado) if trace is not None else (resultado.text if isinstance(resultado, GenerationResult) else getattr(resultado, "text", resultado))
+            if trace is not None:
+                trace.cost = self.provider_manager.calcular_custo(provider, resultado)
+                if trace.cost is not None:
+                    trace.metadata["cost_currency"] = "USD"
+                return self._aplicar_telemetria_trace(trace, resultado)
+            return resultado.text if isinstance(resultado, GenerationResult) else getattr(resultado, "text", resultado)
         resultado = provider.generate(descricao)
         return self._aplicar_telemetria_trace(trace, resultado) if trace is not None else getattr(resultado, "text", resultado)
 
