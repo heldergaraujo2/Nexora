@@ -1,4 +1,6 @@
 """Testes do ProviderManager."""
+import json
+
 import pytest
 
 from nexora.providers.base import GenerationResult
@@ -12,7 +14,7 @@ class ProviderSaudavel(Provider):
         self.chamadas = 0
 
     def generate(self, prompt, **kwargs):
-        self.chamadas +=  1
+        self.chamadas += 1
         return GenerationResult(text="ok")
 
     def saudavel(self):
@@ -47,5 +49,55 @@ def test_manager_estatisticas_contam_chamadas_e_erros():
 def test_manager_healthcheck_reporta_estado():
     manager = ProviderManager()
     manager.registrar("saudavel", ProviderSaudavel)
-    assert manager.obter_healthcheck("saudavel") ["saudavel"] is True
-    assert manager.obter_healthcheck("nao-existe") ["saudavel"] is False
+    assert manager.obter_healthcheck("saudavel")["saudavel"] is True
+    assert manager.obter_healthcheck("nao-existe")["saudavel"] is False
+
+
+def test_manager_persiste_e_recarrega_historico(tmp_path):
+    caminho = tmp_path / "provider-history.json"
+    primeiro = ProviderManager(persistencia_path=caminho)
+    primeiro.registrar("saudavel", ProviderSaudavel)
+    assert primeiro.executar("saudavel", "oi").text == "ok"
+
+    segundo = ProviderManager(persistencia_path=caminho)
+    segundo.registrar("saudavel", ProviderSaudavel)
+    stats = segundo.estatisticas_provider("saudavel")
+    assert stats["chamadas"] == 1
+    assert stats["sucessos"] == 1
+    assert stats["erros"] == 0
+    assert stats["latencia_media"] is not None
+
+
+def test_manager_persistencia_registra_falha_e_sobrevive_a_novo_processo(tmp_path):
+    caminho = tmp_path / "provider-history.json"
+    primeiro = ProviderManager(persistencia_path=caminho)
+    primeiro.registrar("doente", ProviderDoente)
+    with pytest.raises(ProviderError):
+        primeiro.executar("doente", "oi")
+
+    segundo = ProviderManager(persistencia_path=caminho)
+    segundo.registrar("doente", ProviderDoente)
+    stats = segundo.estatisticas_provider("doente")
+    assert stats["chamadas"] == 1
+    assert stats["erros"] == 1
+    assert stats["ultima_falha"] == "fora do ar"
+
+
+def test_manager_persistencia_tem_schema_e_escrita_atomica(tmp_path):
+    caminho = tmp_path / "provider-history.json"
+    manager = ProviderManager(persistencia_path=caminho)
+    manager.registrar("saudavel", ProviderSaudavel)
+    manager.executar("saudavel", "oi")
+
+    dados = json.loads(caminho.read_text(encoding="utf-8"))
+    assert dados["schema_version"] == 1
+    assert dados["providers"]["saudavel"]["chamadas"] == 1
+    assert not caminho.with_name(".provider-history.json.tmp").exists()
+
+
+def test_manager_persistencia_ignora_arquivo_invalido(tmp_path):
+    caminho = tmp_path / "provider-history.json"
+    caminho.write_text("{invalido", encoding="utf-8")
+    manager = ProviderManager(persistencia_path=caminho)
+    manager.registrar("saudavel", ProviderSaudavel)
+    assert manager.estatisticas_provider("saudavel")["chamadas"] == 0
