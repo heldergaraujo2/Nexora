@@ -14,10 +14,8 @@
 - Repositório: `heldergaraujo2/Nexora`.
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- CI Run #170 validou o HEAD `ec146cb797f35b6d30e98f7d0e8d36b93f344487` com conclusão `success`.
-- Runs posteriores anteriores foram considerados no histórico, mas o HEAD atual ainda precisa de CI correspondente.
-- Neste checkpoint: `97951898a217f1c92cb70ce5514216626b7adeea` registrou o contrato de idempotência; `bdbc467a5c8f2d3ceab668075823a948aa801275` tornou a reivindicação atomicamente identificável; `83b2341a1b21d92cabae755ac9b1cd90ba9df096` integrou a barreira ao Registry; `95e852ce71dfbf024bf16158d0fd1114b952ced0` integrou o Orchestrator; `837bf6edec575141bc7d14cb139f672de310d319` persistiu a chave explícita na Tarefa; `cb7cad491c2fdc7b9c933ed597bd71aaca83df45` adicionou testes de integração.
-- **Não considerar o HEAD deste checkpoint validado até o CI correspondente concluir com sucesso.**
+- O roadmap pós-v1.0 está formalizado em `PROJECT_MEMORY/07_ROADMAP.md` nas Fases 17–25.
+- O último CI correspondente ao HEAD deve ser confirmado antes de iniciar a Fase 17. Não declarar CI como OK sem run correspondente bem-sucedido.
 
 ## 3. Arquitetura canônica atual
 
@@ -95,34 +93,12 @@ Decisão:
 - Operação `FAILED` não recebe retry automático; retry futuro exige mecanismo explícito.
 - O store atual é in-memory e concorrente; persistência durável/distribuída ainda não está implementada.
 
-## 5. O que foi implementado neste checkpoint
-### AgentRuntime / ExecutionTrace
-- Exceções de execução e verificação são controladas como observações.
-- O fluxo de análise/recovery continua `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
-- `ResultadoAgente` transporta `trace` estruturado.
-- `ExecutionTrace` registra IDs, agente/tarefa, provider/model, tokens, latência, custo, retry, falha, policy version/fingerprint, checkpoint, status e timestamps.
-
-### Orchestrator
-- Não usa mais `ExecutorCiclo`/`VerificadorCiclo` no caminho normal.
-- Cada tarefa passa por um `AgenteRuntime`.
-- O trace recebe contexto real disponível.
-- Tarefas com ferramenta continuam passando pelo `RegistryFerramentas`.
-- Retry automático de ferramenta continua limitado a uma tentativa nesta integração.
-- Quando o Registry possui idempotência, tarefas de ferramenta recebem automaticamente uma chave estável `objetivo:tarefa:ferramenta`.
-- O planner pode declarar `idempotencia_chave` explicitamente e a Tarefa preserva essa chave.
-- Nenhum token/custo/modelo é inventado.
-
-### Idempotência
-- `src/nexora/runtime/idempotencia.py` fornece store concorrente em memória, fingerprint determinístico e estados `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.
-- `RegistryFerramentas` aceita `StoreIdempotenciaMemoria` opcional.
-- A ordem canônica é `Permission → Policy → Checkpoint → Idempotency → Tool → Observation → Verification → Audit → Result`.
-- Sem store configurado, o comportamento legado do Registry permanece preservado.
-- Com store configurado, duplicidades não reexecutam a ferramenta.
-- Falhas anteriores não são automaticamente repetidas.
-
-### Ciclo legado
-- `src/nexora/core/ciclo.py` permanece funcional e documentado como contrato legado/compatibilidade.
-- Nenhum novo caminho de produção deve usá-lo para criar outro motor de execução.
+## 5. Trabalho implementado e preservado
+- AgentRuntime é o proprietário do ciclo `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
+- ExecutionTrace transporta contexto estruturado sem inventar métricas.
+- Orchestrator encaminha tarefas para AgentRuntime e ferramentas para Registry.
+- Idempotência mínima está integrada ao caminho governado de ferramentas.
+- Long-Term Autonomy da Fase 16 permanece concluída e não deve ser substituída.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -137,14 +113,53 @@ Fluxo canônico:
 - Sandbox é governança/controle de subprocesso, não isolamento OS forte.
 - Auditoria JSONL é append-only por convenção, não prova criptográfica de imutabilidade.
 
-## 7. Long-Term Autonomy — NÃO QUEBRAR
-A Fase 16 está concluída e preservada.
+## 7. Direção de desenvolvimento — Fase 17 em diante
+A sequência oficial inicial está em `PROJECT_MEMORY/07_ROADMAP.md`:
 
-Arquivo principal: `src/nexora/autonomia/registro.py`.
+1. **Fase 17 — Local Intelligence Foundation:** OllamaProvider e inteligência local.
+2. **Fase 18 — Coding Workspace Agent:** ferramentas governadas para workspace real.
+3. **Fase 19 — Dev Loop + Programming Experience:** código → teste → erro → correção → reteste → experiência.
+4. **Fase 20 — Code Knowledge + RAG:** conhecimento recuperável sobre código e histórico.
+5. **Fase 21 — Intelligent Model Routing:** seleção de modelo/provider por tarefa, custo, risco e contexto.
+6. **Fase 22 — Hardware & NEXORA Setup:** instalação e configuração simples conforme o hardware.
+7. **Fase 23 — NEXORA UI / Experience Layer:** UI extremamente tecnológica/futurista/inovadora, mas simples e intuitiva.
+8. **Fase 24 — Autonomous Product Engine:** aproximação do loop econômico completo.
+9. **Fase 25 — Continuous Evolution:** evolução contínua governada.
 
-Não substituir essa camada para integrar novos componentes. A integração atual deve aproximar a NEXORA do North Star, não reduzir sua capacidade de autonomia futura.
+### Visão de Provider local
+O hardware-alvo atualmente considerado para o desenvolvimento local é Ryzen 5 5600 + ~16 GB DDR4 + Radeon RX 6600 8 GB. Isso orienta a escolha inicial de perfil local, mas **não deve ser codificado como requisito fixo da NEXORA**.
 
-## 8. Limites reais
+O perfil inicial recomendado é um modelo de código local quantizado na classe Qwen2.5-Coder 7B Q4, executado por runtime local compatível. A arquitetura deve continuar agnóstica a modelo e preparada para perfis menores/maiores.
+
+Ollama é uma integração planejada, não uma dependência arquitetural obrigatória da NEXORA.
+
+## 8. UI — requisito de produto
+A UI final da NEXORA deve transmitir:
+- tecnologia;
+- futuro;
+- inovação;
+- inteligência;
+- sensação de sistema vivo;
+
+sem transformar isso em complexidade de uso.
+
+**Regra de UX:** a complexidade deve ficar na arquitetura interna; a interface principal deve ser limpa, intuitiva e visualmente impactante.
+
+A estética poderá usar elementos futuristas, estados de execução em tempo real, visualização de atividades, animações discretas e identidade premium, sempre subordinados à legibilidade e à facilidade de uso.
+
+## 9. Testes — regra permanente
+Para cada funcionalidade nova:
+1. implementar;
+2. criar/atualizar testes;
+3. executar os testes relevantes;
+4. adicionar integração quando houver cruzamento de componentes;
+5. validar CI correspondente ao HEAD;
+6. atualizar PROJECT_MEMORY;
+7. registrar commit/handoff.
+
+**Nunca confundir teste escrito com teste aprovado.**
+
+## 10. Limites reais
 - Checkpoints são em memória.
 - Não existe rollback de efeitos externos.
 - Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
@@ -158,30 +173,20 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 - Groq ainda requer validação real HTTP/tool-calling antes de ser tratado como integração de produção validada.
 - `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
 
-## 9. Anomalia conhecida
-`src/nexora/runtime/analise.py` já apresentou SHA inconsistente no tooling. **Não inventar SHA.** Se for necessário alterá-lo, resolver a identidade do blob primeiro.
-
-## 10. Próximo trabalho
-1. Confirmar CI correspondente ao HEAD atual em Python 3.11–3.14.
-2. Se CI falhar, corrigir antes de avançar.
-3. Auditar a superfície pública de `core/ciclo.py` antes de remoção/simplificação.
-4. Adicionar integração de idempotência também ao caminho de execução que efetivamente recebe tarefas persistidas/repetidas, quando essa camada existir.
-5. Evoluir o store de idempotência para persistência durável somente quando o runtime exigir recuperação após crash/múltiplas instâncias.
-6. Não habilitar retry externo automaticamente; primeiro implementar precondições, autorização, recuperação e verificação explícitas.
-7. Depois: evidência de pesquisa, economia computacional e evolução do World Model.
-
 ## 11. O que NÃO fazer
 - Não criar outra NEXORA.
 - Não criar outro repositório.
-- Não criar nova fase sem necessidade arquitetural.
-- Não duplicar Runtime, Permission, Policy, Checkpoint ou Tool Registry.
+- Não criar outro Runtime de execução.
+- Não duplicar Permission, Policy, Checkpoint ou Tool Registry.
 - Não apagar Long-Term Autonomy.
+- Não transformar NEXORA em wrapper de Ollama/Aider/Continue/OpenHands ou outro produto externo.
 - Não tratar sandbox como isolamento OS forte.
 - Não tratar auditoria como histórico criptograficamente inviolável.
 - Não chamar infraestrutura de autonomia completa antes de fechar o loop real do North Star.
-- Não introduzir retry de efeito externo sem idempotência, autorização, precondições e governança.
-- Não preencher métricas de trace com valores inventados ou estimados sem evidência.
+- Não introduzir retry de efeito externo sem idempotência, autorização, precondições e verificação.
+- Não preencher métricas com valores inventados.
 - Não remover `core/ciclo.py` apenas porque a busca interna não encontrou consumidores adicionais.
+- Não transformar a UI em um painel complexo apenas para parecer tecnológico.
 
 ## 12. Regra operacional
 A cada avanço significativo:
