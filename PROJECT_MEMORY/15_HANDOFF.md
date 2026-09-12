@@ -15,8 +15,8 @@
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - CI Run #170 validou o HEAD `ec146cb797f35b6d30e98f7d0e8d36b93f344487` com conclusão `success`.
-- Run #172 e Run #173 foram disparados pelos commits de classificação/documentação do ciclo legado; ambos precisam ser considerados junto do CI posterior do HEAD.
-- Neste checkpoint: `65490e66db0de4641740fc37bc99e5f6cdca58fb` integrou contexto real de tarefa/provider ao `ExecutionTrace`; `7377558e93974ca7fd77201adb74b5386f50665b` adicionou testes de integração; este handoff fecha a continuidade documental.
+- Runs posteriores anteriores foram considerados no histórico, mas o HEAD atual ainda precisa de CI correspondente.
+- Neste checkpoint: `97951898a217f1c92cb70ce5514216626b7adeea` registrou o contrato de idempotência; `bdbc467a5c8f2d3ceab668075823a948aa801275` tornou a reivindicação atomicamente identificável; `83b2341a1b21d92cabae755ac9b1cd90ba9df096` integrou a barreira ao Registry; `95e852ce71dfbf024bf16158d0fd1114b952ced0` integrou o Orchestrator; `837bf6edec575141bc7d14cb139f672de310d319` persistiu a chave explícita na Tarefa; `cb7cad491c2fdc7b9c933ed597bd71aaca83df45` adicionou testes de integração.
 - **Não considerar o HEAD deste checkpoint validado até o CI correspondente concluir com sucesso.**
 
 ## 3. Arquitetura canônica atual
@@ -33,6 +33,8 @@ Seleção do executor/agente
 AgentRuntime  ← proprietário do ciclo avançado
   ↓
 Permission / Policy / Checkpoint
+  ↓
+Idempotency (quando configurada para a operação)
   ↓
 Provider ou Tool
   ↓
@@ -68,7 +70,7 @@ Decisões principais:
 - `core/ciclo.py` não deve ser removido por suposição.
 - Migração incremental e orientada por testes.
 - Uma tarefa não pode ser executada duas vezes por camadas concorrentes.
-- Ferramentas continuam sujeitas a `Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`.
+- Ferramentas continuam sujeitas a governança.
 - Retry de efeitos externos exige idempotência/autorização.
 
 ### ADR-013
@@ -81,51 +83,55 @@ Resultado da revisão do ciclo legado:
 - `src/nexora/core/ciclo.py` foi explicitamente marcado como legado/compatibilidade.
 - A remoção ainda não está autorizada: consumidores externos não podem ser inferidos apenas pela busca interna.
 
+### ADR-014
+Arquivo: `docs/adr/ADR-014-idempotencia-efeitos-externos.md`.
+
+Decisão:
+- Idempotência é uma barreira explícita antes da execução de efeitos externos.
+- A chave identifica a operação; o fingerprint identifica os parâmetros semânticos da operação.
+- Reutilização com mesmo fingerprint não executa novamente.
+- Reutilização com fingerprint diferente é conflito de integridade.
+- Operação `IN_PROGRESS` não é executada novamente.
+- Operação `FAILED` não recebe retry automático; retry futuro exige mecanismo explícito.
+- O store atual é in-memory e concorrente; persistência durável/distribuída ainda não está implementada.
+
 ## 5. O que foi implementado neste checkpoint
-### AgentRuntime
-- Exceções de execução agora viram `Observacao` com erro.
-- Exceções de verificação também são controladas como observação.
+### AgentRuntime / ExecutionTrace
+- Exceções de execução e verificação são controladas como observações.
 - O fluxo de análise/recovery continua `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
 - `ResultadoAgente` transporta `trace` estruturado.
-- `ExecutionTrace` foi introduzido em `src/nexora/runtime/trace.py` com IDs de execução/trace/span, agente/tarefa, provider/model, tokens, latência, custo, retry, falha, policy version/fingerprint, checkpoint, status e timestamps.
-- O runtime gera/atualiza o trace, contabiliza retries e finaliza o status de forma determinística.
+- `ExecutionTrace` registra IDs, agente/tarefa, provider/model, tokens, latência, custo, retry, falha, policy version/fingerprint, checkpoint, status e timestamps.
 
 ### Orchestrator
 - Não usa mais `ExecutorCiclo`/`VerificadorCiclo` no caminho normal.
 - Cada tarefa passa por um `AgenteRuntime`.
-- O `ExecutionTrace` agora recebe `task_id` real da tarefa e, quando o provider declara `name`, esse nome é registrado em `provider`.
-- Metadados do trace carregam `objetivo_id`, executor e ferramenta quando aplicável.
-- Nenhum token/custo/modelo foi inventado: campos sem fonte continuam vazios/nulos.
-- O trace é devolvido na etapa do resultado do Orchestrator.
-- Provider continua executando tarefas sem ferramenta.
+- O trace recebe contexto real disponível.
 - Tarefas com ferramenta continuam passando pelo `RegistryFerramentas`.
-- Retry automático de ferramenta está limitado a uma tentativa nesta primeira integração para não repetir efeitos externos sem idempotência.
-- Resultado do runtime é normalizado para o contrato do Orchestrator e preserva tentativas/histórico.
+- Retry automático de ferramenta continua limitado a uma tentativa nesta integração.
+- Quando o Registry possui idempotência, tarefas de ferramenta recebem automaticamente uma chave estável `objetivo:tarefa:ferramenta`.
+- O planner pode declarar `idempotencia_chave` explicitamente e a Tarefa preserva essa chave.
+- Nenhum token/custo/modelo é inventado.
+
+### Idempotência
+- `src/nexora/runtime/idempotencia.py` fornece store concorrente em memória, fingerprint determinístico e estados `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.
+- `RegistryFerramentas` aceita `StoreIdempotenciaMemoria` opcional.
+- A ordem canônica é `Permission → Policy → Checkpoint → Idempotency → Tool → Observation → Verification → Audit → Result`.
+- Sem store configurado, o comportamento legado do Registry permanece preservado.
+- Com store configurado, duplicidades não reexecutam a ferramenta.
+- Falhas anteriores não são automaticamente repetidas.
 
 ### Ciclo legado
-- `src/nexora/core/ciclo.py` permanece funcional, mas agora é documentado como contrato legado/compatibilidade.
+- `src/nexora/core/ciclo.py` permanece funcional e documentado como contrato legado/compatibilidade.
 - Nenhum novo caminho de produção deve usá-lo para criar outro motor de execução.
-- A migração/aposentadoria será uma etapa posterior, orientada por evidência e testes.
-
-### Governança
-- O teste `test_orquestrador_ferramenta_passa_uma_vez_pela_governanca` valida Orchestrator → Registry → Permission/Policy → Checkpoint → Tool e confirma uma única execução.
-
-### Testes
-Arquivos principais:
-- `tests/integration/test_orquestrador_agent_runtime.py`
-- `tests/unit/test_execution_trace.py`
-- `tests/unit/test_agente_runtime_trace.py`
-- `tests/unit/test_ciclo.py`
-
-O novo teste `test_orquestrador_execution_trace_recebe_contexto_real_da_tarefa_e_provider` confirma que o trace recebe apenas contexto efetivamente disponível.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
-`Pedido → Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`
+`Pedido → Permission → Policy → Checkpoint → Idempotency → Tool → Observation → Verification → Audit → Result`
 
 - Policy default DENY.
 - Permission ocorre antes da ação.
 - Checkpoint ocorre antes da ferramenta.
+- Idempotência, quando habilitada, ocorre antes do efeito.
 - Registry é o executor governado da ferramenta.
 - Orchestrator não deve executar ferramenta contornando o Registry.
 - Sandbox é governança/controle de subprocesso, não isolamento OS forte.
@@ -141,7 +147,8 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 ## 8. Limites reais
 - Checkpoints são em memória.
 - Não existe rollback de efeitos externos.
-- Não existe camada completa de idempotência externa.
+- Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
+- Não existe estratégia completa de recuperação de operações `IN_PROGRESS` após crash.
 - Registry/capabilities são em memória.
 - ExecutorDelegacoes é síncrono/in-memory.
 - YAML de política não existe.
@@ -149,18 +156,19 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 - Economic Engine ainda não fecha o loop oportunidade → produto → mercado → receita → reinvestimento.
 - Autonomia econômica completa ainda não existe.
 - Groq ainda requer validação real HTTP/tool-calling antes de ser tratado como integração de produção validada.
-- `ExecutionTrace` é contrato de observabilidade; ainda não há backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
+- `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
 
 ## 9. Anomalia conhecida
 `src/nexora/runtime/analise.py` já apresentou SHA inconsistente no tooling. **Não inventar SHA.** Se for necessário alterá-lo, resolver a identidade do blob primeiro.
 
 ## 10. Próximo trabalho
-1. Confirmar CI do HEAD deste checkpoint em Python 3.11–3.14.
+1. Confirmar CI correspondente ao HEAD atual em Python 3.11–3.14.
 2. Se CI falhar, corrigir antes de avançar.
-3. Fazer nova auditoria de superfície pública de `core/ciclo.py` antes de qualquer remoção/simplificação.
-4. Evoluir `ExecutionTrace` para spans/eventos e persistência somente quando houver necessidade real, mantendo o contrato atual compatível.
-5. Próximo ganho arquitetural prioritário: idempotência explícita para efeitos externos, começando pelo contrato e testes antes de qualquer retry externo.
-6. Depois: evidência de pesquisa, economia computacional e evolução do World Model.
+3. Auditar a superfície pública de `core/ciclo.py` antes de remoção/simplificação.
+4. Adicionar integração de idempotência também ao caminho de execução que efetivamente recebe tarefas persistidas/repetidas, quando essa camada existir.
+5. Evoluir o store de idempotência para persistência durável somente quando o runtime exigir recuperação após crash/múltiplas instâncias.
+6. Não habilitar retry externo automaticamente; primeiro implementar precondições, autorização, recuperação e verificação explícitas.
+7. Depois: evidência de pesquisa, economia computacional e evolução do World Model.
 
 ## 11. O que NÃO fazer
 - Não criar outra NEXORA.
@@ -171,7 +179,7 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 - Não tratar sandbox como isolamento OS forte.
 - Não tratar auditoria como histórico criptograficamente inviolável.
 - Não chamar infraestrutura de autonomia completa antes de fechar o loop real do North Star.
-- Não introduzir retry de efeito externo sem idempotência e governança.
+- Não introduzir retry de efeito externo sem idempotência, autorização, precondições e governança.
 - Não preencher métricas de trace com valores inventados ou estimados sem evidência.
 - Não remover `core/ciclo.py` apenas porque a busca interna não encontrou consumidores adicionais.
 
