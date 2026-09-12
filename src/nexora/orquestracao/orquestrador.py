@@ -7,10 +7,14 @@ from typing import Any
 from nexora.comunicacao import CommunicationBus
 from nexora.core.objetivo import Objetivo
 from nexora.core.plano import Plano, Tarefa
+from nexora.providers.manager import ProviderManager
+from nexora.providers.roteamento import CandidatoRoteamento, RoteadorInteligente
+from nexora.providers.routing_trace import registrar_decisao_trace
 from nexora.runtime.agente import AgenteRuntime, ResultadoAgente
 from nexora.runtime.analise import AnalisadorFalhas
 from nexora.runtime.correcao import Corrector
 from nexora.runtime.eventos import EventStore
+from nexora.runtime.hardware import PerfilHardware
 from nexora.runtime.trace import ExecutionTrace
 from nexora.runtime.verificacao import texto_nao_vazio
 from nexora.tools.registry import RegistryFerramentas
@@ -30,6 +34,10 @@ class Orquestrador:
         agent_id="orchestrator",
         ferramentas: RegistryFerramentas | None = None,
         max_tentativas: int = 3,
+        provider_manager: ProviderManager | None = None,
+        roteador_inteligente: RoteadorInteligente | None = None,
+        candidatos_roteamento: list[dict[str, Any]] | None = None,
+        hardware: PerfilHardware | None = None,
     ):
         self.rotador = rotador
         self.provider = provider
@@ -40,6 +48,10 @@ class Orquestrador:
         self.agent_id = agent_id
         self.ferramentas = ferramentas
         self.max_tentativas = max_tentativas
+        self.provider_manager = provider_manager
+        self.roteador_inteligente = roteador_inteligente
+        self.candidatos_roteamento = candidatos_roteamento
+        self.hardware = hardware
 
     @staticmethod
     def _planejar(objetivo):
@@ -100,7 +112,13 @@ class Orquestrador:
     def _analisar(observacao):
         return AnalisadorFalhas().analisar(observacao)
 
-    def _executar_runtime(self, tarefa_dict, provider):
+    def _executar_runtime(
+        self,
+        tarefa_dict,
+        provider,
+        *,
+        routing_candidates: list[CandidatoRoteamento] | None = None,
+    ):
         def executar(_prompt):
             return self._executar_tarefa(tarefa_dict, provider)
 
@@ -112,16 +130,20 @@ class Orquestrador:
         # nesta primeira integracao; providers sem efeitos externos podem usar recovery.
         tentativas = 1 if tarefa_dict.get("ferramenta") is not None else self.max_tentativas
         provider_name = getattr(provider, "name", "")
+        model_name = getattr(provider, "modelo", "")
         trace = ExecutionTrace(
             agent_id=f"{self.agent_id}:runtime",
             task_id=str(tarefa_dict.get("id") or ""),
             provider=provider_name if isinstance(provider_name, str) else "",
+            model=model_name if isinstance(model_name, str) else "",
             metadata={
                 "objetivo_id": tarefa_dict.get("objetivo_id"),
                 "executor": self.agent_id,
                 "ferramenta": tarefa_dict.get("ferramenta") or "",
             },
         )
+        if routing_candidates is not None:
+            registrar_decisao_trace(trace, routing_candidates)
         runtime = AgenteRuntime(
             executar=executar,
             verificar=verificar,
@@ -135,12 +157,39 @@ class Orquestrador:
         )
         return runtime.executar(tarefa_dict.get("descricao", ""))
 
+    def _selecionar_provider(self, objetivo_texto: str, alias=None):
+        """Seleciona provider/modelo pelo router inteligente quando configurado.
+
+        O caminho legado continua intacto quando o router inteligente nao possui
+        contexto suficiente. Quando uma decisao inteligente e usada, o provider
+        e instanciado com o modelo selecionado, sem fallback silencioso.
+        """
+        if (
+            self.roteador_inteligente is None
+            or self.provider_manager is None
+            or self.hardware is None
+            or not self.candidatos_roteamento
+        ):
+            return self.rotador.obter_provider(objetivo_texto, alias=alias), None
+
+        candidatos = self.roteador_inteligente.selecionar(
+            self.candidatos_roteamento,
+            self.hardware,
+            tarefa="coding" if "cod" in objetivo_texto.lower() else "general",
+        )
+        adequados = [candidato for candidato in candidatos if candidato.adequado]
+        if not adequados:
+            raise RuntimeError("Nenhum provider/modelo adequado pelo roteador inteligente")
+        selecionado = adequados[0]
+        provider = self.provider_manager.obter_com_modelo(selecionado.provider, selecionado.modelo)
+        return provider, candidatos
+
     def executar(self, objetivo_texto, alias=None):
         objetivo = Objetivo(objetivo_texto)
         self._registrar("objetivo", objetivo.para_dict())
         self._publicar("orquestracao.inicio", {"objetivo_id": objetivo.id, "objetivo": objetivo.texto})
 
-        provider = self.rotador.obter_provider(objetivo_texto, alias=alias)
+        provider, routing_candidates = self._selecionar_provider(objetivo_texto, alias=alias)
         if not provider.saudavel():
             self._publicar("orquestracao.erro", {"objetivo_id": objetivo.id, "motivo": "Provider indisponivel"})
             raise RuntimeError("Provider indisponivel")
@@ -167,7 +216,11 @@ class Orquestrador:
             tarefa_dict = tarefa.para_dict()
             tarefa_dict["objetivo_id"] = objetivo.id
             self._publicar("orquestracao.tarefa.inicio", {"objetivo_id": objetivo.id, "tarefa_id": tarefa_dict.get("id")})
-            resultado_runtime: ResultadoAgente = self._executar_runtime(tarefa_dict, provider)
+            resultado_runtime: ResultadoAgente = self._executar_runtime(
+                tarefa_dict,
+                provider,
+                routing_candidates=routing_candidates,
+            )
             etapa: dict[str, Any] = {
                 "tarefa_id": tarefa_dict.get("id"),
                 "ok": resultado_runtime.sucesso,
