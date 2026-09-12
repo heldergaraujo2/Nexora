@@ -53,6 +53,18 @@ class StoreIdempotenciaMemoria:
         Chamadas posteriores com a mesma identidade nunca criam uma nova execucao.
         Reutilizar a chave com outro fingerprint e erro de integridade.
         """
+        registro, _ = self.reivindicar_com_status(chave, fingerprint)
+        return registro
+
+    def reivindicar_com_status(
+        self, chave: str, fingerprint: str
+    ) -> tuple[RegistroIdempotencia, bool]:
+        """Reivindica uma operacao e informa se esta chamada foi a primeira.
+
+        O par ``(registro, True)`` significa que o chamador ganhou a posse da
+        execucao. ``False`` significa que a chave ja existia e a operacao nao
+        deve ser executada novamente.
+        """
         self._validar(chave, fingerprint)
         with self._lock:
             atual = self._registros.get(chave)
@@ -61,14 +73,14 @@ class StoreIdempotenciaMemoria:
                     raise ConflitoIdempotencia(
                         f"chave de idempotencia ja associada a outra operacao: {chave}"
                     )
-                return atual
+                return atual, False
             novo = RegistroIdempotencia(
                 chave=chave,
                 fingerprint=fingerprint,
                 status=StatusIdempotencia.IN_PROGRESS,
             )
             self._registros[chave] = novo
-            return novo
+            return novo, True
 
     def concluir(
         self,
