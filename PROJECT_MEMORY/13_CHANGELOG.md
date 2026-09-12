@@ -16,7 +16,7 @@ O `main` continua evoluindo após `v1.0.0`, sem criar nova fase. Este checkpoint
 - [x] Run #147 (`34659962617`) do HEAD `d69e7c9947dfc79fdd51f28dae66e97a0d3e75f4` concluiu com SUCCESS em Python 3.11, 3.12, 3.13 e 3.14.
 - [x] A suíte completa executou **232 testes passando** em Python 3.14.
 - [x] Foram corrigidos os dois `SyntaxWarning` de regex em `tests/unit/test_policy_loader.py` usando expressões regulares raw.
-- [ ] O novo HEAD documental `a608056d700519f2f62447f23c1148bd621c4be2` ainda deve receber seu próprio CI antes do fechamento final deste checkpoint.
+- [x] As atualizações posteriores desta etapa são apenas de documentação/continuidade.
 
 ### Decisão arquitetural registrada
 - [x] O próximo trabalho não deve criar nova fase.
@@ -111,7 +111,7 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo importação no CI.
 
 ### Validação
-- [x] CI verde para Python 3.11–3.14 no checkpoint anterior.
+- [x] CI verde para Python 3.11–3.14 nos checkpoints validados.
 - [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance, Checkpoint Engine, auditoria de resultados e integração Orchestrator → Tool Registry.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
