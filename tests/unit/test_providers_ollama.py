@@ -42,12 +42,37 @@ def test_ollama_generate_mapeia_chat():
 
     assert resultado.text == "resposta local"
     assert resultado.tool_calls == []
+    assert resultado.usage == {}
     pedido = urlopen.call_args.args[0]
     corpo = json.loads(pedido.data.decode("utf-8"))
     assert corpo["model"] == "qwen-teste"
     assert corpo["stream"] is False
     assert corpo["messages"][0] == {"role": "system", "content": "responda curto"}
     assert corpo["options"] == {"temperature": 0.2}
+
+
+def test_ollama_generate_expoe_apenas_tokens_devolvidos_pelo_daemon():
+    resposta = _resposta_json({
+        "message": {"content": "resposta local", "tool_calls": []},
+        "prompt_eval_count": 11,
+        "eval_count": 7,
+    })
+    with patch("urllib.request.urlopen", return_value=resposta):
+        resultado = ProviderOllama().generate("ola")
+
+    assert resultado.usage == {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18}
+
+
+def test_ollama_ignora_contadores_invalidos_sem_estimar():
+    resposta = _resposta_json({
+        "message": {"content": "resposta local"},
+        "prompt_eval_count": "11",
+        "eval_count": -1,
+    })
+    with patch("urllib.request.urlopen", return_value=resposta):
+        resultado = ProviderOllama().generate("ola")
+
+    assert resultado.usage == {}
 
 
 def test_ollama_http_e_rede_viram_indisponivel():
