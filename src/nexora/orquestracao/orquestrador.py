@@ -42,6 +42,8 @@ class Orquestrador:
         self.hardware = hardware
         self.avaliador_resultado = avaliador_resultado
         self.historico_avaliacao = historico_avaliacao
+        if self.roteador_inteligente is not None and self.historico_avaliacao is not None:
+            self.roteador_inteligente.definir_historico_avaliacao(self.historico_avaliacao)
 
     @staticmethod
     def _planejar(objetivo):
@@ -133,10 +135,10 @@ class Orquestrador:
         runtime = AgenteRuntime(executar=executar, verificar=self._verificar, analisar=self._analisar, corregir=corrector.corregir, registrar=self._registrar, max_tentativas=tentativas, communication_bus=self.communication_bus, agent_id=f"{self.agent_id}:runtime", trace=trace, avaliador=self.avaliador_resultado)
         return runtime.executar(tarefa_dict.get("descricao", ""))
 
-    def _selecionar_provider(self, objetivo_texto: str, alias=None):
+    def _selecionar_provider(self, objetivo_texto: str, alias=None, *, tipo_tarefa: str = "general"):
         if self.roteador_inteligente is None or self.provider_manager is None or self.hardware is None or not self.candidatos_roteamento:
             return self.rotador.obter_provider(objetivo_texto, alias=alias), None
-        candidatos = self.roteador_inteligente.selecionar(self.candidatos_roteamento, self.hardware, tarefa="coding" if "cod" in objetivo_texto.lower() else "general")
+        candidatos = self.roteador_inteligente.selecionar(self.candidatos_roteamento, self.hardware, tarefa=tipo_tarefa)
         adequados = [candidato for candidato in candidatos if candidato.adequado]
         if not adequados:
             raise RuntimeError("Nenhum provider/modelo adequado pelo roteador inteligente")
@@ -148,16 +150,17 @@ class Orquestrador:
         objetivo = Objetivo(objetivo_texto)
         self._registrar("objetivo", objetivo.para_dict())
         self._publicar("orquestracao.inicio", {"objetivo_id": objetivo.id, "objetivo": objetivo.texto})
-        provider, routing_candidates = self._selecionar_provider(objetivo_texto, alias=alias)
-        if not provider.saudavel():
-            self._publicar("orquestracao.erro", {"objetivo_id": objetivo.id, "motivo": "Provider indisponivel"})
-            raise RuntimeError("Provider indisponivel")
         plano_dict = self.planejador(objetivo_texto)
         plano = Plano(objetivo_id=objetivo.id)
         for item in plano_dict:
             plano.adicionar_tarefa(Tarefa(descricao=item.get("descricao", ""), id=item.get("id"), ferramenta=item.get("ferramenta"), parametros=item.get("parametros", {}), depende_de=item.get("depende_de", []), idempotencia_chave=item.get("idempotencia_chave"), tipo=item.get("tipo")))
         self._registrar("plano", plano.para_dict())
         self._publicar("orquestracao.plano", {"objetivo_id": objetivo.id, "plano_id": plano.id, "tarefas": len(plano.tarefas)})
+        tipo_tarefa = self._tipo_tarefa(plano.tarefas[0].para_dict()) if plano.tarefas else "general"
+        provider, routing_candidates = self._selecionar_provider(objetivo_texto, alias=alias, tipo_tarefa=tipo_tarefa)
+        if not provider.saudavel():
+            self._publicar("orquestracao.erro", {"objetivo_id": objetivo.id, "motivo": "Provider indisponivel"})
+            raise RuntimeError("Provider indisponivel")
         etapas = []
         ok_geral = True
         for tarefa in plano.tarefas:
