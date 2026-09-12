@@ -81,17 +81,14 @@ class RoteadorInteligente:
         """Aplica qualidade observada somente para o tipo exato e com amostra suficiente."""
         if self._historico_avaliacao is None:
             return 0.0, []
-        historico = self._historico_avaliacao.estatisticas(provider, modelo, tipo_tarefa)
-        amostra = int(historico.get("avaliacoes", 0))
-        if amostra < self._min_amostra_qualidade:
+        historico = self._historico_avaliacao.qualidade_para_roteamento(provider, modelo, tipo_tarefa, min_amostra=self._min_amostra_qualidade)
+        if not historico["amostra_suficiente"]:
             return 0.0, []
-        score = historico.get("score_medio")
-        if not isinstance(score, (int, float)) or isinstance(score, bool):
-            return 0.0, []
+        score = historico["score_medio"]
         pares_com_amostra = []
         for candidato_provider, candidato_modelo in candidatos:
-            dados = self._historico_avaliacao.estatisticas(candidato_provider, candidato_modelo, tipo_tarefa)
-            if int(dados.get("avaliacoes", 0)) >= self._min_amostra_qualidade and isinstance(dados.get("score_medio"), (int, float)):
+            dados = self._historico_avaliacao.qualidade_para_roteamento(candidato_provider, candidato_modelo, tipo_tarefa, min_amostra=self._min_amostra_qualidade)
+            if dados["amostra_suficiente"]:
                 pares_com_amostra.append(float(dados["score_medio"]))
         if len(pares_com_amostra) < 2:
             return 0.0, []
