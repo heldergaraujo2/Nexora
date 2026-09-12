@@ -18,8 +18,9 @@
 - Incremento funcional de roteamento/trace: `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
 - Incremento de persistência do histórico: `b78eb29f41491c2437556ff4c6f7af49ff065d96`.
 - Incremento de métricas no caminho real: `4492b53f012fb6cb88b4771f24b11f07effcebe3`.
-- CI run `34703807547` passou em Python 3.11, 3.12, 3.13 e 3.14 para o incremento funcional de métricas.
-- Os arquivos de continuidade foram atualizados depois desse CI; confirmar sempre o HEAD atual e o CI mais recente antes de fechar o próximo checkpoint.
+- Correção de compatibilidade do Orchestrator: `3ba8cb3f01d0100b6b6969f22b7f0cef6cf21d94`.
+- CI run `34704095484` passou em Python 3.11, 3.12, 3.13 e 3.14.
+- Após o CI verde, o checkpoint de telemetria de tokens foi documentado e o próximo incremento é custo real somente com pricing autoritativo.
 
 ## 3. Arquitetura canônica atual
 
@@ -84,11 +85,11 @@ Detecção inicial de hardware é conservadora, somente leitura e não presume G
 Roteamento inteligente é provider/modelo agnóstico, determinístico e explicável. Considera adequação do modelo, hardware, capabilities, health opcional e histórico operacional medido. O roteador decide; o AgentRuntime executa.
 
 ### ADR-018
-Histórico do `ProviderManager` possui persistência JSON opcional, versionada, configurável por caminho explícito ou `NEXORA_PROVIDER_HISTORY_PATH`, com escrita atômica e tolerância a dados inválidos.
+Histórico do `ProviderManager` possui persistência JSON opcional, versionada, configurável por caminho explícito ou `NEXORA_PROVIDER_HISTORY_PATH`, com escrita atômica e tolerância a dados inválidos. Schema v2 inclui tokens medidos quando fornecidos pelo provider e mantém compatibilidade de leitura com schema v1.
 
 ## 5. Trabalho implementado e preservado
 - AgentRuntime é o proprietário do ciclo `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
-- ExecutionTrace transporta contexto estruturado sem inventar métricas.
+- ExecutionTrace transporta contexto estruturado e métricas reais quando disponíveis, sem inventar valores.
 - Orchestrator encaminha tarefas para AgentRuntime e ferramentas para Registry.
 - Idempotência mínima está integrada ao caminho governado de ferramentas.
 - Long-Term Autonomy da Fase 16 permanece concluída e não deve ser substituída.
@@ -126,13 +127,15 @@ Implementado:
 - Histórico do `ProviderManager` pode ser persistido/recarregado por JSON versionado e caminho configurável.
 - `ProviderManager.executar_instancia()` permite medir a instância já selecionada sem duplicar a chamada.
 - `Orquestrador` alimenta as métricas reais do provider durante a execução governada pelo `AgentRuntime`.
-- Teste de integração confirma execução única, chamadas/sucesso/latência, persistência e trace correto.
-- CI run `34703807547` passou em Python 3.11–3.14 para esse incremento.
+- Telemetria real de tokens é propagada ao trace e persistida no histórico v2 quando fornecida pelo provider.
+- Compatibilidade com providers legados que retornam objetos com `.text` foi preservada.
+- Teste de integração confirma execução única, chamadas/sucesso/latência, tokens 9/6/15, persistência e trace correto.
+- CI run `34704095484` passou em Python 3.11–3.14.
 
 Próximo incremento:
-1. manter tokens/custo bloqueados até existir telemetria real e confiável;
-2. avaliar como incorporar telemetria real de tokens/custo por provider sem estimativas;
-3. avançar descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo;
+1. não estimar custo;
+2. implementar custo real somente quando existir pricing autoritativo/versionado por provider/modelo;
+3. avaliar descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo;
 4. depois avançar para Fase 18, preservando governança e o ciclo único de execução.
 
 ## 6. Governança — NÃO QUEBRAR
@@ -191,7 +194,7 @@ Para cada funcionalidade nova:
 - Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
 - Não existe estratégia completa de recuperação de operações `IN_PROGRESS` após crash.
 - Registry/capabilities continuam em memória.
-- Histórico do ProviderManager agora pode sobreviver a reinicializações e recebe métricas do caminho real, mas ainda não é distribuído.
+- Histórico do ProviderManager agora pode sobreviver a reinicializações, recebe métricas do caminho real e inclui tokens medidos quando fornecidos, mas ainda não é distribuído.
 - ExecutorDelegacoes é síncrono/in-memory.
 - YAML de política não existe.
 - World Model/Knowledge ainda são infraestrutura, não inteligência mundial completa.
@@ -201,6 +204,7 @@ Para cada funcionalidade nova:
 - `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
 - Ollama foi integrado por contrato, mas a validação real em máquina com daemon/modelo instalado ainda está pendente.
 - A integração inteligente de roteamento está disponível de forma opt-in no Orchestrator; a configuração automática global de candidatos ainda é futura.
+- Custo permanece ausente quando não há pricing autoritativo/versionado; a NEXORA não estima custo.
 
 ## 12. O que NÃO fazer
 - Não criar outra NEXORA.
@@ -222,3 +226,9 @@ A cada avanço significativo:
 `AUDITAR → DECIDIR → IMPLEMENTAR → TESTAR → ATUALIZAR PROJECT_MEMORY → COMMIT → PUSH → VERIFICAR CI → HANDOFF`.
 
 O repositório deve permanecer sempre em estado reproduzível e documentado. O North Star é a direção; testes, arquitetura e GitHub são as evidências do estado real.
+
+## 14. Estado do checkpoint atual
+- **CI do incremento de tokens: OK.** Run `34704095484`, Python 3.11/3.12/3.13/3.14: todos `success`.
+- **HEAD técnico que originou o CI:** `3ba8cb3f01d0100b6b6969f22b7f0cef6cf21d94`.
+- **Documentação de continuidade:** atualizada após validação do CI.
+- **Próxima ação:** fechar/atualizar ADR-018 com schema v2 e iniciar análise de pricing autoritativo para custo real; se não houver fonte confiável, manter custo ausente e avançar para descoberta automática de candidatos ou Fase 18.
