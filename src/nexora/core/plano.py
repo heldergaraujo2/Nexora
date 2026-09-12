@@ -18,6 +18,7 @@ class Tarefa:
         parametros: dict[str, Any] | None = None,
         depende_de: list[str] | None = None,
         idempotencia_chave: str | None = None,
+        tipo: str | None = None,
     ) -> None:
         self.id = id.strip() if id and id.strip() else uuid.uuid4().hex
         self.descricao = descricao.strip()
@@ -25,12 +26,12 @@ class Tarefa:
         self.parametros = parametros if parametros is not None else {}
         self.depende_de = depende_de if depende_de is not None else []
         self.idempotencia_chave = idempotencia_chave.strip() if idempotencia_chave else None
+        self.tipo = tipo.strip().lower() if tipo and tipo.strip() else None
         self.status: str = "pendente"
         self.resultado: dict[str, Any] | None = None
         self.erro: str | None = None
         self.iniciada_em: str | None = None
         self.concluida_em: str | None = None
-
 
     def para_dict(self) -> dict[str, Any]:
         return {
@@ -40,6 +41,7 @@ class Tarefa:
             "parametros": self.parametros,
             "depende_de": self.depende_de,
             "idempotencia_chave": self.idempotencia_chave,
+            "tipo": self.tipo,
             "status": self.status,
             "resultado": self.resultado,
             "erro": self.erro,
@@ -58,15 +60,11 @@ class Plano:
         self.criado_em = datetime.now(timezone.utc).isoformat()
         self.status: str = "planejado"
 
-
     def adicionar_tarefa(self, tarefa: Tarefa) -> None:
-
         self.tarefas.append(tarefa)
-
 
     def pendentes(self) -> list[Tarefa]:
         return [t for t in self.tarefas if t.status == "pendente"]
-
 
     def para_dict(self) -> dict[str, Any]:
         return {
