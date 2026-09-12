@@ -44,9 +44,11 @@ def test_roteamento_prefere_confiabilidade_do_modelo_quando_ha_amostra():
     for _ in range(3):
         m.executar("alpha", "ok")
         m.executar("beta", "ok")
-    # Injeta duas falhas adicionais somente no modelo beta.
+    # Injeta tres falhas adicionais somente no modelo beta.
+    # Com 3 sucessos + 3 falhas, a taxa de erro do modelo chega a 50%,
+    # ativando explicitamente a regra historico_alta_taxa_erro.
     m._fabricas["beta"] = ProviderHistorico("beta", "model-b", falhar=True)
-    for _ in range(2):
+    for _ in range(3):
         try:
             m.executar("beta", "falhar")
         except RuntimeError:
