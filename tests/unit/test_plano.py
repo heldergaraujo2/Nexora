@@ -14,6 +14,12 @@ def test_tarefa_para_dict():
     assert dados["ferramenta"] == "bash"
 
 
+def test_tarefa_preserva_chave_de_idempotencia():
+    tarefa = Tarefa("Executar efeito", ferramenta="efeito", idempotencia_chave="op-123")
+    assert tarefa.idempotencia_chave == "op-123"
+    assert tarefa.para_dict()["idempotencia_chave"] == "op-123"
+
+
 def test_plano_adiciona_e_lista_pendentes():
     plano = Plano(objetivo_id="obj-1")
     plano.adicionar_tarefa(Tarefa("a"))
