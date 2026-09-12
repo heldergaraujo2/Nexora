@@ -15,8 +15,9 @@
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - O roadmap pós-v1.0 está formalizado em `PROJECT_MEMORY/07_ROADMAP.md` nas Fases 17–25.
-- O CI do incremento de histórico de ProviderManager passou em Python 3.11–3.14 no run `34697884018` (run #232).
-- O commit posterior de testes `52dc64e496e5623662c69b8fa5d095cd33eaa4d8` iniciou novo CI (run #232 conforme evento mais recente); confirmar esse run antes de fechar qualquer novo checkpoint posterior.
+- Incremento funcional atual de roteamento/trace: `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
+- CI run #243 (`34702264099`) passou em Python 3.11, 3.12, 3.13 e 3.14 para esse incremento funcional.
+- Commits posteriores apenas atualizaram documentação de continuidade/changelog; o CI do HEAD documental ainda deve ser confirmado antes do próximo checkpoint.
 
 ## 3. Arquitetura canônica atual
 
@@ -113,14 +114,17 @@ Implementado:
 - Métricas reais do `ProviderManager` por provider.
 - Histórico mínimo de três chamadas antes de influenciar score.
 - Ajustes pequenos e explicáveis por sucesso, erro e latência relativa.
-- Testes unitários cobrindo histórico medido.
-- CI verde do incremento de histórico no run `34697884018`, Python 3.11–3.14.
+- Ponte `routing_trace.py` para serialização da decisão.
+- `Orquestrador` pode executar a decisão inteligente e instanciar o modelo selecionado via `ProviderManager.obter_com_modelo()`.
+- `ExecutionTrace` recebe `provider`, `model` e `metadata.routing_decision` da execução real.
+- Teste de integração cobre `RoteadorInteligente → Orquestrador → AgentRuntime → ExecutionTrace`.
+- CI run #243 passou em Python 3.11–3.14 no commit funcional `386e810...`.
 
 Próximo incremento:
-1. confirmar CI do HEAD mais recente;
-2. integrar a decisão de roteamento ao `ExecutionTrace.metadata`;
-3. adicionar teste de integração `Roteador → AgentRuntime → Trace`;
-4. depois estudar persistência das métricas sem quebrar o desenho in-memory atual.
+1. confirmar CI do HEAD documental;
+2. estudar persistência das métricas do `ProviderManager` sem quebrar o desenho in-memory;
+3. adicionar custo/tokens apenas com telemetria real e confiável;
+4. avançar a descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -186,6 +190,7 @@ Para cada funcionalidade nova:
 - Groq ainda requer validação real HTTP/tool-calling antes de ser tratado como integração de produção validada.
 - `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
 - Ollama foi integrado por contrato, mas a validação real em máquina com daemon/modelo instalado ainda está pendente.
+- A integração inteligente de roteamento está disponível de forma opt-in no Orchestrator; a configuração automática global de candidatos ainda é futura.
 
 ## 12. O que NÃO fazer
 - Não criar outra NEXORA.
