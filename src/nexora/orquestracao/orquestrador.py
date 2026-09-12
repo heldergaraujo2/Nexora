@@ -102,6 +102,13 @@ class Orquestrador:
             if hasattr(resultado, "resultado"):
                 return resultado.resultado
             return resultado
+        provider_name = getattr(provider, "name", "")
+        if (
+            self.provider_manager is not None
+            and isinstance(provider_name, str)
+            and provider_name.strip().lower() in self.provider_manager.nomes()
+        ):
+            return self.provider_manager.executar_instancia(provider_name, provider, descricao).text
         return provider.generate(descricao).text
 
     @staticmethod
