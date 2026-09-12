@@ -15,7 +15,8 @@
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - O roadmap pós-v1.0 está formalizado em `PROJECT_MEMORY/07_ROADMAP.md` nas Fases 17–25.
-- O último CI correspondente ao HEAD deve ser confirmado antes de iniciar a Fase 17. Não declarar CI como OK sem run correspondente bem-sucedido.
+- O CI do commit anterior `f8fb7919...` passou em Python 3.11–3.14.
+- O CI do HEAD atual ainda está em execução; não considerar este checkpoint validado até o run correspondente concluir com sucesso.
 
 ## 3. Arquitetura canônica atual
 
@@ -60,38 +61,26 @@ Orchestrator
 
 ## 4. ADRs de execução
 ### ADR-012
-Arquivo: `docs/adr/ADR-012-orchestrator-agent-runtime.md`.
-
-Decisões principais:
-- Orchestrator = coordenador de alto nível.
-- AgentRuntime = limite canônico do ciclo de execução.
-- `core/ciclo.py` não deve ser removido por suposição.
-- Migração incremental e orientada por testes.
-- Uma tarefa não pode ser executada duas vezes por camadas concorrentes.
-- Ferramentas continuam sujeitas a governança.
-- Retry de efeitos externos exige idempotência/autorização.
+Orchestrator = coordenador de alto nível; AgentRuntime = limite canônico do ciclo de execução.
 
 ### ADR-013
-Arquivo: `docs/adr/ADR-013-ciclo-legado-inventario-consumidores.md`.
-
-Resultado da revisão do ciclo legado:
-- `src/nexora/orquestracao/orquestrador.py` usa `AgenteRuntime` no caminho normal e não importa o ciclo legado.
-- `tests/unit/test_ciclo.py` é o consumidor interno explícito que preserva o contrato histórico.
-- A busca atual não encontrou outras referências internas relevantes aos símbolos/caminho do ciclo.
-- `src/nexora/core/ciclo.py` foi explicitamente marcado como legado/compatibilidade.
-- A remoção ainda não está autorizada: consumidores externos não podem ser inferidos apenas pela busca interna.
+`core/ciclo.py` permanece contrato legado/compatibilidade até evidência suficiente para migração segura.
 
 ### ADR-014
-Arquivo: `docs/adr/ADR-014-idempotencia-efeitos-externos.md`.
+Idempotência é barreira explícita antes de efeitos externos; store atual é concorrente em memória e não habilita retry automático.
 
-Decisão:
-- Idempotência é uma barreira explícita antes da execução de efeitos externos.
-- A chave identifica a operação; o fingerprint identifica os parâmetros semânticos da operação.
-- Reutilização com mesmo fingerprint não executa novamente.
-- Reutilização com fingerprint diferente é conflito de integridade.
-- Operação `IN_PROGRESS` não é executada novamente.
-- Operação `FAILED` não recebe retry automático; retry futuro exige mecanismo explícito.
-- O store atual é in-memory e concorrente; persistência durável/distribuída ainda não está implementada.
+### ADR-015
+Arquivo: `docs/adr/ADR-015-ollama-provider-local.md`.
+
+Decisões:
+- `ProviderOllama` implementa o contrato Provider existente.
+- HTTP usa apenas stdlib; nenhuma dependência pip adicional foi criada.
+- Endpoint padrão: `http://localhost:11434`, configurável por `NEXORA_OLLAMA_URL`.
+- Modelo configurável por `NEXORA_OLLAMA_MODEL`.
+- Perfil padrão inicial: `qwen2.5-coder:7b-instruct-q4_K_M`.
+- Health check consulta `/api/tags` sem consumir geração.
+- Streaming e tool-calling não são declarados até implementação/testes específicos.
+- Ollama é integração, não dependência arquitetural obrigatória.
 
 ## 5. Trabalho implementado e preservado
 - AgentRuntime é o proprietário do ciclo `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
@@ -99,6 +88,23 @@ Decisão:
 - Orchestrator encaminha tarefas para AgentRuntime e ferramentas para Registry.
 - Idempotência mínima está integrada ao caminho governado de ferramentas.
 - Long-Term Autonomy da Fase 16 permanece concluída e não deve ser substituída.
+
+### Fase 17 — Local Intelligence Foundation
+Implementado:
+- `src/nexora/providers/ollama.py`.
+- Configuração por ambiente e argumentos.
+- Geração `/api/chat` com `stream=false`.
+- Health check `/api/tags`.
+- Normalização de indisponibilidade para `ProviderIndisponivel`.
+- `tests/unit/test_providers_ollama.py`.
+- `tests/integration/test_provider_ollama_registry.py`.
+- ADR-015.
+
+Pendente:
+- validar contra Ollama real instalado;
+- descoberta estruturada de modelos locais;
+- perfis de modelo por capacidade/hardware;
+- futura detecção de CPU/RAM/GPU/VRAM/OS.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -113,41 +119,34 @@ Fluxo canônico:
 - Sandbox é governança/controle de subprocesso, não isolamento OS forte.
 - Auditoria JSONL é append-only por convenção, não prova criptográfica de imutabilidade.
 
-## 7. Direção de desenvolvimento — Fase 17 em diante
-A sequência oficial inicial está em `PROJECT_MEMORY/07_ROADMAP.md`:
-
-1. **Fase 17 — Local Intelligence Foundation:** OllamaProvider e inteligência local.
+## 7. Direção de desenvolvimento
+1. **Fase 17 — Local Intelligence Foundation:** concluir validação/descoberta/configuração local.
 2. **Fase 18 — Coding Workspace Agent:** ferramentas governadas para workspace real.
 3. **Fase 19 — Dev Loop + Programming Experience:** código → teste → erro → correção → reteste → experiência.
 4. **Fase 20 — Code Knowledge + RAG:** conhecimento recuperável sobre código e histórico.
 5. **Fase 21 — Intelligent Model Routing:** seleção de modelo/provider por tarefa, custo, risco e contexto.
-6. **Fase 22 — Hardware & NEXORA Setup:** instalação e configuração simples conforme o hardware.
+6. **Fase 22 — Hardware & NEXORA Setup:** instalação e configuração simples conforme hardware.
 7. **Fase 23 — NEXORA UI / Experience Layer:** UI extremamente tecnológica/futurista/inovadora, mas simples e intuitiva.
 8. **Fase 24 — Autonomous Product Engine:** aproximação do loop econômico completo.
 9. **Fase 25 — Continuous Evolution:** evolução contínua governada.
 
-### Visão de Provider local
-O hardware-alvo atualmente considerado para o desenvolvimento local é Ryzen 5 5600 + ~16 GB DDR4 + Radeon RX 6600 8 GB. Isso orienta a escolha inicial de perfil local, mas **não deve ser codificado como requisito fixo da NEXORA**.
+## 8. Provider local e hardware
+Hardware de desenvolvimento considerado: Ryzen 5 5600 + ~16 GB DDR4 + Radeon RX 6600 8 GB.
 
-O perfil inicial recomendado é um modelo de código local quantizado na classe Qwen2.5-Coder 7B Q4, executado por runtime local compatível. A arquitetura deve continuar agnóstica a modelo e preparada para perfis menores/maiores.
+Esse hardware orienta o perfil inicial, mas **não é requisito fixo da NEXORA**.
 
-Ollama é uma integração planejada, não uma dependência arquitetural obrigatória da NEXORA.
+O perfil inicial é um modelo de código local quantizado na classe Qwen2.5-Coder 7B Q4. O código permanece agnóstico ao modelo.
 
-## 8. UI — requisito de produto
-A UI final da NEXORA deve transmitir:
-- tecnologia;
-- futuro;
-- inovação;
-- inteligência;
-- sensação de sistema vivo;
+Ollama não é o núcleo da NEXORA; é apenas um Provider.
 
-sem transformar isso em complexidade de uso.
+## 9. UI — requisito de produto
+A UI final deve transmitir tecnologia, futuro, inovação, inteligência e sensação de sistema vivo **sem transformar isso em complexidade de uso**.
 
-**Regra de UX:** a complexidade deve ficar na arquitetura interna; a interface principal deve ser limpa, intuitiva e visualmente impactante.
+Regra: a complexidade fica na arquitetura interna; a interface principal permanece limpa, intuitiva e visualmente impactante.
 
-A estética poderá usar elementos futuristas, estados de execução em tempo real, visualização de atividades, animações discretas e identidade premium, sempre subordinados à legibilidade e à facilidade de uso.
+A estética poderá usar estados de execução em tempo real, visualização de atividades, animações discretas e identidade premium, sempre subordinados à legibilidade e facilidade de uso.
 
-## 9. Testes — regra permanente
+## 10. Testes — regra permanente
 Para cada funcionalidade nova:
 1. implementar;
 2. criar/atualizar testes;
@@ -159,7 +158,7 @@ Para cada funcionalidade nova:
 
 **Nunca confundir teste escrito com teste aprovado.**
 
-## 10. Limites reais
+## 11. Limites reais
 - Checkpoints são em memória.
 - Não existe rollback de efeitos externos.
 - Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
@@ -172,8 +171,9 @@ Para cada funcionalidade nova:
 - Autonomia econômica completa ainda não existe.
 - Groq ainda requer validação real HTTP/tool-calling antes de ser tratado como integração de produção validada.
 - `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
+- Ollama foi integrado por contrato, mas a validação real em máquina com daemon/modelo instalado ainda está pendente.
 
-## 11. O que NÃO fazer
+## 12. O que NÃO fazer
 - Não criar outra NEXORA.
 - Não criar outro repositório.
 - Não criar outro Runtime de execução.
@@ -188,7 +188,7 @@ Para cada funcionalidade nova:
 - Não remover `core/ciclo.py` apenas porque a busca interna não encontrou consumidores adicionais.
 - Não transformar a UI em um painel complexo apenas para parecer tecnológico.
 
-## 12. Regra operacional
+## 13. Regra operacional
 A cada avanço significativo:
 `AUDITAR → DECIDIR → IMPLEMENTAR → TESTAR → ATUALIZAR PROJECT_MEMORY → COMMIT → PUSH → VERIFICAR CI → HANDOFF`.
 
