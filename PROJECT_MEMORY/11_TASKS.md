@@ -46,6 +46,10 @@ As seções abaixo registram o planejamento e a execução das fases iniciais. E
 - [x] Contrato mínimo de idempotência para efeitos externos
 - [x] Testes de duplicidade, conflito de fingerprint, falha, determinismo e concorrência
 - [x] ADR-014 — idempotência como barreira antes de retry de efeitos externos
+- [x] Integração da barreira de idempotência ao RegistryFerramentas
+- [x] Chave de idempotência explícita persistida em Tarefa/Plano
+- [x] Roteamento do Orchestrator para idempotência quando o Registry estiver configurado
+- [x] Testes unitários e de integração do caminho Orchestrator → Registry → Idempotency → Tool
 
 ### Correção de teste relacionada à reconciliação
 - [x] Alinhar as expectativas dos testes de Runtime/Orchestrator ao contrato real do CommunicationBus (`PENDENTE` sem assinante; `ENTREGUE` quando há callback).
@@ -59,16 +63,19 @@ As seções abaixo registram o planejamento e a execução das fases iniciais. E
 - [x] Reconciliar a numeração do roadmap para refletir as Fases 11–16 reais.
 - [x] Atualizar a memória operacional principal.
 - [x] Definir a idempotência mínima antes de qualquer retry externo.
+- [x] Integrar idempotência ao caminho canônico do Registry de ferramentas.
+- [x] Cobrir a integração com testes de duplicidade e não repetição.
 - [ ] Confirmar CI verde no HEAD atual.
-- [ ] Integrar idempotência ao caminho canônico do Registry de ferramentas.
 - [ ] Fazer nova auditoria de superfície pública de `core/ciclo.py` antes de remoção/simplificação.
 - [ ] Evoluir `ExecutionTrace` para spans/eventos/persistência somente quando houver necessidade real.
-- [ ] Depois da integração de idempotência: evidência de pesquisa, economia computacional e evolução do World Model.
+- [ ] Evoluir idempotência para persistência durável/multi-processo quando houver requisito de recuperação após crash.
+- [ ] Implementar precondições, autorização explícita e recuperação/compensação antes de qualquer retry de efeito externo.
+- [ ] Depois da estabilização de execução: evidência de pesquisa, economia computacional e evolução do World Model.
 
 ## Regra do próximo incremento
-A integração de idempotência deve ser feita primeiro no contrato de execução de ferramentas e seus testes. **Não habilitar retry de efeitos externos automaticamente.**
+Idempotência está integrada ao caminho de ferramentas quando configurada, mas **retry de efeitos externos continua proibido automaticamente**. A próxima evolução de segurança deve ser orientada por evidência e testes.
 
-A sequência obrigatória é:
+Sequência obrigatória:
 
 `Permission → Policy → Checkpoint → Idempotency → Tool → Observation → Verification → Audit → Result`
 
