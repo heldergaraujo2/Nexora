@@ -21,6 +21,7 @@ class ResultadoAgente:
     historico: list[dict[str, Any]] = field(default_factory=list)
     avaliacao: dict[str, Any] = field(default_factory=dict)
     trace: dict[str, Any] = field(default_factory=dict)
+    evidencias: list[dict[str, Any]] = field(default_factory=list)
 
 
 class AgenteRuntime:
