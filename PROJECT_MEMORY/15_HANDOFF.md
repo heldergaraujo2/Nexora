@@ -23,22 +23,28 @@
 - Qualidade influencia o roteamento somente com amostra mínima, pelo menos dois candidatos comparáveis e peso de maturidade da amostra.
 - No limiar mínimo, `peso_amostra=0,5`; em `2 × min_amostra`, chega a `1,0`; a influência final permanece limitada a ±1,0.
 
-## 3. Último CI validado antes deste incremento
-- Run #335 (`34715778582`) — **100% GREEN**.
+## 3. CI validado
+- Run #344 (`34721678128`) — **100% GREEN**.
 - Python 3.11: success.
 - Python 3.12: success.
 - Python 3.13: success.
 - Python 3.14: success.
-- Esse run validou a base do quality routing sample gate antes da ponderação de maturidade.
+- Run #345 (`34721984271`) — **100% GREEN**.
+- Python 3.11: success.
+- Python 3.12: success.
+- Python 3.13: success.
+- Python 3.14: success.
+- O Run #345 valida também o cenário controlado em que qualidade diferencia candidatos com capacidade-base equivalente.
 
-## 4. Trabalho deste incremento
-Implementado:
-- `src/nexora/runtime/historico_avaliacao.py` — `peso_amostra` determinístico, conservador e derivado apenas do número de avaliações observadas.
-- `src/nexora/providers/roteamento.py` — qualidade histórica passa a ser ponderada pelo `peso_amostra` antes do limite de ±1,0.
-- `tests/unit/test_historico_avaliacao_roteamento.py` — testes de peso 0, gate, maturidade e impacto do ajuste no roteamento.
-- `docs/adr/ADR-024-quality-routing-sample-gate.md` — decisão atualizada com maturidade da amostra.
-- `PROJECT_MEMORY/17_TASK_QUALITY_HISTORY.md` — continuidade atualizada.
-- `PROJECT_MEMORY/08_CURRENT_STATE.md` — estado consolidado.
+## 4. Incremento concluído — Quality Routing
+Implementado e validado:
+- Histórico persistente de avaliação por `provider + modelo + tipo_tarefa`.
+- Gate de amostra mínima.
+- Peso de maturidade `0,5 → 1,0` conforme a amostra cresce até `2 × min_amostra`.
+- Influência final limitada a ±1,0.
+- Testes adversariais confirmam que qualidade não domina capability forte nem confiabilidade histórica forte.
+- Teste controlado confirma que qualidade consegue desempatar candidatos com capacidade-base equilibrada.
+- Commit de validação controlada: `84335341a8effe42649f34979829e0a6de2841de`.
 
 ## 5. Regras de qualidade
 1. Teste escrito não significa teste aprovado.
@@ -48,13 +54,16 @@ Implementado:
 5. Qualidade só entra no roteador após amostra mínima e testes de isolamento por tipo/provider/modelo.
 6. Não misturar histórico entre modelos ou tipos de tarefa.
 7. Peso de maturidade é uma proteção heurística, não deve ser descrito como confiança estatística.
+8. Qualidade não é benchmark universal; é sinal observacional contextual ao tipo de tarefa.
 
-## 6. Próximo passo obrigatório
-Após o CI do HEAD ficar verde:
-1. validar experimentalmente o impacto da qualidade no ranking em cenários controlados;
-2. confirmar que qualidade não domina capability/reliabilidade/latência/custo em cenários adversos;
-3. só depois avaliar recência/janela temporal e detecção de drift;
-4. evoluir posteriormente para avaliação contextual/semântica com evidências mais fortes.
+## 6. Próximo incremento obrigatório
+**Evidência estruturada para pesquisa.**
+1. Introduzir contrato explícito `Evidence`/`Claim` sem quebrar as fontes atuais.
+2. Preservar `source`, `url`, `consulta`, trecho e confiança/proveniência quando disponíveis.
+3. Fazer o `ResearchAgent` produzir resultado verificável sem depender somente de texto livre.
+4. Criar testes unitários e integração para ausência de fonte, fonte válida, claim sem evidência e múltiplas fontes.
+5. Integrar a evidência ao resultado/telemetria sem transformar uma string de URL em prova de verdade.
+6. CI verde antes de considerar o incremento concluído.
 
 ## 7. Limites reais
 - Checkpoint/idempotência/Registry/delegações ainda possuem componentes em memória.
