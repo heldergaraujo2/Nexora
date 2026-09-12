@@ -25,6 +25,46 @@ class RoteadorInteligente:
     def __init__(self, manager: ProviderManager) -> None:
         self._manager = manager
 
+    def _ajuste_historico(self, provider: str) -> tuple[float, list[str]]:
+        """Aplica ajuste pequeno baseado somente em metricas reais medidas.
+
+        Menos de tres chamadas nao produz ajuste: a amostra e insuficiente.
+        O historico nunca substitui a adequacao funcional do modelo.
+        """
+        historico = self._manager.estatisticas_provider(provider)
+        chamadas = int(historico["chamadas"])
+        if chamadas < 3:
+            return 0.0, []
+
+        ajuste = 0.0
+        motivos: list[str] = []
+        taxa_erro = historico["taxa_erro"]
+        taxa_sucesso = historico["taxa_sucesso"]
+        latencia = historico["latencia_media"]
+
+        if isinstance(taxa_sucesso, float) and taxa_sucesso >= 0.90:
+            ajuste += 1.0
+            motivos.append("historico_alta_taxa_sucesso")
+        elif isinstance(taxa_erro, float) and taxa_erro >= 0.50:
+            ajuste -= 2.0
+            motivos.append("historico_alta_taxa_erro")
+
+        if isinstance(latencia, float):
+            todas = [
+                dados["latencia_media"]
+                for dados in self._manager.estatisticas_providers().values()
+                if isinstance(dados["latencia_media"], float)
+            ]
+            media_global = (sum(todas) / len(todas)) if todas else None
+            if isinstance(media_global, float) and latencia < media_global:
+                ajuste += 0.5
+                motivos.append("historico_baixa_latencia")
+            elif isinstance(media_global, float) and latencia > media_global:
+                ajuste -= 0.5
+                motivos.append("historico_alta_latencia")
+
+        return ajuste, motivos
+
     def selecionar(
         self,
         candidatos: list[dict[str, Any]],
@@ -35,11 +75,13 @@ class RoteadorInteligente:
         exigir_tool_calling: bool = False,
         exigir_streaming: bool = False,
         exigir_provider_saudavel: bool = False,
+        usar_historico: bool = True,
     ) -> list[CandidatoRoteamento]:
-        """Ordena candidatos por adequacao, capacidades e score deterministico.
+        """Ordena candidatos por adequacao, capacidades e historico medido.
 
         A funcao somente decide. Ela nao executa o provider nem a tarefa.
         Capacidades nao declaradas sao tratadas como ausentes.
+        O historico e opcional e tem influencia deliberadamente limitada.
         """
         avaliados: list[CandidatoRoteamento] = []
         for candidato in candidatos:
@@ -77,7 +119,12 @@ class RoteadorInteligente:
             if not avaliacao.adequado:
                 adequado = False
             motivos.extend(avaliacao.motivos)
+
             score = avaliacao.score if adequado else -100.0
+            if adequado and usar_historico:
+                ajuste, motivos_historico = self._ajuste_historico(provider)
+                score += ajuste
+                motivos.extend(motivos_historico)
             avaliados.append(CandidatoRoteamento(provider, modelo, score, adequado, tuple(motivos)))
 
         return sorted(avaliados, key=lambda item: (-item.adequado, -item.score, item.provider, item.modelo))
