@@ -44,6 +44,9 @@ class _RoutedProvider(Provider):
         self.modelo = modelo
         self.chamadas = 0
 
+    def saudavel(self) -> bool:
+        return True
+
     def generate(self, _prompt: str, **_kwargs) -> GenerationResult:
         self.chamadas += 1
         return GenerationResult(text=f"resultado:{self.modelo}", tool_calls=[])
