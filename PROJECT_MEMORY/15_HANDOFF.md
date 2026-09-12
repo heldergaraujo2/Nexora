@@ -15,8 +15,9 @@
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - CI Run #170 validou o HEAD `ec146cb797f35b6d30e98f7d0e8d36b93f344487` com conclusão `success`.
-- Desde então, os commits `5b03990050a795c6c214da83f057cae708c07202` e `60882967bbfe0d6d1f3911206225987cba3ea068` atualizaram o contrato legado e a documentação ADR-013.
-- **Os commits posteriores ao Run #170 ainda precisam de CI próprio antes de serem considerados validados.**
+- Run #172 e Run #173 foram disparados pelos commits de classificação/documentação do ciclo legado; ambos precisam ser considerados junto do CI posterior do HEAD.
+- Neste checkpoint: `65490e66db0de4641740fc37bc99e5f6cdca58fb` integrou contexto real de tarefa/provider ao `ExecutionTrace`; `7377558e93974ca7fd77201adb74b5386f50665b` adicionou testes de integração; este handoff fecha a continuidade documental.
+- **Não considerar o HEAD deste checkpoint validado até o CI correspondente concluir com sucesso.**
 
 ## 3. Arquitetura canônica atual
 
@@ -92,6 +93,10 @@ Resultado da revisão do ciclo legado:
 ### Orchestrator
 - Não usa mais `ExecutorCiclo`/`VerificadorCiclo` no caminho normal.
 - Cada tarefa passa por um `AgenteRuntime`.
+- O `ExecutionTrace` agora recebe `task_id` real da tarefa e, quando o provider declara `name`, esse nome é registrado em `provider`.
+- Metadados do trace carregam `objetivo_id`, executor e ferramenta quando aplicável.
+- Nenhum token/custo/modelo foi inventado: campos sem fonte continuam vazios/nulos.
+- O trace é devolvido na etapa do resultado do Orchestrator.
 - Provider continua executando tarefas sem ferramenta.
 - Tarefas com ferramenta continuam passando pelo `RegistryFerramentas`.
 - Retry automático de ferramenta está limitado a uma tentativa nesta primeira integração para não repetir efeitos externos sem idempotência.
@@ -112,7 +117,7 @@ Arquivos principais:
 - `tests/unit/test_agente_runtime_trace.py`
 - `tests/unit/test_ciclo.py`
 
-O CI Run #170 confirmou o checkpoint anterior em sucesso.
+O novo teste `test_orquestrador_execution_trace_recebe_contexto_real_da_tarefa_e_provider` confirma que o trace recebe apenas contexto efetivamente disponível.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -150,12 +155,12 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 `src/nexora/runtime/analise.py` já apresentou SHA inconsistente no tooling. **Não inventar SHA.** Se for necessário alterá-lo, resolver a identidade do blob primeiro.
 
 ## 10. Próximo trabalho
-1. Confirmar CI do HEAD após os commits de classificação do ciclo legado.
+1. Confirmar CI do HEAD deste checkpoint em Python 3.11–3.14.
 2. Se CI falhar, corrigir antes de avançar.
-3. Integrar `ExecutionTrace` progressivamente no Orchestrator, preenchendo `task_id` e contexto de provider quando disponíveis, sem inventar dados.
-4. Fazer a próxima etapa de migração do ciclo legado somente após nova busca de consumidores e avaliação da superfície pública.
-5. Evoluir `ExecutionTrace` para spans/eventos e persistência somente quando houver necessidade real, mantendo o contrato atual compatível.
-6. Depois: idempotência externa, evidência de pesquisa, economia computacional e evolução do World Model.
+3. Fazer nova auditoria de superfície pública de `core/ciclo.py` antes de qualquer remoção/simplificação.
+4. Evoluir `ExecutionTrace` para spans/eventos e persistência somente quando houver necessidade real, mantendo o contrato atual compatível.
+5. Próximo ganho arquitetural prioritário: idempotência explícita para efeitos externos, começando pelo contrato e testes antes de qualquer retry externo.
+6. Depois: evidência de pesquisa, economia computacional e evolução do World Model.
 
 ## 11. O que NÃO fazer
 - Não criar outra NEXORA.
