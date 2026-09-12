@@ -3,10 +3,11 @@
 ## Estado
 - Fase 16 — Long-Term Autonomy: concluída e preservada.
 - Fase 17 — Local Intelligence Foundation: em implementação avançada.
-- Fase 21 — Intelligent Model Routing: fundação implementada e validada em CI.
+- Fase 21 — Intelligent Model Routing: fundação implementada e integrada ao caminho real de execução.
 - `ProviderOllama` implementado e integrado ao contrato de Providers.
 - Descoberta de modelos locais, perfis, avaliação hardware × modelo e seleção de candidatos implementados.
-- `RoteadorInteligente` agora considera adequação, hardware, capacidades declaradas, health opcional e histórico operacional real medido.
+- `RoteadorInteligente` considera adequação, hardware, capacidades declaradas, health opcional e histórico operacional real medido.
+- `Orquestrador` pode usar o roteador inteligente para selecionar provider + modelo e registrar a decisão no `ExecutionTrace`.
 
 ## Fase 17 — progresso
 - [x] Provider Ollama via HTTP stdlib.
@@ -34,15 +35,17 @@
 - [x] Ajuste histórico deliberadamente limitado e explicável.
 - [x] Amostra mínima de 3 chamadas antes de influenciar o score.
 - [x] Testes unitários do histórico e do roteamento.
-- [x] CI verde em Python 3.11, 3.12, 3.13 e 3.14.
-- [ ] Integrar decisão de roteamento ao `ExecutionTrace` de forma estruturada.
+- [x] Ponte de decisão para `ExecutionTrace.metadata`.
+- [x] Integração real `RoteadorInteligente → Orquestrador → AgentRuntime → ExecutionTrace`.
+- [x] Instanciação explícita do provider com o modelo selecionado, sem fallback silencioso.
+- [x] CI verde no HEAD `386e810af8502a03a2bdc66d2d9c3d3360813e62`, Python 3.11, 3.12, 3.13 e 3.14.
 - [ ] Persistir histórico de métricas para sobreviver a reinicialização.
 - [ ] Incorporar custo/tokens somente quando houver telemetria real e confiável.
 
 ## Arquitetura canônica
-`Objetivo → Orchestrator → Plano/Tarefas → AgentRuntime → Permission/Policy/Checkpoint → Idempotency (quando aplicável) → Provider/Tool → Observation → Verification → Analysis → Correction/Recovery → Retest → Audit/Experience → Trace → Result`.
+`Objetivo → Orchestrator → Plano/Tarefas → Seleção de executor/agente → Roteador Inteligente → AgentRuntime → Permission/Policy/Checkpoint → Idempotency (quando aplicável) → Provider/Tool → Observation → Verification → Analysis → Correction/Recovery → Retest → Audit/Experience → ExecutionTrace → Result`.
 
-Roteamento ocorre como decisão antes da execução do provider e não cria Runtime paralelo. `core/ciclo.py` permanece legado/compatibilidade até migração segura.
+O roteamento é decisão antes da execução; o provider/modelo escolhido é refletido no trace. O `AgentRuntime` continua sendo o único proprietário do ciclo de execução. `core/ciclo.py` permanece legado/compatibilidade até migração segura.
 
 ## Governança
 - Permission antes da ação.
@@ -69,4 +72,4 @@ A Fase 23 define uma UI extremamente tecnológica, futurista e inovadora, mas si
 Toda funcionalidade nova exige testes; cruzamentos de componentes exigem integração. Teste escrito não equivale a teste aprovado. O CI do HEAD deve ser verificado antes de fechar checkpoint.
 
 ## Limites conhecidos
-Checkpoints/idempotência/registry e histórico atual de ProviderManager ainda são in-memory; não há rollback de efeitos externos; World Model/Knowledge e Economy ainda não fecham o loop completo do North Star; Groq requer validação real; ExecutionTrace ainda não possui telemetria persistente universal.
+Checkpoints/idempotência/registry e histórico atual de ProviderManager ainda são in-memory; não há rollback de efeitos externos; World Model/Knowledge e Economy ainda não fecham o loop completo do North Star; Groq requer validação real; ExecutionTrace ainda não possui telemetria persistente universal. O roteamento inteligente está integrado ao caminho real, mas a descoberta automática de todos os candidatos e a persistência das métricas continuam futuras.
