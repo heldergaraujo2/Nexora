@@ -1,22 +1,34 @@
 """ProviderManager: monitora chamadas, latencia, erros e capacidades."""
 from __future__ import annotations
 
+import json
+import os
 import time
+from pathlib import Path
 from typing import Any
 
 from nexora.providers.base import ProviderCapability
 
 
 class ProviderManager:
-    """Envolve providers e registra metricas de uso globais e por provider."""
+    """Envolve providers e registra metricas globais e por provider.
 
-    def __init__(self) -> None:
+    A persistencia do historico e opcional. Quando configurada, usa um JSON
+    versionado e escrita atomica para sobreviver a reinicializacoes sem tornar
+    o manager dependente de banco de dados.
+    """
+
+    _SCHEMA_VERSION = 1
+
+    def __init__(self, persistencia_path: str | Path | None = None) -> None:
         self._fabricas: dict[str, Any] = {}
         self._chamadas: int = 0
         self._erros: int = 0
         self._tempo_total: float = 0.0
         self._ultimas_falhas: dict[str, str] = {}
         self._metricas_provider: dict[str, dict[str, Any]] = {}
+        self._persistencia_path = Path(persistencia_path) if persistencia_path is not None else None
+        self._carregar_historico()
 
     def registrar(self, nome: str, fabrica: Any) -> None:
         chave = nome.strip().lower()
@@ -69,6 +81,65 @@ class ProviderManager:
             decorrido = time.monotonic() - inicio
             self._tempo_total += decorrido
             metricas["tempo_total"] += decorrido
+            self._salvar_historico()
+
+    def _carregar_historico(self) -> None:
+        if self._persistencia_path is None or not self._persistencia_path.exists():
+            return
+        try:
+            dados = json.loads(self._persistencia_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            return
+        if not isinstance(dados, dict) or dados.get("schema_version") != self._SCHEMA_VERSION:
+            return
+        metricas = dados.get("providers")
+        falhas = dados.get("ultimas_falhas")
+        if not isinstance(metricas, dict) or not isinstance(falhas, dict):
+            return
+        for nome, valores in metricas.items():
+            if not isinstance(nome, str) or not isinstance(valores, dict):
+                continue
+            try:
+                chamadas = int(valores["chamadas"])
+                sucessos = int(valores["sucessos"])
+                erros = int(valores["erros"])
+                tempo_total = float(valores["tempo_total"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if min(chamadas, sucessos, erros, tempo_total) < 0:
+                continue
+            self._metricas_provider[nome] = {
+                "chamadas": chamadas,
+                "sucessos": sucessos,
+                "erros": erros,
+                "tempo_total": tempo_total,
+            }
+            self._chamadas += chamadas
+            self._erros += erros
+            self._tempo_total += tempo_total
+        self._ultimas_falhas = {
+            nome: valor for nome, valor in falhas.items() if isinstance(nome, str) and isinstance(valor, str)
+        }
+
+    def _salvar_historico(self) -> None:
+        if self._persistencia_path is None:
+            return
+        destino = self._persistencia_path
+        payload = {
+            "schema_version": self._SCHEMA_VERSION,
+            "providers": self._metricas_provider,
+            "ultimas_falhas": self._ultimas_falhas,
+        }
+        try:
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            temporario = destino.with_name(f".{destino.name}.tmp")
+            temporario.write_text(
+                json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                encoding="utf-8",
+            )
+            os.replace(temporario, destino)
+        except OSError:
+            return
 
     def estatisticas(self) -> dict[str, Any]:
         """Resumo das metricas de uso globais."""
@@ -83,7 +154,8 @@ class ProviderManager:
     def estatisticas_provider(self, nome: str) -> dict[str, Any]:
         """Retorna apenas metricas medidas do provider solicitado.
 
-        Os valores sao historicos do processo atual; nenhuma estimativa e criada.
+        Os valores sao historicos do processo atual ou de uma persistencia
+        previamente carregada; nenhuma estimativa e criada.
         """
         chave = nome.strip().lower()
         metricas = self._metricas_provider.get(chave)
@@ -123,6 +195,7 @@ class ProviderManager:
             return {"saudavel": saudavel, "motivo": None, "ultima_falha": self._ultimas_falhas.get(chave, None)}
         except Exception as erro:
             self._ultimas_falhas[chave] = str(erro)
+            self._salvar_historico()
             return {"saudavel": False, "motivo": str(erro), "ultima_falha": str(erro)}
 
     def obter_capacidades(self, nome: str) -> ProviderCapability:
