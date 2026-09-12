@@ -1,13 +1,14 @@
 """Testes do Research Agent (Fase 7)."""
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-from nexora.agentes.pesquisa import ResearchAgent
+from nexora.agentes.pesquisa import EvidenciaPesquisa, ResearchAgent
 from nexora.providers.base import GenerationResult
 
 
@@ -86,8 +87,17 @@ def test_pesquisar_produz_claim_evidencia_e_proveniencia():
     assert claim["evidence"]["trecho"] == "documento de referencia"
     assert claim["evidence"]["consulta"] == "o que e a nexora"
     assert claim["evidence"]["confianca"] is None
+    assert len(claim["evidence"]["source_ref"]) == 64
     assert r.metricas["evidencias"] == 1
     assert r.trace["metadata"]["research_evidence"] == r.evidencias
+
+
+def test_source_ref_e_deterministico_e_independente_do_indice():
+    primeira = EvidenciaPesquisa(source_id=1, titulo="t", url="u", trecho="x", consulta="q")
+    segunda = EvidenciaPesquisa(source_id=99, titulo="t", url="u", trecho="x", consulta="q")
+    esperado = hashlib.sha256("t\x1fu\x1fx\x1fq".encode("utf-8")).hexdigest()
+    assert primeira.source_ref == esperado
+    assert segunda.source_ref == esperado
 
 
 def test_pesquisar_ignora_citacao_para_fonte_inexistente():
