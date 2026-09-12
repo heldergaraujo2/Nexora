@@ -1,6 +1,7 @@
 """Research Agent da NEXORA: planeja consultas, busca via ferramentas e sintetiza com fontes."""
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -22,10 +23,17 @@ class EvidenciaPesquisa:
     trecho: str = ""
     consulta: str = ""
     confianca: float | None = None
+    source_ref: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.source_ref:
+            material = "\x1f".join((self.titulo, self.url, self.trecho, self.consulta))
+            object.__setattr__(self, "source_ref", hashlib.sha256(material.encode("utf-8")).hexdigest())
 
     def para_dict(self) -> dict[str, Any]:
         return {
             "source_id": self.source_id,
+            "source_ref": self.source_ref,
             "titulo": self.titulo,
             "url": self.url,
             "trecho": self.trecho,
