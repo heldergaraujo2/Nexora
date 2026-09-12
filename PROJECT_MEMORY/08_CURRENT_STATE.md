@@ -38,8 +38,11 @@
 - [x] Ponte de decisão para `ExecutionTrace.metadata`.
 - [x] Integração real `RoteadorInteligente → Orquestrador → AgentRuntime → ExecutionTrace`.
 - [x] Instanciação explícita do provider com o modelo selecionado, sem fallback silencioso.
-- [x] CI verde no HEAD `386e810af8502a03a2bdc66d2d9c3d3360813e62`, Python 3.11, 3.12, 3.13 e 3.14.
-- [ ] Persistir histórico de métricas para sobreviver a reinicialização.
+- [x] Persistência opcional e versionada do histórico do `ProviderManager`.
+- [x] Configuração por argumento ou `NEXORA_PROVIDER_HISTORY_PATH`.
+- [x] Escrita atômica e tolerância a histórico inválido/incompatível.
+- [x] CI verde no HEAD `b78eb29f41491c2437556ff4c6f7af49ff065d96`, Python 3.11, 3.12, 3.13 e 3.14.
+- [ ] Fazer o caminho real `Orquestrador → AgentRuntime → Provider` alimentar as métricas do `ProviderManager`.
 - [ ] Incorporar custo/tokens somente quando houver telemetria real e confiável.
 
 ## Arquitetura canônica
@@ -72,4 +75,4 @@ A Fase 23 define uma UI extremamente tecnológica, futurista e inovadora, mas si
 Toda funcionalidade nova exige testes; cruzamentos de componentes exigem integração. Teste escrito não equivale a teste aprovado. O CI do HEAD deve ser verificado antes de fechar checkpoint.
 
 ## Limites conhecidos
-Checkpoints/idempotência/registry e histórico atual de ProviderManager ainda são in-memory; não há rollback de efeitos externos; World Model/Knowledge e Economy ainda não fecham o loop completo do North Star; Groq requer validação real; ExecutionTrace ainda não possui telemetria persistente universal. O roteamento inteligente está integrado ao caminho real, mas a descoberta automática de todos os candidatos e a persistência das métricas continuam futuras.
+Checkpoints/idempotência/registry continuam em-memory; não há rollback de efeitos externos; World Model/Knowledge e Economy ainda não fecham o loop completo do North Star; Groq requer validação real; ExecutionTrace ainda não possui telemetria persistente universal. O histórico do ProviderManager agora pode sobreviver a reinicializações via JSON versionado, mas ainda depende do caminho real de execução alimentar as métricas e não é um backend distribuído. O roteamento inteligente está integrado ao caminho real, mas a descoberta automática de todos os candidatos e a telemetria universal de tokens/custo continuam futuras.
