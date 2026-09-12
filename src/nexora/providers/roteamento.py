@@ -30,6 +30,14 @@ class RoteadorInteligente:
         self._historico_avaliacao = historico_avaliacao
         self._min_amostra_qualidade = min_amostra_qualidade
 
+    def definir_historico_avaliacao(self, historico: HistoricoAvaliacao | None, *, min_amostra: int | None = None) -> None:
+        """Conecta o historico de qualidade sem alterar a politica de execucao."""
+        if min_amostra is not None and min_amostra < 1:
+            raise ValueError("min_amostra deve ser >= 1")
+        self._historico_avaliacao = historico
+        if min_amostra is not None:
+            self._min_amostra_qualidade = min_amostra
+
     @staticmethod
     def _ajuste_historico_metricas(historico: dict[str, Any], comparaveis: list[dict[str, Any]]) -> tuple[float, list[str]]:
         chamadas = int(historico.get("chamadas", 0))
