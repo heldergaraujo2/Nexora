@@ -22,10 +22,15 @@ class ProviderCapability:
 
 @dataclass
 class GenerationResult:
-    """Resposta completa de uma geracao."""
+    """Resposta completa de uma geracao.
+
+    ``usage`` contem somente telemetria fornecida pelo provider. Campos
+    ausentes permanecem fora do contrato, evitando estimativas de tokens.
+    """
     text: str
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     raw: Any = None
+    usage: dict[str, int] = field(default_factory=dict)
 
 @dataclass
 class StreamChunk:
