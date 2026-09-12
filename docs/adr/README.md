@@ -21,6 +21,7 @@
 | ADR-015 | Provider local Ollama | Aprovada |
 | ADR-016 | Deteccao conservadora de capacidade de hardware | Aprovada — fundacao inicial |
 | ADR-017 | Roteamento inteligente de provider e modelo | Aprovada — fundacao inicial |
+| ADR-018 | Historico persistente de providers | Aprovada — fundacao inicial |
 
 ### Nota sobre ADR-006
 ADR-006 permanece condicional: exige validacao real da API do Groq antes de fixar modelo/tool-calling como capacidade de producao.
