@@ -1,5 +1,31 @@
 # 13 — CHANGELOG
 
+## Integração de idempotência no caminho de ferramentas — 2026-09-12
+
+A NEXORA avançou uma barreira de segurança para efeitos externos sem habilitar retry automático.
+
+### Contrato
+- [x] `StoreIdempotenciaMemoria` fornece identidade, fingerprint determinístico e estados `IN_PROGRESS`, `SUCCEEDED`, `FAILED`.
+- [x] Reivindicação atômica informa se a chamada é a primeira dona da execução.
+- [x] Reutilização da chave com fingerprint diferente gera conflito.
+- [x] Reutilização de operação `SUCCEEDED` devolve o resultado armazenado sem executar novamente.
+- [x] Operação `IN_PROGRESS` não é repetida.
+- [x] Operação `FAILED` não recebe retry automático.
+
+### Registry / Orchestrator / Planning
+- [x] `RegistryFerramentas` aceita store de idempotência opcional.
+- [x] Ordem canônica passou a ser `Permission → Policy → Checkpoint → Idempotency → Tool → Observation → Verification → Audit → Result` quando a barreira está habilitada.
+- [x] Sem store configurado, o comportamento legado permanece preservado.
+- [x] `Orquestrador` usa automaticamente `objetivo:tarefa:ferramenta` como identidade quando o Registry possui idempotência.
+- [x] Planner/Tarefa pode declarar `idempotencia_chave` explicitamente.
+- [x] A chave explícita é persistida no contrato de `Tarefa` e exposta no resultado da etapa.
+
+### Testes
+- [x] Testes unitários de idempotência no Registry cobrem execução única, duplicidade, conflito, `IN_PROGRESS`, `FAILED` e auditoria.
+- [x] Testes de integração cobrem Orchestrator → Registry → Idempotency → Tool.
+- [x] Teste de `Tarefa` cobre persistência da chave explícita.
+- [ ] CI correspondente ao HEAD atual ainda precisa ser confirmado.
+
 ## Reconciliação Orchestrator ↔ AgentRuntime — 2026-09-12
 
 A NEXORA avançou na reconciliação do ciclo de execução sem criar nova fase.
