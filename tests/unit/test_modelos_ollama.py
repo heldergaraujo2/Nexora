@@ -13,12 +13,16 @@ class ProviderFake:
 
 def test_descobridor_normaliza_modelos_ollama():
     provider = ProviderFake({
-        "models": [{
-            "name": "qwen2.5-coder:7b",
-            "size": 4700000000,
-            "details": {"family": "qwen2", "parameter_size": "7.6B"},
-            "context_length": 32768,
-        }, {"name": "modelo-sem-detalhes"}, "invalido"]
+        "models": [
+            {
+                "name": "qwen2.5-coder:7b",
+                "size": 4700000000,
+                "details": {"family": "qwen2", "parameter_size": "7.6B"},
+                "context_length": 32768,
+            },
+            {"name": "modelo-sem-detalhes"},
+            "invalido",
+        ]
     })
     modelos = DescobridorModelosOllama(provider).listar()
     assert modelos == [
