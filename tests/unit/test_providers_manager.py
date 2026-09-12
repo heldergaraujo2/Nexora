@@ -21,6 +21,20 @@ class ProviderSaudavel(Provider):
         return True
 
 
+class ProviderComTokens(Provider):
+    def __init__(self):
+        super().__init__(name="tokens", capabilities=ProviderCapability())
+
+    def generate(self, prompt, **kwargs):
+        return GenerationResult(
+            text="ok",
+            usage={"prompt_tokens": 7, "completion_tokens": 5, "total_tokens": 12},
+        )
+
+    def saudavel(self):
+        return True
+
+
 class ProviderDoente(Provider):
     def __init__(self):
         super().__init__(name="doente", capabilities=ProviderCapability())
@@ -57,6 +71,39 @@ def test_manager_executar_instancia_registra_sem_criar_outra_instancia():
     assert provider.chamadas == 1
     assert manager.estatisticas_provider("saudavel")["chamadas"] == 1
     assert manager.obter("saudavel").chamadas == 0
+
+
+def test_manager_registra_tokens_somente_quando_provider_fornece_telemetria():
+    manager = ProviderManager()
+    manager.registrar("tokens", ProviderComTokens)
+    manager.registrar("saudavel", ProviderSaudavel)
+
+    manager.executar("tokens", "oi")
+    manager.executar("saudavel", "oi")
+
+    stats_tokens = manager.estatisticas_provider("tokens")
+    stats_sem_tokens = manager.estatisticas_provider("saudavel")
+    assert stats_tokens["prompt_tokens"] == 7
+    assert stats_tokens["completion_tokens"] == 5
+    assert stats_tokens["total_tokens"] == 12
+    assert stats_tokens["geracoes_com_tokens"] == 1
+    assert stats_sem_tokens["total_tokens"] == 0
+    assert stats_sem_tokens["geracoes_com_tokens"] == 0
+
+
+def test_manager_persiste_e_recarrega_tokens_medidos(tmp_path):
+    caminho = tmp_path / "provider-history.json"
+    primeiro = ProviderManager(persistencia_path=caminho)
+    primeiro.registrar("tokens", ProviderComTokens)
+    primeiro.executar("tokens", "oi")
+
+    segundo = ProviderManager(persistencia_path=caminho)
+    segundo.registrar("tokens", ProviderComTokens)
+    stats = segundo.estatisticas_provider("tokens")
+    assert stats["total_tokens"] == 12
+    assert stats["prompt_tokens"] == 7
+    assert stats["completion_tokens"] == 5
+    assert stats["geracoes_com_tokens"] == 1
 
 
 def test_manager_healthcheck_reporta_estado():
@@ -103,7 +150,7 @@ def test_manager_persistencia_tem_schema_e_escrita_atomica(tmp_path):
     manager.executar("saudavel", "oi")
 
     dados = json.loads(caminho.read_text(encoding="utf-8"))
-    assert dados["schema_version"] == 1
+    assert dados["schema_version"] == 2
     assert dados["providers"]["saudavel"]["chamadas"] == 1
     assert not caminho.with_name(".provider-history.json.tmp").exists()
 
