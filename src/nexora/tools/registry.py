@@ -8,6 +8,11 @@ from nexora.auditoria.registro import RegistroAuditoria
 from nexora.governanca.permissoes import GerenciadorPermissoes, PedidoPermissao
 from nexora.runtime.checkpoint import CheckpointEngine
 from nexora.runtime.ferramenta import ResultadoFerramenta
+from nexora.runtime.idempotencia import (
+    StatusIdempotencia,
+    StoreIdempotenciaMemoria,
+    fingerprint_operacao,
+)
 from nexora.runtime.observacao import Observacao
 from nexora.runtime.verificacao import Verificacao
 
@@ -30,7 +35,7 @@ class Ferramenta:
 
 
 class RegistryFerramentas:
-    """Mapeia ferramentas e aplica governanca, checkpoint e observacao/verificacao opcionais."""
+    """Mapeia ferramentas e aplica governanca, idempotencia e observacao/verificacao."""
 
     def __init__(
         self,
@@ -40,6 +45,7 @@ class RegistryFerramentas:
         observador: Callable[[dict[str, Any]], Observacao] | None = None,
         verificador: Verificacao | None = None,
         auditoria: RegistroAuditoria | None = None,
+        idempotencia: StoreIdempotenciaMemoria | None = None,
     ) -> None:
         self._ferramentas: dict[str, Ferramenta] = {}
         self._permissoes = permissoes
@@ -47,6 +53,7 @@ class RegistryFerramentas:
         self._observador = observador
         self._verificador = verificador
         self._auditoria = auditoria
+        self._idempotencia = idempotencia
 
     def registrar(self, ferramenta: Ferramenta) -> None:
         self._ferramentas[ferramenta.nome] = ferramenta
@@ -62,6 +69,7 @@ class RegistryFerramentas:
         solicitante: str = "sistema",
         contexto: dict[str, Any] | None = None,
         execucao_id: str | None = None,
+        idempotencia_chave: str | None = None,
     ) -> Any:
         ferramenta = self.obter(nome)
         contexto_seguro = dict(contexto or {})
@@ -89,9 +97,56 @@ class RegistryFerramentas:
                 motivo="antes_da_acao",
             )
 
+        idempotencia_fingerprint: str | None = None
+        if idempotencia_chave is not None:
+            if self._idempotencia is None:
+                raise RuntimeError(
+                    "idempotencia_chave exige um StoreIdempotenciaMemoria configurado"
+                )
+            idempotencia_fingerprint = fingerprint_operacao(
+                {
+                    "ferramenta": ferramenta.nome,
+                    "parametros": parametros,
+                    "solicitante": solicitante,
+                    "contexto": contexto_seguro,
+                }
+            )
+            registro, primeira_execucao = self._idempotencia.reivindicar_com_status(
+                idempotencia_chave,
+                idempotencia_fingerprint,
+            )
+            if not primeira_execucao:
+                if self._auditoria is not None:
+                    self._auditoria.registrar(
+                        "ferramenta.idempotencia_reutilizada",
+                        entidade="ferramenta",
+                        entidade_id=identificador,
+                        dados={
+                            "ferramenta": ferramenta.nome,
+                            "chave": idempotencia_chave,
+                            "status": registro.status.value,
+                        },
+                    )
+                if registro.status == StatusIdempotencia.SUCCEEDED:
+                    return registro.resultado
+                if registro.status == StatusIdempotencia.IN_PROGRESS:
+                    raise RuntimeError(
+                        f"operacao de idempotencia em andamento: {idempotencia_chave}"
+                    )
+                raise RuntimeError(
+                    f"operacao de idempotencia falhou anteriormente; retry explicito necessario: {idempotencia_chave}"
+                )
+
         try:
             resultado = ferramenta.executar(parametros)
         except Exception as exc:
+            if self._idempotencia is not None and idempotencia_chave is not None:
+                self._idempotencia.concluir(
+                    idempotencia_chave,
+                    idempotencia_fingerprint or "",
+                    sucesso=False,
+                    resultado=None,
+                )
             if self._auditoria is not None:
                 self._auditoria.registrar(
                     "ferramenta.falhou",
@@ -105,6 +160,14 @@ class RegistryFerramentas:
                     },
                 )
             raise
+
+        if self._idempotencia is not None and idempotencia_chave is not None:
+            self._idempotencia.concluir(
+                idempotencia_chave,
+                idempotencia_fingerprint or "",
+                sucesso=True,
+                resultado=resultado,
+            )
 
         if self._observador is None and self._verificador is None:
             if self._auditoria is not None:
