@@ -9,10 +9,10 @@ from nexora.governanca.policy import EfeitoPolitica, PolicyEngine, RegraPolitica
 from nexora.orquestracao.orquestrador import Orquestrador
 from nexora.providers.base import GenerationResult, Provider, ProviderCapability
 from nexora.providers.manager import ProviderManager
+from nexora.providers.modelos import PerfilCapacidadeModelo
 from nexora.providers.roteamento import RoteadorInteligente
 from nexora.runtime.checkpoint import CheckpointEngine
 from nexora.runtime.hardware import PerfilHardware
-from nexora.providers.modelos import PerfilCapacidadeModelo
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
 
 
@@ -167,7 +167,6 @@ def test_orquestrador_ferramenta_passa_uma_vez_pela_governanca() -> None:
     assert resultado["etapas"][0]["ferramenta"] == "ferramenta_teste"
     assert resultado["etapas"][0]["trace"]["task_id"] == "t1"
     assert resultado["etapas"][0]["trace"]["provider"] == ""
-    assert resultado["etapas"][0]["metadata"]["ferramenta"] == "ferramenta_teste" if "metadata" in resultado["etapas"][0] else True
     assert resultado["etapas"][0]["trace"]["metadata"]["ferramenta"] == "ferramenta_teste"
     assert chamadas == 1
     assert provider.chamadas == 0
@@ -179,7 +178,7 @@ def test_orquestrador_rota_provider_e_modelo_realmente_e_registra_decisao_no_tra
     manager = ProviderManager()
     instancias: list[_RoutedProvider] = []
 
-    def factory(*, modelo: str) -> _RoutedProvider:
+    def factory(*, modelo: str = "default") -> _RoutedProvider:
         provider = _RoutedProvider(modelo)
         instancias.append(provider)
         return provider
@@ -230,8 +229,8 @@ def test_orquestrador_rota_provider_e_modelo_realmente_e_registra_decisao_no_tra
     assert resultado["sucesso"] is True
     assert resultado["etapas"][0]["saida"] == "resultado:coder-7b"
     assert fallback.chamadas == 0
-    assert len(instancias) == 1
-    assert instancias[0].modelo == "coder-7b"
+    assert len(instancias) == 2  # healthcheck + runtime; ambos usam o modelo selecionado
+    assert all(instancia.modelo == "coder-7b" for instancia in instancias)
     assert trace["provider"] == "routed-provider"
     assert trace["model"] == "coder-7b"
     assert trace["metadata"]["routing_decision"]["selected"]["modelo"] == "coder-7b"
