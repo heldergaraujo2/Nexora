@@ -27,6 +27,11 @@ class ProviderTeste(Provider):
         return True
 
 
+class ProviderFalho(ProviderTeste):
+    def generate(self, prompt: str, **kwargs):
+        raise RuntimeError("falha de teste")
+
+
 def test_roteamento_prioriza_candidato_adequado_e_score():
     manager = ProviderManager()
     manager.registrar("ollama", object())
@@ -73,3 +78,69 @@ def test_roteamento_rejeita_contexto_acima_do_limite_do_provider():
     resultado = RoteadorInteligente(manager).selecionar(candidatos, hw(), tarefa="coding", contexto_necessario=16000)
     assert resultado[0].adequado is False
     assert "provider_contexto_insuficiente" in resultado[0].motivos
+
+
+def test_manager_registra_historico_real_por_provider():
+    manager = ProviderManager()
+    manager.registrar("teste", ProviderTeste())
+    for _ in range(3):
+        manager.executar("teste", "ping")
+    metricas = manager.estatisticas_provider("teste")
+    assert metricas["chamadas"] == 3
+    assert metricas["sucessos"] == 3
+    assert metricas["erros"] == 0
+    assert metricas["taxa_sucesso"] == 1.0
+    assert metricas["taxa_erro"] == 0.0
+    assert isinstance(metricas["latencia_media"], float)
+
+
+def test_roteamento_usa_historico_de_sucesso_com_ajuste_limitado_e_explicavel():
+    manager = ProviderManager()
+    manager.registrar("alpha", ProviderTeste())
+    manager.registrar("beta", ProviderTeste())
+    for _ in range(3):
+        manager.executar("alpha", "ping")
+
+    candidatos = [
+        {"provider": "beta", "modelo": "coder-7b", "perfil": perfil_modelo("coder-7b", contexto=32768, parametros="7B")},
+        {"provider": "alpha", "modelo": "coder-7b", "perfil": perfil_modelo("coder-7b", contexto=32768, parametros="7B")},
+    ]
+    resultado = RoteadorInteligente(manager).selecionar(candidatos, hw(), tarefa="coding")
+    assert resultado[0].provider == "alpha"
+    assert "historico_alta_taxa_sucesso" in resultado[0].motivos
+    assert resultado[0].score - resultado[1].score <= 1.5
+
+
+def test_roteamento_penaliza_provider_com_alta_taxa_de_erro():
+    manager = ProviderManager()
+    manager.registrar("falho", ProviderFalho())
+    manager.registrar("bom", ProviderTeste())
+    for _ in range(3):
+        try:
+            manager.executar("falho", "ping")
+        except RuntimeError:
+            pass
+
+    candidatos = [
+        {"provider": "falho", "modelo": "coder-7b", "perfil": perfil_modelo("coder-7b", contexto=32768, parametros="7B")},
+        {"provider": "bom", "modelo": "coder-7b", "perfil": perfil_modelo("coder-7b", contexto=32768, parametros="7B")},
+    ]
+    resultado = RoteadorInteligente(manager).selecionar(candidatos, hw(), tarefa="coding")
+    assert resultado[0].provider == "bom"
+    falho = next(item for item in resultado if item.provider == "falho")
+    assert "historico_alta_taxa_erro" in falho.motivos
+
+
+def test_roteamento_pode_desativar_uso_do_historico():
+    manager = ProviderManager()
+    manager.registrar("alpha", ProviderTeste())
+    manager.registrar("beta", ProviderTeste())
+    for _ in range(3):
+        manager.executar("alpha", "ping")
+    candidatos = [
+        {"provider": "beta", "modelo": "coder-7b", "perfil": perfil_modelo("coder-7b", contexto=32768, parametros="7B")},
+        {"provider": "alpha", "modelo": "coder-7b", "perfil": perfil_modelo("coder-7b", contexto=32768, parametros="7B")},
+    ]
+    resultado = RoteadorInteligente(manager).selecionar(candidatos, hw(), tarefa="coding", usar_historico=False)
+    assert resultado[0].provider == "alpha"
+    assert not any(item.motivos for item in resultado if item.provider == "alpha")
