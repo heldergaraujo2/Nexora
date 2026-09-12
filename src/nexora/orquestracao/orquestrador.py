@@ -151,6 +151,7 @@ class Orquestrador:
             plano.adicionar_tarefa(
                 Tarefa(
                     descricao=item.get("descricao", ""),
+                    id=item.get("id"),
                     ferramenta=item.get("ferramenta"),
                     parametros=item.get("parametros", {}),
                     depende_de=item.get("depende_de", []),
