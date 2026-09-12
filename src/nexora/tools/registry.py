@@ -55,6 +55,11 @@ class RegistryFerramentas:
         self._auditoria = auditoria
         self._idempotencia = idempotencia
 
+    @property
+    def idempotencia_habilitada(self) -> bool:
+        """Indica se o Registry possui uma barreira de idempotencia configurada."""
+        return self._idempotencia is not None
+
     def registrar(self, ferramenta: Ferramenta) -> None:
         self._ferramentas[ferramenta.nome] = ferramenta
 
