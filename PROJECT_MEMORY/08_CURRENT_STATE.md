@@ -56,7 +56,8 @@
 - [x] Roteador aplica ajuste pequeno de custo histórico real quando existem pelo menos 3 gerações precificadas e pelo menos 2 providers com histórico comparável.
 - [x] Custo nunca substitui adequação funcional; ajuste máximo por custo: ±0.75 ponto.
 - [x] Custo histórico pode ser explicitamente desativado com `considerar_custo=False`.
-- [ ] CI do incremento de custo/roteamento ainda pendente.
+- [x] Testes unitários dedicados cobrem custo menor, amostra insuficiente e desativação do sinal.
+- [x] CI run `34705923418` passou em Python 3.11, 3.12, 3.13 e 3.14.
 
 ## Arquitetura canônica
 `Objetivo → Orchestrator → Plano/Tarefas → Seleção de executor/agente → Roteador Inteligente → AgentRuntime → Permission/Policy/Checkpoint → Idempotency (quando aplicável) → Provider/Tool → Observation → Verification → Analysis → Correction/Recovery → Retest → Audit/Experience → ExecutionTrace → Result`.
