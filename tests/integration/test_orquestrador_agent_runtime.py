@@ -235,3 +235,27 @@ def test_orquestrador_rota_provider_e_modelo_realmente_e_registra_decisao_no_tra
     assert trace["model"] == "coder-7b"
     assert trace["metadata"]["routing_decision"]["selected"]["modelo"] == "coder-7b"
     assert trace["metadata"]["routing_decision"]["selected"]["provider"] == "routed-provider"
+
+
+def test_orquestrador_alimenta_metricas_do_provider_manager_sem_duplicar_execucao(tmp_path) -> None:
+    manager = ProviderManager(persistencia_path=tmp_path / "provider-history.json")
+    provider = _RoutedProvider("coder-7b")
+    manager.registrar("routed-provider", lambda **_: provider)
+    orquestrador = Orquestrador(
+        rotador=_Rotador(provider),
+        provider=provider,
+        provider_manager=manager,
+        planejador=lambda _: [{"id": "t1", "descricao": "gerar resultado"}],
+    )
+
+    resultado = orquestrador.executar("concluir tarefa")
+    stats = manager.estatisticas_provider("routed-provider")
+
+    assert resultado["sucesso"] is True
+    assert provider.chamadas == 1
+    assert stats["chamadas"] == 1
+    assert stats["sucessos"] == 1
+    assert stats["erros"] == 0
+    assert stats["latencia_media"] is not None
+    assert (tmp_path / "provider-history.json").exists()
+    assert resultado["etapas"][0]["trace"]["provider"] == "routed-provider"
