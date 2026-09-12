@@ -116,3 +116,27 @@ def test_qualidade_tem_influencia_limitada_e_nao_reordena_capacidade_forte(tmp_p
 
     assert resultado[0].provider == "forte"
     assert resultado[0].score - resultado[1].score >= 7.0
+
+
+def test_qualidade_influencia_quando_capacidade_base_esta_equilibrada(tmp_path):
+    manager = ProviderManager()
+    manager.registrar("alpha", ProviderTeste())
+    manager.registrar("beta", ProviderTeste())
+    historico = HistoricoAvaliacao(tmp_path / "evaluation.json")
+    registrar_qualidade(historico, "alpha", "coder-alpha-7b", 0.95)
+    registrar_qualidade(historico, "beta", "coder-beta-7b", 0.55)
+
+    resultado = RoteadorInteligente(manager, historico_avaliacao=historico).selecionar(
+        [
+            candidato("beta", "coder-beta-7b"),
+            candidato("alpha", "coder-alpha-7b"),
+        ],
+        hw(),
+        tarefa="coding",
+    )
+
+    assert resultado[0].provider == "alpha"
+    assert resultado[0].score > resultado[1].score
+    assert "qualidade_tarefa_historica_acima_media" in resultado[0].motivos
+    assert "qualidade_tarefa_historica_abaixo_media" in resultado[1].motivos
+    assert resultado[0].score - resultado[1].score <= 1.0
