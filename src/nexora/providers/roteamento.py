@@ -22,29 +22,44 @@ class RoteadorInteligente:
     def __init__(self, manager: ProviderManager) -> None:
         self._manager = manager
 
-    def _ajuste_historico(self, provider: str) -> tuple[float, list[str]]:
-        historico = self._manager.estatisticas_provider(provider)
-        chamadas = int(historico["chamadas"])
+    @staticmethod
+    def _ajuste_historico_metricas(historico: dict[str, Any], comparaveis: list[dict[str, Any]]) -> tuple[float, list[str]]:
+        chamadas = int(historico.get("chamadas", 0))
         if chamadas < 3:
             return 0.0, []
         ajuste, motivos = 0.0, []
-        taxa_erro, taxa_sucesso, latencia = historico["taxa_erro"], historico["taxa_sucesso"], historico["latencia_media"]
+        taxa_erro = historico.get("taxa_erro")
+        taxa_sucesso = historico.get("taxa_sucesso")
+        latencia = historico.get("latencia_media")
         if isinstance(taxa_sucesso, float) and taxa_sucesso >= 0.90:
             ajuste += 1.0; motivos.append("historico_alta_taxa_sucesso")
         elif isinstance(taxa_erro, float) and taxa_erro >= 0.50:
             ajuste -= 2.0; motivos.append("historico_alta_taxa_erro")
-        if isinstance(latencia, float):
-            todas = [d["latencia_media"] for d in self._manager.estatisticas_providers().values() if isinstance(d["latencia_media"], float)]
-            media_global = (sum(todas) / len(todas)) if todas else None
-            if isinstance(media_global, float) and latencia < media_global:
+        latencias = [d.get("latencia_media") for d in comparaveis if isinstance(d.get("latencia_media"), float)]
+        if isinstance(latencia, float) and latencias:
+            media_global = sum(latencias) / len(latencias)
+            if latencia < media_global:
                 ajuste += 0.5; motivos.append("historico_baixa_latencia")
-            elif isinstance(media_global, float) and latencia > media_global:
+            elif latencia > media_global:
                 ajuste -= 0.5; motivos.append("historico_alta_latencia")
         return ajuste, motivos
 
+    def _ajuste_historico(self, provider: str) -> tuple[float, list[str]]:
+        historico = self._manager.estatisticas_provider(provider)
+        comparaveis = list(self._manager.estatisticas_providers().values())
+        return self._ajuste_historico_metricas(historico, comparaveis)
+
+    def _ajuste_historico_modelo(self, provider: str, modelo: str, candidatos: list[tuple[str, str]]) -> tuple[float, list[str]]:
+        """Usa confiabilidade/latencia do par exato provider/modelo quando ha amostra suficiente."""
+        historico = self._manager.estatisticas_modelo(provider, modelo)
+        if int(historico.get("chamadas", 0)) < 3:
+            return 0.0, []
+        comparaveis = [self._manager.estatisticas_modelo(p, m) for p, m in candidatos]
+        return self._ajuste_historico_metricas(historico, comparaveis)
+
     def _custo_historico_por_milhao(self, provider: str) -> float | None:
         historico = self._manager.estatisticas_provider(provider)
-        geracoes, tokens, custo = int(historico.get("geracoes_com_custo", 0)), int(historico.get("total_tokens", 0)), float(historico.get("custo_total", 0.0))
+        geracoes, tokens, custo = int(historico["geracoes_com_custo"]), int(historico["total_tokens"]), float(historico["custo_total"])
         if geracoes < 3 or tokens <= 0 or custo < 0:
             return None
         return (custo / tokens) * 1_000_000
@@ -122,7 +137,11 @@ class RoteadorInteligente:
             motivos.extend(avaliacao.motivos)
             score = avaliacao.score if adequado else -100.0
             if adequado and usar_historico:
-                ajuste, motivos_historico = self._ajuste_historico(provider)
+                historico_modelo = self._manager.estatisticas_modelo(provider, modelo)
+                if int(historico_modelo.get("chamadas", 0)) >= 3:
+                    ajuste, motivos_historico = self._ajuste_historico_modelo(provider, modelo, pares)
+                else:
+                    ajuste, motivos_historico = self._ajuste_historico(provider)
                 score += ajuste; motivos.extend(motivos_historico)
                 if considerar_custo:
                     ajuste_custo, motivos_custo = self._ajuste_custo_modelo(provider, modelo, pares)
