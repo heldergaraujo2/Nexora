@@ -1,5 +1,31 @@
 # 13 — CHANGELOG
 
+## Fase 21 — Telemetria real de tokens no caminho de execução — 2026-09-12
+
+O caminho real de execução passou a transportar e persistir contagens de tokens somente quando fornecidas pelo provider, sem estimativas e sem alterar a semântica de retry/governança.
+
+### Implementação
+- [x] `GenerationResult` aceita `usage` opcional mantendo compatibilidade retroativa.
+- [x] `ProviderManager` mede `prompt_tokens`, `completion_tokens`, `total_tokens` e quantidade de gerações com tokens válidos.
+- [x] O histórico persistente evoluiu para `schema_version=2` e carrega compatibilidade com schema v1.
+- [x] `Orquestrador` encaminha `GenerationResult.usage` para o `ExecutionTrace` da execução real.
+- [x] `ExecutionTrace.tokens` recebe `total_tokens` somente quando o valor é um inteiro não negativo realmente fornecido pelo provider.
+- [x] `ExecutionTrace.metadata.token_usage` preserva o usage medido.
+- [x] Não são gerados tokens por estimativa.
+- [x] Custo continua deliberadamente sem estimativa; só será incorporado com pricing autoritativo/versionado.
+
+### Compatibilidade corrigida
+- [x] O Orchestrator preserva respostas de providers legados que retornam objetos com `.text`, além de `GenerationResult`.
+- [x] O health check do provider de teste foi isolado para não contaminar a métrica da execução sob teste.
+
+### Testes / CI
+- [x] Testes unitários cobrem contagem, persistência/reload, schema v2 e ausência de usage inválido.
+- [x] Teste de integração confirma execução única, métricas do `ProviderManager`, tokens 9/6/15, persistência e `ExecutionTrace` correto.
+- [x] CI run `34704095484` passou em Python 3.11, 3.12, 3.13 e 3.14.
+
+### Próximo limite
+- [ ] Incorporar custo real somente quando houver pricing autoritativo e versionado por provider/modelo.
+
 ## Fase 21 — Execução real alimentando métricas do ProviderManager — 2026-09-12
 
 O caminho real do Orchestrator passou a registrar métricas da instância de provider efetivamente selecionada, sem executar o provider duas vezes.
@@ -19,7 +45,8 @@ O caminho real do Orchestrator passou a registrar métricas da instância de pro
 - [x] CI run `34703807547` passou em Python 3.11, 3.12, 3.13 e 3.14.
 
 ### Próximo limite
-- [ ] Incorporar custo/tokens somente quando houver telemetria real e confiável.
+- [x] Tokens reais foram adicionados no incremento seguinte.
+- [ ] Custo real aguarda pricing confiável.
 
 ## Fase 21 — Persistência opcional do histórico do ProviderManager — 2026-09-12
 
@@ -41,7 +68,8 @@ O histórico operacional do `ProviderManager` passou a poder sobreviver a reinic
 
 ### Limite preservado
 - [x] O caminho real do `Orquestrador` passou posteriormente a alimentar essas métricas sem duplicar chamadas.
-- [ ] Tokens/custo permanecem pendentes até existir telemetria real e confiável.
+- [x] Tokens passaram posteriormente a ser persistidos no schema v2 quando fornecidos pelo provider.
+- [ ] Custo permanece pendente até existir telemetria real e pricing confiável.
 
 ## Fase 21 — Integração real do roteamento com ExecutionTrace — 2026-09-12
 
