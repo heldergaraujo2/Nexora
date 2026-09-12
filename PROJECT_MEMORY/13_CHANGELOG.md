@@ -1,5 +1,35 @@
 # 13 — CHANGELOG
 
+## Fechamento da reconciliação do Runtime — 2026-09-12
+
+O `main` continua evoluindo após `v1.0.0`, sem criar nova fase. Este checkpoint fecha a etapa de consistência interna do runtime e registra a validação do estado atual.
+
+### Runtime / agentes
+- [x] `AgenteRuntime` usa `Observacao` estruturada no caminho de análise de falhas.
+- [x] Coding Agent passou a transportar o último erro de validação para `Observacao.erro` antes de chamar `AnalisadorFalhas`.
+- [x] Research Agent passou a transportar o último erro de validação para `Observacao.erro` antes de chamar `AnalisadorFalhas`.
+- [x] Falhas de validação de saída nos agentes especializados são mantidas como retentáveis, evitando aborto prematuro de problemas corrigíveis.
+- [x] O ciclo generalista existente `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR` foi preservado.
+- [x] Não foi introduzida uma terceira camada de execução.
+
+### Qualidade do CI
+- [x] Run #147 (`34659962617`) do HEAD `d69e7c9947dfc79fdd51f28dae66e97a0d3e75f4` concluiu com SUCCESS em Python 3.11, 3.12, 3.13 e 3.14.
+- [x] A suíte completa executou **232 testes passando** em Python 3.14.
+- [x] Foram corrigidos os dois `SyntaxWarning` de regex em `tests/unit/test_policy_loader.py` usando expressões regulares raw.
+- [ ] O novo HEAD documental `a608056d700519f2f62447f23c1148bd621c4be2` ainda deve receber seu próprio CI antes do fechamento final deste checkpoint.
+
+### Decisão arquitetural registrada
+- [x] O próximo trabalho não deve criar nova fase.
+- [x] O limite aberto é a reconciliação `Orquestrador → AgenteRuntime`, evitando que `ExecutorCiclo`/`VerificadorCiclo` dupliquem o ciclo avançado do Runtime.
+- [x] O Registry continua sendo a fronteira de execução governada de ferramentas.
+- [x] `Policy → Permission → Checkpoint` continua ocorrendo antes da ação.
+
+## Correção de warnings do Policy Loader — 2026-09-12
+
+- [x] Corrigidos os escapes inválidos nas regex de `tests/unit/test_policy_loader.py`.
+- [x] Commit: `a608056d700519f2f62447f23c1148bd621c4be2`.
+- [x] Nenhuma regra de negócio ou contrato de produção foi alterado.
+
 ## Orchestrator → Tool Registry — 2026-09-11
 
 O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
@@ -13,12 +43,10 @@ O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
 - [x] Correção do teste integrado: `origem=` é o argumento correto do `PolicyEngine`.
 
 ### Validação
-- [x] HEAD validado: `f67f270c25609559264c19ef7a2561cc359873b8`.
+- [x] HEAD validado naquele checkpoint: `f67f270c25609559264c19ef7a2561cc359873b8`.
 - [x] CI Run #138 (`34658836451`) concluído com SUCCESS em Python 3.11, 3.12, 3.13 e 3.14.
 
 ## Fechamento do fluxo de ferramenta — 2026-09-11
-
-O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
 
 ### Tool → Observation → Verification → Audit → Result
 - [x] `RegistryFerramentas` mantém a autorização antes da ação.
@@ -36,8 +64,6 @@ O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
 - [ ] Observação/verificação e auditoria são opcionais no Registry para preservar compatibilidade.
 
 ## Checkpoint Engine — 2026-09-11
-
-O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
 
 ### Checkpoint
 - [x] Criado `src/nexora/runtime/checkpoint.py` com `Checkpoint` imutável e `CheckpointEngine`.
@@ -85,8 +111,7 @@ A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo importação no CI.
 
 ### Validação
-- [x] CI verde para Python 3.11–3.14 no HEAD atual `f67f270c25609559264c19ef7a2561cc359873b8`.
-- [x] Run #138 (`34658836451`) concluído com SUCCESS.
+- [x] CI verde para Python 3.11–3.14 no checkpoint anterior.
 - [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance, Checkpoint Engine, auditoria de resultados e integração Orchestrator → Tool Registry.
 
 ## Reconciliação pós-v1.0.0 — 2026-09-11
