@@ -1,4 +1,4 @@
-"""ProviderManager: monitora chamadas, latencia, erros e capacidades."""
+"""ProviderManager: monitora chamadas, latencia, tokens e custo real."""
 from __future__ import annotations
 
 import json
@@ -8,20 +8,22 @@ from pathlib import Path
 from typing import Any
 
 from nexora.providers.base import GenerationResult, ProviderCapability
+from nexora.providers.pricing import PRICING_REGISTRY, PricingRegistry
 
 
 class ProviderManager:
     """Envolve providers e registra metricas globais e por provider."""
 
-    _SCHEMA_VERSION = 2
+    _SCHEMA_VERSION = 3
 
-    def __init__(self, persistencia_path: str | Path | None = None) -> None:
+    def __init__(self, persistencia_path: str | Path | None = None, pricing_registry: PricingRegistry | None = None) -> None:
         self._fabricas: dict[str, Any] = {}
         self._chamadas: int = 0
         self._erros: int = 0
         self._tempo_total: float = 0.0
         self._ultimas_falhas: dict[str, str] = {}
         self._metricas_provider: dict[str, dict[str, Any]] = {}
+        self._pricing_registry = pricing_registry or PRICING_REGISTRY
         caminho_env = os.getenv("NEXORA_PROVIDER_HISTORY_PATH")
         caminho = persistencia_path if persistencia_path is not None else caminho_env
         self._persistencia_path = Path(caminho) if caminho else None
@@ -29,7 +31,7 @@ class ProviderManager:
 
     @staticmethod
     def _metricas_vazias() -> dict[str, Any]:
-        return {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "geracoes_com_tokens": 0}
+        return {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "geracoes_com_tokens": 0, "custo_total": 0.0, "geracoes_com_custo": 0}
 
     def registrar(self, nome: str, fabrica: Any) -> None:
         chave = nome.strip().lower()
@@ -68,7 +70,7 @@ class ProviderManager:
             raise
         else:
             metricas["sucessos"] += 1
-            self._registrar_usage(metricas, resultado)
+            self._registrar_usage(metricas, chave, provider, resultado)
             return resultado
         finally:
             decorrido = time.monotonic() - inicio
@@ -76,8 +78,7 @@ class ProviderManager:
             metricas["tempo_total"] += decorrido
             self._salvar_historico()
 
-    @staticmethod
-    def _registrar_usage(metricas: dict[str, Any], resultado: Any) -> None:
+    def _registrar_usage(self, metricas: dict[str, Any], provider_name: str, provider: Any, resultado: Any) -> None:
         if not isinstance(resultado, GenerationResult) or not isinstance(resultado.usage, dict):
             return
         valores: dict[str, int] = {}
@@ -92,6 +93,39 @@ class ProviderManager:
         metricas["total_tokens"] += valores.get("total_tokens", 0)
         metricas["geracoes_com_tokens"] += 1
 
+        prompt_tokens = valores.get("prompt_tokens")
+        completion_tokens = valores.get("completion_tokens")
+        modelo = self._modelo_provider(provider)
+        if prompt_tokens is not None and completion_tokens is not None and modelo:
+            custo = self._pricing_registry.calculate(provider_name, modelo, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
+            if custo is not None:
+                metricas["custo_total"] += custo
+                metricas["geracoes_com_custo"] += 1
+
+    @staticmethod
+    def _modelo_provider(provider: Any) -> str:
+        for atributo in ("modelo", "model", "_modelo"):
+            valor = getattr(provider, atributo, "")
+            if isinstance(valor, str) and valor.strip():
+                return valor.strip()
+        return ""
+
+    def calcular_custo(self, provider: Any, resultado: Any) -> float | None:
+        """Calcula custo somente com uso medido e preco publicado."""
+        if not isinstance(resultado, GenerationResult) or not isinstance(resultado.usage, dict):
+            return None
+        prompt_tokens = resultado.usage.get("prompt_tokens")
+        completion_tokens = resultado.usage.get("completion_tokens")
+        provider_name = getattr(provider, "name", "")
+        modelo = self._modelo_provider(provider)
+        if not isinstance(provider_name, str) or not modelo:
+            return None
+        if not isinstance(prompt_tokens, int) or prompt_tokens < 0:
+            return None
+        if not isinstance(completion_tokens, int) or completion_tokens < 0:
+            return None
+        return self._pricing_registry.calculate(provider_name, modelo, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
+
     def _carregar_historico(self) -> None:
         if self._persistencia_path is None or not self._persistencia_path.exists():
             return
@@ -99,7 +133,7 @@ class ProviderManager:
             dados = json.loads(self._persistencia_path.read_text(encoding="utf-8"))
         except (OSError, ValueError, json.JSONDecodeError):
             return
-        if not isinstance(dados, dict) or dados.get("schema_version") not in {1, self._SCHEMA_VERSION}:
+        if not isinstance(dados, dict) or dados.get("schema_version") not in {1, 2, self._SCHEMA_VERSION}:
             return
         metricas = dados.get("providers")
         falhas = dados.get("ultimas_falhas")
@@ -109,13 +143,14 @@ class ProviderManager:
             if not isinstance(nome, str) or not isinstance(valores, dict):
                 continue
             try:
-                campos = {campo: int(valores.get(campo, 0)) for campo in ("chamadas", "sucessos", "erros", "prompt_tokens", "completion_tokens", "total_tokens", "geracoes_com_tokens")}
+                campos = {campo: int(valores.get(campo, 0)) for campo in ("chamadas", "sucessos", "erros", "prompt_tokens", "completion_tokens", "total_tokens", "geracoes_com_tokens", "geracoes_com_custo")}
                 tempo_total = float(valores.get("tempo_total", 0.0))
+                custo_total = float(valores.get("custo_total", 0.0))
             except (TypeError, ValueError):
                 continue
-            if min(*campos.values(), tempo_total) < 0:
+            if min(*campos.values(), tempo_total, custo_total) < 0:
                 continue
-            self._metricas_provider[nome] = {**campos, "tempo_total": tempo_total}
+            self._metricas_provider[nome] = {**campos, "tempo_total": tempo_total, "custo_total": custo_total}
             self._chamadas += campos["chamadas"]
             self._erros += campos["erros"]
             self._tempo_total += tempo_total
@@ -146,7 +181,7 @@ class ProviderManager:
         total = int(metricas["chamadas"])
         sucessos = int(metricas["sucessos"])
         erros = int(metricas["erros"])
-        return {"chamadas": total, "sucessos": sucessos, "erros": erros, "latencia_media": (float(metricas["tempo_total"]) / total) if total else None, "taxa_sucesso": (sucessos / total) if total else None, "taxa_erro": (erros / total) if total else None, "ultima_falha": self._ultimas_falhas.get(chave), "prompt_tokens": int(metricas.get("prompt_tokens", 0)), "completion_tokens": int(metricas.get("completion_tokens", 0)), "total_tokens": int(metricas.get("total_tokens", 0)), "geracoes_com_tokens": int(metricas.get("geracoes_com_tokens", 0))}
+        return {"chamadas": total, "sucessos": sucessos, "erros": erros, "latencia_media": (float(metricas["tempo_total"]) / total) if total else None, "taxa_sucesso": (sucessos / total) if total else None, "taxa_erro": (erros / total) if total else None, "ultima_falha": self._ultimas_falhas.get(chave), "prompt_tokens": int(metricas.get("prompt_tokens", 0)), "completion_tokens": int(metricas.get("completion_tokens", 0)), "total_tokens": int(metricas.get("total_tokens", 0)), "geracoes_com_tokens": int(metricas.get("geracoes_com_tokens", 0)), "custo_total": float(metricas.get("custo_total", 0.0)), "geracoes_com_custo": int(metricas.get("geracoes_com_custo", 0))}
 
     def estatisticas_providers(self) -> dict[str, dict[str, Any]]:
         return {nome: self.estatisticas_provider(nome) for nome in self.nomes()}
