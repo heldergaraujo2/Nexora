@@ -19,42 +19,42 @@
 - `RoteadorInteligente` usa confiabilidade/latência específicas de `provider + modelo` quando há amostra mínima e faz fallback controlado para histórico agregado.
 - Custo histórico usa somente custo real medido.
 - `AvaliadorResultado` fornece qualidade explícita baseada em critérios/evidências reais.
-- `HistoricoAvaliacao` agora persiste qualidade por `provider + modelo + tipo_tarefa`.
-- **Qualidade ainda NÃO influencia o roteamento.**
+- `HistoricoAvaliacao` persiste qualidade por `provider + modelo + tipo_tarefa`.
+- Qualidade influencia o roteamento somente com amostra mínima, pelo menos dois candidatos comparáveis e peso de maturidade da amostra.
+- No limiar mínimo, `peso_amostra=0,5`; em `2 × min_amostra`, chega a `1,0`; a influência final permanece limitada a ±1,0.
 
-## 3. Último checkpoint validado
-- CI run #315 (`34714728583`) — **100% GREEN**.
+## 3. Último CI validado antes deste incremento
+- Run #335 (`34715778582`) — **100% GREEN**.
 - Python 3.11: success.
 - Python 3.12: success.
 - Python 3.13: success.
 - Python 3.14: success.
-- O run #315 validou a fundação de avaliação de resultado antes do novo incremento de histórico de qualidade.
+- Esse run validou a base do quality routing sample gate antes da ponderação de maturidade.
 
 ## 4. Trabalho deste incremento
 Implementado:
-- `src/nexora/runtime/historico_avaliacao.py` — histórico persistente versionado (`schema_version=1`).
-- `src/nexora/core/plano.py` — `Tarefa.tipo` explícito e retrocompatível.
-- `src/nexora/orquestracao/orquestrador.py` — integração opcional de `AvaliadorResultado` + `HistoricoAvaliacao`; registra qualidade após execução.
-- `tests/unit/test_historico_avaliacao.py` — persistência, isolamento, ausência de qualidade e validação.
-- `tests/integration/test_orquestrador_avaliacao_historico.py` — fluxo real Orchestrator → Runtime → Evaluation → History → reload.
-- `docs/adr/ADR-023-persistent-task-quality-history.md` — decisão arquitetural.
-- `PROJECT_MEMORY/17_TASK_QUALITY_HISTORY.md` — continuidade do incremento.
+- `src/nexora/runtime/historico_avaliacao.py` — `peso_amostra` determinístico, conservador e derivado apenas do número de avaliações observadas.
+- `src/nexora/providers/roteamento.py` — qualidade histórica passa a ser ponderada pelo `peso_amostra` antes do limite de ±1,0.
+- `tests/unit/test_historico_avaliacao_roteamento.py` — testes de peso 0, gate, maturidade e impacto do ajuste no roteamento.
+- `docs/adr/ADR-024-quality-routing-sample-gate.md` — decisão atualizada com maturidade da amostra.
+- `PROJECT_MEMORY/17_TASK_QUALITY_HISTORY.md` — continuidade atualizada.
+- `PROJECT_MEMORY/08_CURRENT_STATE.md` — estado consolidado.
 
 ## 5. Regras de qualidade
 1. Teste escrito não significa teste aprovado.
 2. Toda funcionalidade nova precisa de testes unitários e integração quando cruza componentes.
 3. CI do HEAD é o critério final de aprovação.
 4. Nunca inventar score, tokens, custo ou evidência.
-5. Qualidade não entra no roteador antes de amostra mínima e testes de isolamento por tipo/provider/modelo.
+5. Qualidade só entra no roteador após amostra mínima e testes de isolamento por tipo/provider/modelo.
 6. Não misturar histórico entre modelos ou tipos de tarefa.
+7. Peso de maturidade é uma proteção heurística, não deve ser descrito como confiança estatística.
 
 ## 6. Próximo passo obrigatório
-Após o CI deste incremento ficar verde:
-1. definir limiar mínimo de amostra de qualidade;
-2. adicionar testes de insuficiência de amostra e isolamento;
-3. expor consulta de qualidade para o `RoteadorInteligente` sem ainda alterar o score;
-4. integrar qualidade ao score somente após evidência suficiente;
-5. manter fórmula determinística e explicável: `capability × quality × reliability × latency × tokens × cost`.
+Após o CI do HEAD ficar verde:
+1. validar experimentalmente o impacto da qualidade no ranking em cenários controlados;
+2. confirmar que qualidade não domina capability/reliabilidade/latência/custo em cenários adversos;
+3. só depois avaliar recência/janela temporal e detecção de drift;
+4. evoluir posteriormente para avaliação contextual/semântica com evidências mais fortes.
 
 ## 7. Limites reais
 - Checkpoint/idempotência/Registry/delegações ainda possuem componentes em memória.
