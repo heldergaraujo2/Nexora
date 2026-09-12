@@ -1,5 +1,27 @@
 # 13 — CHANGELOG
 
+## Fase 21 — Persistência opcional do histórico do ProviderManager — 2026-09-12
+
+O histórico operacional do `ProviderManager` passou a poder sobreviver a reinicializações sem transformar o componente em um banco de dados ou alterar o comportamento in-memory padrão.
+
+### Persistência
+- [x] `ProviderManager` aceita `persistencia_path` explícito.
+- [x] `NEXORA_PROVIDER_HISTORY_PATH` permite configuração por ambiente.
+- [x] Sem caminho configurado, o comportamento permanece in-memory.
+- [x] Histórico JSON possui `schema_version`.
+- [x] Escrita usa arquivo temporário + `os.replace`.
+- [x] Histórico inválido/incompatível é ignorado sem derrubar o provider manager.
+- [x] São persistidas somente métricas realmente medidas: chamadas, sucessos, erros, tempo total e últimas falhas.
+- [x] ADR-018 registrada.
+
+### Testes / CI
+- [x] Testes cobrem persistência, reload, falhas, schema, atomicidade, limpeza do temporário e variável de ambiente.
+- [x] CI run `34702844025` passou em Python 3.11, 3.12, 3.13 e 3.14.
+
+### Limite preservado
+- [ ] O caminho real do `Orquestrador` ainda executa diretamente a instância selecionada; o próximo incremento deve fazer essa execução alimentar as métricas do `ProviderManager` sem duplicar chamadas.
+- [ ] Tokens/custo permanecem pendentes até existir telemetria real e confiável.
+
 ## Fase 21 — Integração real do roteamento com ExecutionTrace — 2026-09-12
 
 O roteamento inteligente deixou de ser apenas uma função de decisão isolada e passou a participar do caminho real `Orquestrador → AgentRuntime`.
