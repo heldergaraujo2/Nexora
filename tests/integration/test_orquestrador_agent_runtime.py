@@ -229,8 +229,9 @@ def test_orquestrador_rota_provider_e_modelo_realmente_e_registra_decisao_no_tra
     assert resultado["sucesso"] is True
     assert resultado["etapas"][0]["saida"] == "resultado:coder-7b"
     assert fallback.chamadas == 0
-    assert len(instancias) == 2  # healthcheck + runtime; ambos usam o modelo selecionado
-    assert all(instancia.modelo == "coder-7b" for instancia in instancias)
+    assert len(instancias) == 3  # capability probe + instancia selecionada; healthcheck usa a selecionada
+    assert instancias[0].modelo == "default"
+    assert all(instancia.modelo == "coder-7b" for instancia in instancias[1:])
     assert trace["provider"] == "routed-provider"
     assert trace["model"] == "coder-7b"
     assert trace["metadata"]["routing_decision"]["selected"]["modelo"] == "coder-7b"
