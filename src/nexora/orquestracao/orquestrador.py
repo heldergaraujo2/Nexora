@@ -154,6 +154,7 @@ class Orquestrador:
                     ferramenta=item.get("ferramenta"),
                     parametros=item.get("parametros", {}),
                     depende_de=item.get("depende_de", []),
+                    idempotencia_chave=item.get("idempotencia_chave"),
                 )
             )
         self._registrar("plano", plano.para_dict())
@@ -164,9 +165,6 @@ class Orquestrador:
         for tarefa in plano.tarefas:
             tarefa_dict = tarefa.para_dict()
             tarefa_dict["objetivo_id"] = objetivo.id
-            # O planner pode declarar uma chave explicita, mas a Tarefa atual nao a
-            # persiste no seu contrato; o caminho automatico usa a identidade estavel
-            # objetivo+tarefa+ferramenta quando o Registry possui idempotencia.
             self._publicar("orquestracao.tarefa.inicio", {"objetivo_id": objetivo.id, "tarefa_id": tarefa_dict.get("id")})
             resultado_runtime: ResultadoAgente = self._executar_runtime(tarefa_dict, provider)
             etapa: dict[str, Any] = {
@@ -181,6 +179,8 @@ class Orquestrador:
             if tarefa_dict.get("ferramenta") is not None:
                 etapa["ferramenta"] = tarefa_dict["ferramenta"]
                 etapa["parametros"] = tarefa_dict.get("parametros", {})
+                if tarefa_dict.get("idempotencia_chave") is not None:
+                    etapa["idempotencia_chave"] = tarefa_dict["idempotencia_chave"]
             etapas.append(etapa)
             self._publicar("orquestracao.tarefa.resultado", {"objetivo_id": objetivo.id, **etapa})
             if not resultado_runtime.sucesso:
