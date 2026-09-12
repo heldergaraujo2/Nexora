@@ -31,6 +31,19 @@ class ProviderManager:
         fabrica = self._fabricas[chave]
         return fabrica() if callable(fabrica) else fabrica
 
+    def obter_com_modelo(self, nome: str, modelo: str) -> Any:
+        """Cria uma instancia explicitamente configurada para o modelo selecionado.
+
+        O factory registrado precisa declarar suporte ao argumento ``modelo``.
+        Nao ha fallback silencioso para outro modelo, pois isso falsificaria a
+        decisao de roteamento registrada no trace.
+        """
+        chave = nome.strip().lower()
+        fabrica = self._fabricas[chave]
+        if not callable(fabrica):
+            raise TypeError(f"Provider {chave} nao possui factory configuravel por modelo")
+        return fabrica(modelo=modelo)
+
     def executar(self, nome: str, prompt: str, **kwargs: Any):
         """Executa generate registrando latencia, sucesso e erro do provider."""
         chave = nome.strip().lower()
