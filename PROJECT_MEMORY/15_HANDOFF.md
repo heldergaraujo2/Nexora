@@ -14,9 +14,9 @@
 - Repositório: `heldergaraujo2/Nexora`.
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- Último checkpoint anterior validado pelo CI: Run #157 no HEAD `52ef09f...`.
-- Depois desse checkpoint, foi implementada a primeira integração Orchestrator ↔ AgentRuntime. Os commits desta sequência são `9e38146...` (ADR-012), `0360ce2...` (runtime resiliente), `b617d91...` (Orchestrator integrado), `b77ca31...` (testes), `eb8b8d0...` e `e48ceaf...` (continuidade).
-- **Não considerar o novo código validado até o CI do HEAD atual concluir com sucesso.**
+- CI Run #164 validou o checkpoint anterior `b8b4619...` em Python 3.11–3.14.
+- Desde então: `7bbdebcee7cf0b954b5e01eb1067f5e6b0d439bf` adicionou o teste de governança explícita de ferramenta; `4dabb383fd93e0e9c49d9d23f693049aa7eb8221` adicionou `ExecutionTrace`; `c5be9193086bab190180093351211b2e133c5375` adicionou testes unitários do trace; `55920a19d7f581c8f8007ddc86a76961510e0bd6` integrou o trace ao AgentRuntime; `3d07a437664ca43f2194a33a098787da7830ca64` adicionou teste do trace no runtime.
+- **Não considerar os commits posteriores ao Run #164 validados até o CI do HEAD atual concluir com sucesso.**
 
 ## 3. Arquitetura canônica atual
 
@@ -47,6 +47,8 @@ Retest
   ↓
 Audit / Experience
   ↓
+ExecutionTrace
+  ↓
 Resultado
   ↓
 Orchestrator
@@ -72,6 +74,9 @@ Decisões:
 - Exceções de execução agora viram `Observacao` com erro.
 - Exceções de verificação também são controladas como observação.
 - O fluxo de análise/recovery continua `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
+- `ResultadoAgente` agora pode transportar um `trace` estruturado.
+- `ExecutionTrace` foi introduzido em `src/nexora/runtime/trace.py` com IDs de execução/trace/span, agente/tarefa, provider/model, tokens, latência, custo, retry, falha, policy version/fingerprint, checkpoint, status e timestamps.
+- O runtime gera/atualiza o trace, contabiliza retries e finaliza o status de forma determinística.
 
 ### Orchestrator
 - Não usa mais `ExecutorCiclo`/`VerificadorCiclo` no caminho normal.
@@ -81,10 +86,16 @@ Decisões:
 - Retry automático de ferramenta está limitado a uma tentativa nesta primeira integração para não repetir efeitos externos sem idempotência.
 - Resultado do runtime é normalizado para o contrato do Orchestrator e preserva tentativas/histórico.
 
+### Governança
+- O teste `test_orquestrador_ferramenta_passa_uma_vez_pela_governanca` valida Orchestrator → Registry → Permission/Policy → Checkpoint → Tool e confirma uma única execução.
+
 ### Testes
-Arquivo: `tests/integration/test_orquestrador_agent_runtime.py`.
-- Testa falha inicial de provider seguida de sucesso pelo recovery do runtime.
-- Testa exceção de provider sem escapar pelo Orchestrator.
+Arquivos:
+- `tests/integration/test_orquestrador_agent_runtime.py`
+- `tests/unit/test_execution_trace.py`
+- `tests/unit/test_agente_runtime_trace.py`
+
+Os testes cobrem recovery do provider, exceção controlada, execução única governada de ferramenta e contrato do ExecutionTrace.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -116,20 +127,18 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 - Economic Engine ainda não fecha o loop oportunidade → produto → mercado → receita → reinvestimento.
 - Autonomia econômica completa ainda não existe.
 - Groq ainda requer validação real HTTP/tool-calling antes de ser tratado como integração de produção validada.
+- `ExecutionTrace` é contrato de observabilidade; ainda não há backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
 
 ## 9. Anomalia conhecida
 `src/nexora/runtime/analise.py` já apresentou SHA inconsistente no tooling. **Não inventar SHA.** Se for necessário alterá-lo, resolver a identidade do blob primeiro.
 
 ## 10. Próximo trabalho
-Agora que o limite Orchestrator ↔ AgentRuntime foi implementado, a próxima etapa deve ser **validação e endurecimento da integração**, nesta ordem:
-
-1. Confirmar HEAD real do `main`.
-2. Confirmar CI do novo HEAD em Python 3.11–3.14.
-3. Se CI falhar, corrigir antes de avançar.
-4. Adicionar integração governada explícita Orchestrator → Registry → Tool → Runtime/Result, garantindo que uma ferramenta não seja executada duas vezes.
-5. Revisar o contrato de `core/ciclo.py` e seus consumidores; somente depois decidir sua aposentadoria gradual.
-6. Criar uma camada de `ExecutionTrace` unificada com `execution_id`, `task_id`, `agent_id`, provider/model, tentativa, latência, custo, falha, policy fingerprint e checkpoint quando disponíveis.
-7. Depois: idempotência externa, evidência de pesquisa, economia computacional e evolução do World Model.
+1. Confirmar CI do HEAD que inclui o ExecutionTrace.
+2. Se CI falhar, corrigir antes de avançar.
+3. Integrar `ExecutionTrace` progressivamente no Orchestrator, preenchendo `task_id` e contexto de provider quando disponíveis, sem inventar dados.
+4. Revisar o contrato de `core/ciclo.py` e seus consumidores; somente depois decidir aposentadoria gradual.
+5. Evoluir `ExecutionTrace` para spans/eventos e persistência somente quando houver necessidade real, mantendo o contrato atual compatível.
+6. Depois: idempotência externa, evidência de pesquisa, economia computacional e evolução do World Model.
 
 ## 11. O que NÃO fazer
 - Não criar outra NEXORA.
@@ -141,6 +150,7 @@ Agora que o limite Orchestrator ↔ AgentRuntime foi implementado, a próxima et
 - Não tratar auditoria como histórico criptograficamente inviolável.
 - Não chamar infraestrutura de autonomia completa antes de fechar o loop real do North Star.
 - Não introduzir retry de efeito externo sem idempotência e governança.
+- Não preencher métricas de trace com valores inventados ou estimados sem evidência.
 
 ## 12. Regra operacional
 A cada avanço significativo:
