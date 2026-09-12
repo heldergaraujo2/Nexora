@@ -46,6 +46,19 @@ def test_manager_estatisticas_contam_chamadas_e_erros():
     assert "doente" in stats["ultimas_falhas"]
 
 
+def test_manager_executar_instancia_registra_sem_criar_outra_instancia():
+    manager = ProviderManager()
+    manager.registrar("saudavel", ProviderSaudavel)
+    provider = ProviderSaudavel()
+
+    resultado = manager.executar_instancia("saudavel", provider, "oi")
+
+    assert resultado.text == "ok"
+    assert provider.chamadas == 1
+    assert manager.estatisticas_provider("saudavel")["chamadas"] == 1
+    assert manager.obter("saudavel").chamadas == 0
+
+
 def test_manager_healthcheck_reporta_estado():
     manager = ProviderManager()
     manager.registrar("saudavel", ProviderSaudavel)
