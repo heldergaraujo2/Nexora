@@ -82,7 +82,7 @@ unknown = "valor"
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfiguracaoInvalida, match="\[policy\].*campos desconhecidos"):
+    with pytest.raises(ConfiguracaoInvalida, match=r"\[policy\].*campos desconhecidos"):
         carregar_policy_toml(caminho)
 
 
@@ -118,7 +118,7 @@ executor = "research-agent"
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfiguracaoInvalida, match="\.id"):
+    with pytest.raises(ConfiguracaoInvalida, match=r"\.id"):
         carregar_policy_toml(caminho)
 
 
