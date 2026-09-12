@@ -15,8 +15,8 @@
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
 - O roadmap pós-v1.0 está formalizado em `PROJECT_MEMORY/07_ROADMAP.md` nas Fases 17–25.
-- O CI do commit anterior `f8fb7919...` passou em Python 3.11–3.14.
-- O CI do HEAD atual ainda está em execução; não considerar este checkpoint validado até o run correspondente concluir com sucesso.
+- O CI do incremento de histórico de ProviderManager passou em Python 3.11–3.14 no run `34697884018` (run #232).
+- O commit posterior de testes `52dc64e496e5623662c69b8fa5d095cd33eaa4d8` iniciou novo CI (run #232 conforme evento mais recente); confirmar esse run antes de fechar qualquer novo checkpoint posterior.
 
 ## 3. Arquitetura canônica atual
 
@@ -28,6 +28,8 @@ Orchestrator
 Plano / Tarefas
   ↓
 Seleção do executor/agente
+  ↓
+Roteador Inteligente (decisão provider/modelo)
   ↓
 AgentRuntime  ← proprietário do ciclo avançado
   ↓
@@ -70,17 +72,13 @@ Orchestrator = coordenador de alto nível; AgentRuntime = limite canônico do ci
 Idempotência é barreira explícita antes de efeitos externos; store atual é concorrente em memória e não habilita retry automático.
 
 ### ADR-015
-Arquivo: `docs/adr/ADR-015-ollama-provider-local.md`.
+`ProviderOllama` é integração local via contrato Provider, não dependência arquitetural obrigatória.
 
-Decisões:
-- `ProviderOllama` implementa o contrato Provider existente.
-- HTTP usa apenas stdlib; nenhuma dependência pip adicional foi criada.
-- Endpoint padrão: `http://localhost:11434`, configurável por `NEXORA_OLLAMA_URL`.
-- Modelo configurável por `NEXORA_OLLAMA_MODEL`.
-- Perfil padrão inicial: `qwen2.5-coder:7b-instruct-q4_K_M`.
-- Health check consulta `/api/tags` sem consumir geração.
-- Streaming e tool-calling não são declarados até implementação/testes específicos.
-- Ollama é integração, não dependência arquitetural obrigatória.
+### ADR-016
+Detecção inicial de hardware é conservadora, somente leitura e não presume GPU/VRAM que não possam ser detectadas com segurança.
+
+### ADR-017
+Roteamento inteligente é provider/modelo agnóstico, determinístico e explicável. Considera adequação do modelo, hardware, capabilities, health opcional e histórico operacional medido. O roteador decide; o AgentRuntime executa.
 
 ## 5. Trabalho implementado e preservado
 - AgentRuntime é o proprietário do ciclo `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
@@ -96,15 +94,33 @@ Implementado:
 - Geração `/api/chat` com `stream=false`.
 - Health check `/api/tags`.
 - Normalização de indisponibilidade para `ProviderIndisponivel`.
-- `tests/unit/test_providers_ollama.py`.
-- `tests/integration/test_provider_ollama_registry.py`.
-- ADR-015.
+- Descoberta estruturada de modelos locais.
+- Perfis determinísticos de modelo.
+- Detecção inicial de CPU/RAM/OS/arquitetura.
+- Avaliação hardware × modelo e seleção de candidatos.
+- Testes unitários e de integração correspondentes.
 
 Pendente:
 - validar contra Ollama real instalado;
-- descoberta estruturada de modelos locais;
-- perfis de modelo por capacidade/hardware;
-- futura detecção de CPU/RAM/GPU/VRAM/OS.
+- detecção detalhada de GPU/VRAM por plataforma;
+- instalador/setup automático.
+
+### Fase 21 — Intelligent Model Routing
+Implementado:
+- `RoteadorInteligente` provider/modelo agnóstico.
+- Filtragem por registro, hardware e adequação do modelo.
+- Requisitos opcionais de tool-calling, streaming, contexto e health.
+- Métricas reais do `ProviderManager` por provider.
+- Histórico mínimo de três chamadas antes de influenciar score.
+- Ajustes pequenos e explicáveis por sucesso, erro e latência relativa.
+- Testes unitários cobrindo histórico medido.
+- CI verde do incremento de histórico no run `34697884018`, Python 3.11–3.14.
+
+Próximo incremento:
+1. confirmar CI do HEAD mais recente;
+2. integrar a decisão de roteamento ao `ExecutionTrace.metadata`;
+3. adicionar teste de integração `Roteador → AgentRuntime → Trace`;
+4. depois estudar persistência das métricas sem quebrar o desenho in-memory atual.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -124,7 +140,7 @@ Fluxo canônico:
 2. **Fase 18 — Coding Workspace Agent:** ferramentas governadas para workspace real.
 3. **Fase 19 — Dev Loop + Programming Experience:** código → teste → erro → correção → reteste → experiência.
 4. **Fase 20 — Code Knowledge + RAG:** conhecimento recuperável sobre código e histórico.
-5. **Fase 21 — Intelligent Model Routing:** seleção de modelo/provider por tarefa, custo, risco e contexto.
+5. **Fase 21 — Intelligent Model Routing:** seleção de modelo/provider por adequação, histórico medido, risco, contexto e futuramente custo real.
 6. **Fase 22 — Hardware & NEXORA Setup:** instalação e configuração simples conforme hardware.
 7. **Fase 23 — NEXORA UI / Experience Layer:** UI extremamente tecnológica/futurista/inovadora, mas simples e intuitiva.
 8. **Fase 24 — Autonomous Product Engine:** aproximação do loop econômico completo.
@@ -144,8 +160,6 @@ A UI final deve transmitir tecnologia, futuro, inovação, inteligência e sensa
 
 Regra: a complexidade fica na arquitetura interna; a interface principal permanece limpa, intuitiva e visualmente impactante.
 
-A estética poderá usar estados de execução em tempo real, visualização de atividades, animações discretas e identidade premium, sempre subordinados à legibilidade e facilidade de uso.
-
 ## 10. Testes — regra permanente
 Para cada funcionalidade nova:
 1. implementar;
@@ -163,7 +177,7 @@ Para cada funcionalidade nova:
 - Não existe rollback de efeitos externos.
 - Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
 - Não existe estratégia completa de recuperação de operações `IN_PROGRESS` após crash.
-- Registry/capabilities são em memória.
+- Registry/capabilities e histórico atual de ProviderManager são em memória.
 - ExecutorDelegacoes é síncrono/in-memory.
 - YAML de política não existe.
 - World Model/Knowledge ainda são infraestrutura, não inteligência mundial completa.
