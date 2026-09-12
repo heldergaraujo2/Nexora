@@ -13,9 +13,11 @@ from nexora.providers.roteamento import CandidatoRoteamento, RoteadorInteligente
 from nexora.providers.routing_trace import registrar_decisao_trace
 from nexora.runtime.agente import AgenteRuntime, ResultadoAgente
 from nexora.runtime.analise import AnalisadorFalhas
+from nexora.runtime.avaliacao import AvaliadorResultado
 from nexora.runtime.correcao import Corrector
 from nexora.runtime.eventos import EventStore
 from nexora.runtime.hardware import PerfilHardware
+from nexora.runtime.historico_avaliacao import HistoricoAvaliacao
 from nexora.runtime.trace import ExecutionTrace
 from nexora.runtime.verificacao import texto_nao_vazio
 from nexora.tools.registry import RegistryFerramentas
@@ -24,7 +26,7 @@ from nexora.tools.registry import RegistryFerramentas
 class Orquestrador:
     """Coordena objetivos e tarefas; o AgenteRuntime possui o ciclo de execucao."""
 
-    def __init__(self, rotador, provider, planejador=None, evento_store=None, historico=None, communication_bus=None, agent_id="orchestrator", ferramentas: RegistryFerramentas | None = None, max_tentativas: int = 3, provider_manager: ProviderManager | None = None, roteador_inteligente: RoteadorInteligente | None = None, candidatos_roteamento: list[dict[str, Any]] | None = None, hardware: PerfilHardware | None = None):
+    def __init__(self, rotador, provider, planejador=None, evento_store=None, historico=None, communication_bus=None, agent_id="orchestrator", ferramentas: RegistryFerramentas | None = None, max_tentativas: int = 3, provider_manager: ProviderManager | None = None, roteador_inteligente: RoteadorInteligente | None = None, candidatos_roteamento: list[dict[str, Any]] | None = None, hardware: PerfilHardware | None = None, avaliador_resultado: AvaliadorResultado | None = None, historico_avaliacao: HistoricoAvaliacao | None = None):
         self.rotador = rotador
         self.provider = provider
         self.planejador = planejador or self._planejar
@@ -38,10 +40,20 @@ class Orquestrador:
         self.roteador_inteligente = roteador_inteligente
         self.candidatos_roteamento = candidatos_roteamento
         self.hardware = hardware
+        self.avaliador_resultado = avaliador_resultado
+        self.historico_avaliacao = historico_avaliacao
 
     @staticmethod
     def _planejar(objetivo):
         return [{"id": "t1", "descricao": "Executar objetivo"}]
+
+    @staticmethod
+    def _tipo_tarefa(tarefa: dict[str, Any]) -> str:
+        tipo = tarefa.get("tipo")
+        if isinstance(tipo, str) and tipo.strip():
+            return tipo.strip().lower()
+        descricao = str(tarefa.get("descricao", "")).lower()
+        return "coding" if "cod" in descricao else "general"
 
     def _registrar(self, tipo, dados):
         registro = {"tipo": tipo, "dados": dados}
@@ -109,7 +121,7 @@ class Orquestrador:
     def _executar_runtime(self, tarefa_dict, provider, *, routing_candidates: list[CandidatoRoteamento] | None = None):
         provider_name = getattr(provider, "name", "")
         model_name = getattr(provider, "modelo", "")
-        trace = ExecutionTrace(agent_id=f"{self.agent_id}:runtime", task_id=str(tarefa_dict.get("id") or ""), provider=provider_name if isinstance(provider_name, str) else "", model=model_name if isinstance(model_name, str) else "", metadata={"objetivo_id": tarefa_dict.get("objetivo_id"), "executor": self.agent_id, "ferramenta": tarefa_dict.get("ferramenta") or ""})
+        trace = ExecutionTrace(agent_id=f"{self.agent_id}:runtime", task_id=str(tarefa_dict.get("id") or ""), provider=provider_name if isinstance(provider_name, str) else "", model=model_name if isinstance(model_name, str) else "", metadata={"objetivo_id": tarefa_dict.get("objetivo_id"), "executor": self.agent_id, "ferramenta": tarefa_dict.get("ferramenta") or "", "task_type": self._tipo_tarefa(tarefa_dict)})
         if routing_candidates is not None:
             registrar_decisao_trace(trace, routing_candidates)
 
@@ -118,7 +130,7 @@ class Orquestrador:
 
         corrector = Corrector(executar=executar, registrar=self._registrar)
         tentativas = 1 if tarefa_dict.get("ferramenta") is not None else self.max_tentativas
-        runtime = AgenteRuntime(executar=executar, verificar=self._verificar, analisar=self._analisar, corregir=corrector.corregir, registrar=self._registrar, max_tentativas=tentativas, communication_bus=self.communication_bus, agent_id=f"{self.agent_id}:runtime", trace=trace)
+        runtime = AgenteRuntime(executar=executar, verificar=self._verificar, analisar=self._analisar, corregir=corrector.corregir, registrar=self._registrar, max_tentativas=tentativas, communication_bus=self.communication_bus, agent_id=f"{self.agent_id}:runtime", trace=trace, avaliador=self.avaliador_resultado)
         return runtime.executar(tarefa_dict.get("descricao", ""))
 
     def _selecionar_provider(self, objetivo_texto: str, alias=None):
@@ -143,7 +155,7 @@ class Orquestrador:
         plano_dict = self.planejador(objetivo_texto)
         plano = Plano(objetivo_id=objetivo.id)
         for item in plano_dict:
-            plano.adicionar_tarefa(Tarefa(descricao=item.get("descricao", ""), id=item.get("id"), ferramenta=item.get("ferramenta"), parametros=item.get("parametros", {}), depende_de=item.get("depende_de", []), idempotencia_chave=item.get("idempotencia_chave")))
+            plano.adicionar_tarefa(Tarefa(descricao=item.get("descricao", ""), id=item.get("id"), ferramenta=item.get("ferramenta"), parametros=item.get("parametros", {}), depende_de=item.get("depende_de", []), idempotencia_chave=item.get("idempotencia_chave"), tipo=item.get("tipo")))
         self._registrar("plano", plano.para_dict())
         self._publicar("orquestracao.plano", {"objetivo_id": objetivo.id, "plano_id": plano.id, "tarefas": len(plano.tarefas)})
         etapas = []
@@ -153,7 +165,11 @@ class Orquestrador:
             tarefa_dict["objetivo_id"] = objetivo.id
             self._publicar("orquestracao.tarefa.inicio", {"objetivo_id": objetivo.id, "tarefa_id": tarefa_dict.get("id")})
             resultado_runtime: ResultadoAgente = self._executar_runtime(tarefa_dict, provider, routing_candidates=routing_candidates)
-            etapa: dict[str, Any] = {"tarefa_id": tarefa_dict.get("id"), "ok": resultado_runtime.sucesso, "saida": resultado_runtime.saida_final, "erro": resultado_runtime.etapas[-1].get("erro") if resultado_runtime.etapas else None, "tentativas": resultado_runtime.tentativas, "historico_runtime": resultado_runtime.historico, "trace": resultado_runtime.trace}
+            etapa: dict[str, Any] = {"tarefa_id": tarefa_dict.get("id"), "tipo": self._tipo_tarefa(tarefa_dict), "ok": resultado_runtime.sucesso, "saida": resultado_runtime.saida_final, "erro": resultado_runtime.etapas[-1].get("erro") if resultado_runtime.etapas else None, "tentativas": resultado_runtime.tentativas, "historico_runtime": resultado_runtime.historico, "trace": resultado_runtime.trace}
+            if resultado_runtime.avaliacao:
+                etapa["avaliacao"] = resultado_runtime.avaliacao
+                if self.historico_avaliacao is not None and resultado_runtime.trace is not None:
+                    self.historico_avaliacao.registrar(resultado_runtime.trace.provider, resultado_runtime.trace.model, etapa["tipo"], resultado_runtime.avaliacao)
             if tarefa_dict.get("ferramenta") is not None:
                 etapa["ferramenta"] = tarefa_dict["ferramenta"]
                 etapa["parametros"] = tarefa_dict.get("parametros", {})
