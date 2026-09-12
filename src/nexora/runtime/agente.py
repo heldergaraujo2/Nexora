@@ -66,13 +66,29 @@ class AgenteRuntime:
 
         while tentativas < self._max_tentativas:
             tentativas += 1
-            saida = self._executar(objetivo)
-            ok = self._verificar(saida)
+            erro_execucao: str | None = None
+            try:
+                saida = self._executar(objetivo)
+            except Exception as exc:
+                saida = ""
+                erro_execucao = str(exc)
+
+            if erro_execucao is not None:
+                ok = False
+                ultimo_erro = erro_execucao
+            else:
+                try:
+                    ok = self._verificar(saida)
+                except Exception as exc:
+                    ok = False
+                    ultimo_erro = str(exc)
+                    erro_execucao = str(exc)
+
             observacao = Observacao(
                 etapa_id=f"{self._agent_id}:{tentativas}",
                 ok=ok,
                 saida=saida,
-                erro=None,
+                erro=erro_execucao,
                 metadados={"tentativa": tentativas},
             )
             observacao_dict = {
@@ -93,13 +109,18 @@ class AgenteRuntime:
                 if self._registrar is not None:
                     self._registrar("falha", falha_dict)
                 self._publicar("agente.falha", {"tentativa": tentativas, **falha_dict})
-                ultimo_erro = falha.motivo if hasattr(falha, "motivo") else str(falha)
+                ultimo_erro = falha.motivo if hasattr(falha, "motivo") and falha.motivo else ultimo_erro
                 if falha.plano in {"abort", "troca_provider"}:
                     break
                 if falha.plano == "ajuste_prompt":
                     saida = self._corregir(objetivo, falha)
-                    ok = self._verificar(saida)
-                    reteste = {"tentativa": tentativas, "ok": ok, "saida": saida}
+                    try:
+                        ok = self._verificar(saida)
+                        reteste_erro = None
+                    except Exception as exc:
+                        ok = False
+                        reteste_erro = str(exc)
+                    reteste = {"tentativa": tentativas, "ok": ok, "saida": saida, "erro": reteste_erro}
                     historico.append(reteste)
                     if self._registrar is not None:
                         self._registrar("reteste", reteste)
