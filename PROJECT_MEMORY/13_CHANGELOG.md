@@ -1,5 +1,37 @@
 # 13 — CHANGELOG
 
+## Fase 21 — Histórico por provider/modelo para roteamento — 2026-09-12
+
+O roteamento inteligente passou a usar histórico operacional do par exato `provider + modelo` para confiabilidade e latência, evitando misturar modelos diferentes do mesmo provider quando existe amostra suficiente.
+
+### Implementação
+- [x] `ProviderManager` mantém métricas persistentes por provider e por modelo.
+- [x] Histórico por modelo inclui chamadas, sucessos, erros, latência, tokens e custo real quando disponível.
+- [x] `RoteadorInteligente` usa o histórico do par exato quando há pelo menos 3 chamadas.
+- [x] Quando a amostra específica é insuficiente, o roteador faz fallback controlado para o histórico agregado do provider.
+- [x] Confiabilidade do modelo influencia o score com regras determinísticas e explicáveis.
+- [x] Latência do modelo é comparada somente com os pares candidatos correspondentes, sem misturar modelos fora da amostra avaliada.
+- [x] O sinal de custo continua separado e usa somente custo real medido, com pelo menos 3 gerações precificadas.
+- [x] `considerar_custo=False` continua desabilitando o sinal de custo.
+- [x] ADR-021 registrada para formalizar o histórico provider/modelo e seus limites.
+
+### Testes / CI
+- [x] Teste unitário cobre confiabilidade específica do modelo.
+- [x] Teste unitário cobre latência específica sem misturar modelos.
+- [x] Uma falha inicial do CI foi diagnosticada: 3 sucessos + 2 falhas representam taxa de erro de 40%, portanto não ativavam corretamente a regra de erro de 50% prevista pelo teste.
+- [x] O teste foi corrigido para usar 3 sucessos + 3 falhas, atingindo exatamente 50%.
+- [x] CI run #306 (`34712549133`) passou em Python 3.11, 3.12, 3.13 e 3.14.
+- [x] HEAD validado: `3a221d9781fcff2b146deba5968c3e899c96d6de`.
+
+### Limites preservados
+- [x] Não há estimativa de qualidade sem evidência real.
+- [x] Não há previsão de custo futuro.
+- [x] O roteador continua sendo somente decisor; não executa tarefas.
+- [x] O AgentRuntime continua sendo o único proprietário do ciclo avançado de execução.
+
+### Próximo limite
+- [ ] Introduzir avaliação semântica/resultado de tarefa como sinal de qualidade real para roteamento, sem fabricar métricas.
+
 ## Fase 21 — Telemetria real de tokens no caminho de execução — 2026-09-12
 
 O caminho real de execução passou a transportar e persistir contagens de tokens somente quando fornecidas pelo provider, sem estimativas e sem alterar a semântica de retry/governança.
@@ -23,9 +55,6 @@ O caminho real de execução passou a transportar e persistir contagens de token
 - [x] Teste de integração confirma execução única, métricas do `ProviderManager`, tokens 9/6/15, persistência e `ExecutionTrace` correto.
 - [x] CI run `34704095484` passou em Python 3.11, 3.12, 3.13 e 3.14.
 
-### Próximo limite
-- [ ] Incorporar custo real somente quando houver pricing autoritativo e versionado por provider/modelo.
-
 ## Fase 21 — Execução real alimentando métricas do ProviderManager — 2026-09-12
 
 O caminho real do Orchestrator passou a registrar métricas da instância de provider efetivamente selecionada, sem executar o provider duas vezes.
@@ -44,10 +73,6 @@ O caminho real do Orchestrator passou a registrar métricas da instância de pro
 - [x] Uma falha inicial do CI foi diagnosticada: o health check padrão do `Provider` também chama `generate`; o teste foi isolado com health check explícito, sem alterar a semântica de produção.
 - [x] CI run `34703807547` passou em Python 3.11, 3.12, 3.13 e 3.14.
 
-### Próximo limite
-- [x] Tokens reais foram adicionados no incremento seguinte.
-- [ ] Custo real aguarda pricing confiável.
-
 ## Fase 21 — Persistência opcional do histórico do ProviderManager — 2026-09-12
 
 O histórico operacional do `ProviderManager` passou a poder sobreviver a reinicializações sem transformar o componente em um banco de dados ou alterar o comportamento in-memory padrão.
@@ -65,11 +90,6 @@ O histórico operacional do `ProviderManager` passou a poder sobreviver a reinic
 ### Testes / CI
 - [x] Testes cobrem persistência, reload, falhas, schema, atomicidade, limpeza do temporário e variável de ambiente.
 - [x] CI run `34702844025` passou em Python 3.11, 3.12, 3.13 e 3.14.
-
-### Limite preservado
-- [x] O caminho real do `Orquestrador` passou posteriormente a alimentar essas métricas sem duplicar chamadas.
-- [x] Tokens passaram posteriormente a ser persistidos no schema v2 quando fornecidos pelo provider.
-- [ ] Custo permanece pendente até existir telemetria real e pricing confiável.
 
 ## Fase 21 — Integração real do roteamento com ExecutionTrace — 2026-09-12
 
@@ -93,7 +113,6 @@ O roteamento inteligente deixou de ser apenas uma função de decisão isolada e
 - [x] O teste confirma que o provider legado de fallback não é chamado quando o roteamento inteligente está configurado.
 - [x] O teste confirma seleção do modelo de coding e propagação para o trace.
 - [x] CI run #243 (`34702264099`) passou em Python 3.11, 3.12, 3.13 e 3.14 no commit `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
-- [x] Falhas intermediárias dos runs #240 e #241 foram diagnosticadas pelos logs e corrigidas antes do fechamento do checkpoint.
 
 ## Fase 17 — Provider local Ollama — 2026-09-12
 
