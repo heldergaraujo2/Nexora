@@ -8,6 +8,7 @@ from nexora.governanca.policy import EfeitoPolitica, PolicyEngine, RegraPolitica
 from nexora.governanca.permissoes import GerenciadorPermissoes, PermissaoNegada
 from nexora.runtime.checkpoint import CheckpointEngine
 from nexora.runtime.ferramenta import ResultadoFerramenta
+from nexora.runtime.idempotencia import ConflitoIdempotencia, StatusIdempotencia, StoreIdempotenciaMemoria, fingerprint_operacao
 from nexora.runtime.verificacao import Verificacao, sem_erros, texto_nao_vazio
 from nexora.tools.registry import Ferramenta, RegistryFerramentas
 
@@ -207,3 +208,101 @@ def test_registry_audita_falha_da_ferramenta_e_propaga_excecao(tmp_path):
     assert evento["evento"] == "ferramenta.falhou"
     assert evento["dados"]["erro_tipo"] == "RuntimeError"
     assert evento["dados"]["erro"] == "boom"
+
+
+def test_registry_idempotencia_executa_uma_vez_e_reutiliza_resultado():
+    chamadas: list[dict] = []
+    store = StoreIdempotenciaMemoria()
+    repo = RegistryFerramentas(idempotencia=store)
+    repo.registrar(
+        Ferramenta(
+            nome="efeito",
+            descricao="",
+            executar=lambda parametros: chamadas.append(parametros.copy()) or "feito",
+        )
+    )
+
+    primeira = repo.executar(
+        "efeito", {"valor": 7}, solicitante="agente", idempotencia_chave="op-1"
+    )
+    segunda = repo.executar(
+        "efeito", {"valor": 7}, solicitante="agente", idempotencia_chave="op-1"
+    )
+
+    assert primeira == "feito"
+    assert segunda == "feito"
+    assert chamadas == [{"valor": 7}]
+    assert store.obter("op-1").status == StatusIdempotencia.SUCCEEDED
+
+
+def test_registry_idempotencia_conflito_de_fingerprint_nao_executa_novamente():
+    chamadas: list[dict] = []
+    store = StoreIdempotenciaMemoria()
+    repo = RegistryFerramentas(idempotencia=store)
+    repo.registrar(
+        Ferramenta(
+            nome="efeito",
+            descricao="",
+            executar=lambda parametros: chamadas.append(parametros.copy()) or "feito",
+        )
+    )
+
+    repo.executar("efeito", {"valor": 1}, idempotencia_chave="op-2")
+
+    with pytest.raises(ConflitoIdempotencia):
+        repo.executar("efeito", {"valor": 2}, idempotencia_chave="op-2")
+
+    assert chamadas == [{"valor": 1}]
+
+
+def test_registry_idempotencia_nao_repete_operacao_em_andamento():
+    store = StoreIdempotenciaMemoria()
+    repo = RegistryFerramentas(idempotencia=store)
+    chamadas: list[bool] = []
+    repo.registrar(Ferramenta(nome="efeito", descricao="", executar=lambda p: chamadas.append(True) or "ok"))
+    fingerprint = fingerprint_operacao(
+        {"ferramenta": "efeito", "parametros": {}, "solicitante": "sistema", "contexto": {}}
+    )
+    store.reivindicar("op-3", fingerprint)
+
+    with pytest.raises(RuntimeError, match="em andamento"):
+        repo.executar("efeito", {}, idempotencia_chave="op-3")
+
+    assert chamadas == []
+
+
+def test_registry_idempotencia_falha_nao_habilita_retry_automatico():
+    chamadas: list[bool] = []
+    store = StoreIdempotenciaMemoria()
+    repo = RegistryFerramentas(idempotencia=store)
+    repo.registrar(
+        Ferramenta(
+            nome="efeito",
+            descricao="",
+            executar=lambda p: chamadas.append(True) or (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        repo.executar("efeito", {}, idempotencia_chave="op-4")
+
+    with pytest.raises(RuntimeError, match="retry explicito"):
+        repo.executar("efeito", {}, idempotencia_chave="op-4")
+
+    assert chamadas == [True]
+    assert store.obter("op-4").status == StatusIdempotencia.FAILED
+
+
+def test_registry_idempotencia_reutilizada_e_auditada(tmp_path):
+    auditoria = RegistroAuditoria(tmp_path / "auditoria.jsonl")
+    store = StoreIdempotenciaMemoria()
+    repo = RegistryFerramentas(auditoria=auditoria, idempotencia=store)
+    repo.registrar(Ferramenta(nome="efeito", descricao="", executar=lambda p: "ok"))
+
+    repo.executar("efeito", {}, idempotencia_chave="op-5", execucao_id="exec-1")
+    repo.executar("efeito", {}, idempotencia_chave="op-5", execucao_id="exec-2")
+
+    eventos = auditoria.listar(entidade_id="exec-2")
+    assert len(eventos) == 1
+    assert eventos[0]["evento"] == "ferramenta.idempotencia_reutilizada"
+    assert eventos[0]["dados"]["status"] == StatusIdempotencia.SUCCEEDED.value
