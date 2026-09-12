@@ -50,12 +50,22 @@ class HistoricoAvaliacao:
         m = modelo.strip()
         t = tipo_tarefa.strip().lower()
         metricas = self._metricas.get(p, {}).get(m, {}).get(t, self._vazio())
-        total = int(metricas["avaliacoes"])
+        return self._estatisticas_metricas(metricas)
+
+    def qualidade_para_roteamento(self, provider: str, modelo: str, tipo_tarefa: str, *, min_amostra: int) -> dict[str, Any]:
+        """Retorna qualidade observada e informa explicitamente se a amostra e suficiente."""
+        if min_amostra < 1:
+            raise ValueError("min_amostra deve ser >= 1")
+        estatisticas = self.estatisticas(provider, modelo, tipo_tarefa)
+        avaliacoes = int(estatisticas["avaliacoes"])
+        score = estatisticas["score_medio"]
+        suficiente = avaliacoes >= min_amostra and isinstance(score, (int, float))
         return {
-            "avaliacoes": total,
-            "sucessos": int(metricas["sucessos"]),
-            "score_medio": float(metricas["score_total"]) / total if total else None,
-            "taxa_sucesso": int(metricas["sucessos"]) / total if total else None,
+            "amostra_suficiente": suficiente,
+            "min_amostra": min_amostra,
+            "avaliacoes": avaliacoes,
+            "score_medio": float(score) if suficiente else None,
+            "taxa_sucesso": estatisticas["taxa_sucesso"] if suficiente else None,
         }
 
     def estatisticas_todas(self) -> dict[str, dict[str, dict[str, dict[str, Any]]]]:
