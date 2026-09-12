@@ -1,5 +1,29 @@
 # 13 — CHANGELOG
 
+## Fase 21 — Integração real do roteamento com ExecutionTrace — 2026-09-12
+
+O roteamento inteligente deixou de ser apenas uma função de decisão isolada e passou a participar do caminho real `Orquestrador → AgentRuntime`.
+
+### ProviderManager / seleção
+- [x] `ProviderManager.obter_com_modelo()` permite instanciar explicitamente o modelo escolhido pelo roteador.
+- [x] Não existe fallback silencioso para outro modelo quando a factory não suporta configuração por modelo.
+
+### Orchestrator / Runtime / Trace
+- [x] `Orquestrador` aceita `RoteadorInteligente`, `ProviderManager`, candidatos e perfil de hardware de forma opcional, preservando compatibilidade do caminho legado.
+- [x] A decisão é feita antes da execução do provider.
+- [x] O provider é instanciado com o modelo efetivamente selecionado.
+- [x] `ExecutionTrace.provider` e `ExecutionTrace.model` refletem a execução selecionada.
+- [x] `ExecutionTrace.metadata.routing_decision` registra provider, modelo, score, adequação e motivos dos candidatos avaliados.
+- [x] `AgentRuntime` continua sendo o único proprietário do ciclo de execução.
+- [x] Não foi criado terceiro Runtime.
+
+### Testes / CI
+- [x] Teste de integração cobre `RoteadorInteligente → Orquestrador → AgentRuntime → ExecutionTrace`.
+- [x] O teste confirma que o provider legado de fallback não é chamado quando o roteamento inteligente está configurado.
+- [x] O teste confirma seleção do modelo de coding e propagação para o trace.
+- [x] CI run #243 (`34702264099`) passou em Python 3.11, 3.12, 3.13 e 3.14 no commit `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
+- [x] Falhas intermediárias dos runs #240 e #241 foram diagnosticadas pelos logs e corrigidas antes do fechamento do checkpoint.
+
 ## Fase 17 — Provider local Ollama — 2026-09-12
 
 A NEXORA iniciou oficialmente a Fase 17 — Local Intelligence Foundation.
@@ -27,7 +51,6 @@ A NEXORA iniciou oficialmente a Fase 17 — Local Intelligence Foundation.
 - [x] Testes unitários cobrem configuração, ambiente, payload, resposta, erros e health check.
 - [x] Teste de integração cobre `RegistryProviders → ProviderManager → ProviderOllama` com HTTP mockado.
 - [ ] Validação contra uma instalação real de Ollama ainda pendente.
-- [ ] CI correspondente ao HEAD atual ainda está em execução.
 
 ## Integração de idempotência no caminho de ferramentas — 2026-09-12
 
