@@ -48,7 +48,29 @@ class ProviderOllama(Provider):
             payload["messages"].insert(0, {"role": "system", "content": kwargs["system"]})
         dados = self._post("/api/chat", payload)
         mensagem = dados.get("message") or {}
-        return GenerationResult(text=mensagem.get("content") or "", tool_calls=mensagem.get("tool_calls", []), raw=dados)
+        usage = self._extrair_usage(dados)
+        return GenerationResult(
+            text=mensagem.get("content") or "",
+            tool_calls=mensagem.get("tool_calls", []),
+            raw=dados,
+            usage=usage,
+        )
+
+    @staticmethod
+    def _extrair_usage(dados: dict[str, Any]) -> dict[str, int]:
+        """Extrai somente contadores explicitamente devolvidos pelo Ollama."""
+        mapa = {
+            "prompt_tokens": "prompt_eval_count",
+            "completion_tokens": "eval_count",
+        }
+        usage: dict[str, int] = {}
+        for destino, origem in mapa.items():
+            valor = dados.get(origem)
+            if isinstance(valor, int) and valor >= 0:
+                usage[destino] = valor
+        if "prompt_tokens" in usage and "completion_tokens" in usage:
+            usage["total_tokens"] = usage["prompt_tokens"] + usage["completion_tokens"]
+        return usage
 
     def listar_modelos(self) -> dict[str, Any]:
         """Lista modelos instalados sem executar inferencia."""
