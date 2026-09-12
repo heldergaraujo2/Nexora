@@ -21,7 +21,8 @@
 - `AvaliadorResultado` fornece qualidade explícita baseada em critérios/evidências reais.
 - `HistoricoAvaliacao` persiste qualidade por `provider + modelo + tipo_tarefa`.
 - Qualidade influencia o roteamento somente com amostra mínima, pelo menos dois candidatos comparáveis e peso de maturidade da amostra.
-- No limiar mínimo, `peso_amostra=0,5`; em `2 × min_amostra`, chega a `1,0`; a influência final permanece limitada a ±1,0.
+- O `ResearchAgent` agora preserva evidência estruturada `claim → evidence → source`, sem atribuir confiança artificial.
+- Cada evidência possui `source_id` ordinal para compatibilidade com `[fonte:N]` e `source_ref` SHA-256 determinístico da proveniência material.
 
 ## 3. CI validado
 - Run #344 (`34721678128`) — **100% GREEN**.
@@ -34,7 +35,17 @@
 - Python 3.12: success.
 - Python 3.13: success.
 - Python 3.14: success.
-- O Run #345 valida também o cenário controlado em que qualidade diferencia candidatos com capacidade-base equivalente.
+- Run #351 (`34722084768`) — **100% GREEN**.
+- Python 3.11: success.
+- Python 3.12: success.
+- Python 3.13: success.
+- Python 3.14: success.
+- Run #352 (`34722089714`) — **100% GREEN**.
+- Python 3.11: success.
+- Python 3.12: success.
+- Python 3.13: success.
+- Python 3.14: success.
+- Os Runs #351/#352 validaram a integração da evidência estruturada com pesquisa, resultado e trace.
 
 ## 4. Incremento concluído — Quality Routing
 Implementado e validado:
@@ -46,23 +57,24 @@ Implementado e validado:
 - Teste controlado confirma que qualidade consegue desempatar candidatos com capacidade-base equilibrada.
 - Commit de validação controlada: `84335341a8effe42649f34979829e0a6de2841de`.
 
-## 5. Regras de qualidade
-1. Teste escrito não significa teste aprovado.
-2. Toda funcionalidade nova precisa de testes unitários e integração quando cruza componentes.
-3. CI do HEAD é o critério final de aprovação.
-4. Nunca inventar score, tokens, custo ou evidência.
-5. Qualidade só entra no roteador após amostra mínima e testes de isolamento por tipo/provider/modelo.
-6. Não misturar histórico entre modelos ou tipos de tarefa.
-7. Peso de maturidade é uma proteção heurística, não deve ser descrito como confiança estatística.
-8. Qualidade não é benchmark universal; é sinal observacional contextual ao tipo de tarefa.
+## 5. Incremento concluído — Evidência estruturada de pesquisa
+Implementado:
+- `EvidenciaPesquisa` e `AfirmacaoPesquisa`.
+- Preservação de título, URL, trecho e consulta.
+- `confianca=None` quando não há avaliação explícita.
+- Claims só são ligados a índices de fonte realmente existentes.
+- Evidências são propagadas para `ResultadoAgente`, métricas e `ExecutionTrace.metadata`.
+- `source_ref` determinístico para identidade estável da proveniência material.
+- Testes para fonte válida, fonte inexistente, ausência de citação, vínculo claim/evidence e estabilidade do fingerprint.
+- ADRs: `ADR-025-evidence-structured-research.md` e `ADR-026-stable-source-identity.md`.
 
 ## 6. Próximo incremento obrigatório
-**Evidência estruturada para pesquisa.**
-1. Introduzir contrato explícito `Evidence`/`Claim` sem quebrar as fontes atuais.
-2. Preservar `source`, `url`, `consulta`, trecho e confiança/proveniência quando disponíveis.
-3. Fazer o `ResearchAgent` produzir resultado verificável sem depender somente de texto livre.
-4. Criar testes unitários e integração para ausência de fonte, fonte válida, claim sem evidência e múltiplas fontes.
-5. Integrar a evidência ao resultado/telemetria sem transformar uma string de URL em prova de verdade.
+**Verificação de adequação da evidência, sem fingir compreensão semântica.**
+1. Introduzir um verificador explícito que diferencie `fonte existente` de `evidência suficiente`.
+2. Não marcar uma claim como comprovada apenas porque contém `[fonte:N]`.
+3. Começar com sinais determinísticos e auditáveis; não atribuir confiança probabilística sem fundamento.
+4. Criar testes para correspondência forte, correspondência insuficiente, múltiplas fontes e fonte válida porém não sustentadora.
+5. Integrar o resultado ao `ResearchAgent`, `ResultadoAgente` e `ExecutionTrace` sem quebrar compatibilidade.
 6. CI verde antes de considerar o incremento concluído.
 
 ## 7. Limites reais
@@ -76,6 +88,7 @@ Implementado e validado:
 - Groq ainda requer validação real HTTP/tool-calling antes de ser considerado integração de produção validada.
 - `ExecutionTrace` ainda não possui backend distribuído universal.
 - Qualidade histórica é observacional e contextual; não é previsão.
+- `source_ref` identifica a proveniência observada, mas não autentica a fonte remota nem prova a veracidade do conteúdo.
 
 ## 8. O que NÃO fazer
 - Não criar outra NEXORA, outro repositório ou terceiro Runtime.
@@ -85,6 +98,7 @@ Implementado e validado:
 - Não introduzir retry de efeito externo sem idempotência, autorização, precondições e verificação.
 - Não remover `core/ciclo.py` prematuramente.
 - Não declarar autonomia econômica completa antes de fechar o loop real do North Star.
+- Não tratar URL, fingerprint ou citação como prova automática de verdade.
 
 ## 9. Protocolo operacional
 `AUDITAR → DECIDIR → IMPLEMENTAR → TESTAR → ATUALIZAR PROJECT_MEMORY → COMMIT → PUSH → VERIFICAR CI → HANDOFF`
