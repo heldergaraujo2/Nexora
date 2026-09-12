@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from nexora.providers.base import ProviderCapability
+from nexora.providers.base import GenerationResult, ProviderCapability
 
 
 class ProviderManager:
@@ -18,7 +18,7 @@ class ProviderManager:
     o manager dependente de banco de dados.
     """
 
-    _SCHEMA_VERSION = 1
+    _SCHEMA_VERSION = 2
 
     def __init__(self, persistencia_path: str | Path | None = None) -> None:
         self._fabricas: dict[str, Any] = {}
@@ -37,7 +37,7 @@ class ProviderManager:
         self._fabricas[chave] = fabrica
         self._metricas_provider.setdefault(
             chave,
-            {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0},
+            {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "geracoes_com_tokens": 0},
         )
 
     def obter(self, nome: str) -> Any:
@@ -46,12 +46,7 @@ class ProviderManager:
         return fabrica() if callable(fabrica) else fabrica
 
     def obter_com_modelo(self, nome: str, modelo: str) -> Any:
-        """Cria uma instancia explicitamente configurada para o modelo selecionado.
-
-        O factory registrado precisa declarar suporte ao argumento ``modelo``.
-        Nao ha fallback silencioso para outro modelo, pois isso falsificaria a
-        decisao de roteamento registrada no trace.
-        """
+        """Cria uma instancia explicitamente configurada para o modelo selecionado."""
         chave = nome.strip().lower()
         fabrica = self._fabricas[chave]
         if not callable(fabrica):
@@ -59,24 +54,18 @@ class ProviderManager:
         return fabrica(modelo=modelo)
 
     def executar(self, nome: str, prompt: str, **kwargs: Any):
-        """Executa o provider registrado, delegando a metrica para a instancia."""
         chave = nome.strip().lower()
         provider = self.obter(nome)
         return self.executar_instancia(chave, provider, prompt, **kwargs)
 
     def executar_instancia(self, nome: str, provider: Any, prompt: str, **kwargs: Any):
-        """Executa uma instancia ja selecionada e registra as metricas reais.
-
-        Este caminho permite ao Orquestrador executar exatamente a instancia
-        escolhida pelo roteador (inclusive um modelo explicito) sem criar uma
-        segunda chamada apenas para contabilizacao.
-        """
+        """Executa uma instancia ja selecionada e registra metricas reais."""
         chave = nome.strip().lower()
         inicio = time.monotonic()
         self._chamadas += 1
         metricas = self._metricas_provider.setdefault(
             chave,
-            {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0},
+            {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "geracoes_com_tokens": 0},
         )
         metricas["chamadas"] += 1
         try:
@@ -88,12 +77,30 @@ class ProviderManager:
             raise
         else:
             metricas["sucessos"] += 1
+            self._registrar_usage(metricas, resultado)
             return resultado
         finally:
             decorrido = time.monotonic() - inicio
             self._tempo_total += decorrido
             metricas["tempo_total"] += decorrido
             self._salvar_historico()
+
+    @staticmethod
+    def _registrar_usage(metricas: dict[str, Any], resultado: Any) -> None:
+        """Acumula apenas contadores explicitamente fornecidos pelo provider."""
+        if not isinstance(resultado, GenerationResult) or not isinstance(resultado.usage, dict):
+            return
+        valores: dict[str, int] = {}
+        for chave in ("prompt_tokens", "completion_tokens", "total_tokens"):
+            valor = resultado.usage.get(chave)
+            if isinstance(valor, int) and valor >= 0:
+                valores[chave] = valor
+        if not valores:
+            return
+        metricas["prompt_tokens"] += valores.get("prompt_tokens", 0)
+        metricas["completion_tokens"] += valores.get("completion_tokens", 0)
+        metricas["total_tokens"] += valores.get("total_tokens", 0)
+        metricas["geracoes_com_tokens"] += 1
 
     def _carregar_historico(self) -> None:
         if self._persistencia_path is None or not self._persistencia_path.exists():
@@ -112,22 +119,15 @@ class ProviderManager:
             if not isinstance(nome, str) or not isinstance(valores, dict):
                 continue
             try:
-                chamadas = int(valores["chamadas"])
-                sucessos = int(valores["sucessos"])
-                erros = int(valores["erros"])
-                tempo_total = float(valores["tempo_total"])
-            except (KeyError, TypeError, ValueError):
+                campos = {campo: int(valores.get(campo, 0)) for campo in ("chamadas", "sucessos", "erros", "prompt_tokens", "completion_tokens", "total_tokens", "geracoes_com_tokens")}
+                tempo_total = float(valores.get("tempo_total", 0.0))
+            except (TypeError, ValueError):
                 continue
-            if min(chamadas, sucessos, erros, tempo_total) < 0:
+            if min(*campos.values(), tempo_total) < 0:
                 continue
-            self._metricas_provider[nome] = {
-                "chamadas": chamadas,
-                "sucessos": sucessos,
-                "erros": erros,
-                "tempo_total": tempo_total,
-            }
-            self._chamadas += chamadas
-            self._erros += erros
+            self._metricas_provider[nome] = {**campos, "tempo_total": tempo_total}
+            self._chamadas += campos["chamadas"]
+            self._erros += campos["erros"]
             self._tempo_total += tempo_total
         self._ultimas_falhas = {
             nome: valor for nome, valor in falhas.items() if isinstance(nome, str) and isinstance(valor, str)
@@ -154,7 +154,6 @@ class ProviderManager:
             return
 
     def estatisticas(self) -> dict[str, Any]:
-        """Resumo das metricas de uso globais."""
         total = self._chamadas
         return {
             "chamadas": total,
@@ -164,23 +163,10 @@ class ProviderManager:
         }
 
     def estatisticas_provider(self, nome: str) -> dict[str, Any]:
-        """Retorna apenas metricas medidas do provider solicitado.
-
-        Os valores sao historicos do processo atual ou de uma persistencia
-        previamente carregada; nenhuma estimativa e criada.
-        """
         chave = nome.strip().lower()
         metricas = self._metricas_provider.get(chave)
         if metricas is None:
-            return {
-                "chamadas": 0,
-                "sucessos": 0,
-                "erros": 0,
-                "latencia_media": None,
-                "taxa_sucesso": None,
-                "taxa_erro": None,
-                "ultima_falha": self._ultimas_falhas.get(chave),
-            }
+            return {"chamadas": 0, "sucessos": 0, "erros": 0, "latencia_media": None, "taxa_sucesso": None, "taxa_erro": None, "ultima_falha": self._ultimas_falhas.get(chave), "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "geracoes_com_tokens": 0}
         total = int(metricas["chamadas"])
         sucessos = int(metricas["sucessos"])
         erros = int(metricas["erros"])
@@ -192,14 +178,16 @@ class ProviderManager:
             "taxa_sucesso": (sucessos / total) if total else None,
             "taxa_erro": (erros / total) if total else None,
             "ultima_falha": self._ultimas_falhas.get(chave),
+            "prompt_tokens": int(metricas.get("prompt_tokens", 0)),
+            "completion_tokens": int(metricas.get("completion_tokens", 0)),
+            "total_tokens": int(metricas.get("total_tokens", 0)),
+            "geracoes_com_tokens": int(metricas.get("geracoes_com_tokens", 0)),
         }
 
     def estatisticas_providers(self) -> dict[str, dict[str, Any]]:
-        """Retorna metricas medidas de todos os providers registrados."""
         return {nome: self.estatisticas_provider(nome) for nome in self.nomes()}
 
     def obter_healthcheck(self, nome: str) -> dict[str, Any]:
-        """Healthcheck detalhado sem necessariamente instanciar o provider."""
         chave = nome.strip().lower()
         try:
             provider = self.obter(nome)
@@ -211,7 +199,6 @@ class ProviderManager:
             return {"saudavel": False, "motivo": str(erro), "ultima_falha": str(erro)}
 
     def obter_capacidades(self, nome: str) -> ProviderCapability:
-        """Retorna capacidades declaradas, sem inventar suporte ausente."""
         provider = self.obter(nome)
         capacidades = getattr(provider, "capabilities", None)
         if isinstance(capacidades, ProviderCapability):
