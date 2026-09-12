@@ -32,7 +32,15 @@ class RoteadorInteligente:
         *,
         tarefa: str = "general",
         contexto_necessario: int = 0,
+        exigir_tool_calling: bool = False,
+        exigir_streaming: bool = False,
+        exigir_provider_saudavel: bool = False,
     ) -> list[CandidatoRoteamento]:
+        """Ordena candidatos por adequacao, capacidades e score deterministico.
+
+        A funcao somente decide. Ela nao executa o provider nem a tarefa.
+        Capacidades nao declaradas sao tratadas como ausentes.
+        """
         avaliados: list[CandidatoRoteamento] = []
         for candidato in candidatos:
             provider = str(candidato.get("provider", "")).strip().lower()
@@ -42,6 +50,23 @@ class RoteadorInteligente:
                 continue
             if provider not in self._manager.nomes():
                 continue
+
+            motivos: list[str] = []
+            capacidades = self._manager.obter_capacidades(provider)
+            adequado = True
+            if exigir_tool_calling and not capacidades.tool_calling:
+                adequado = False
+                motivos.append("provider_sem_tool_calling")
+            if exigir_streaming and not capacidades.streaming:
+                adequado = False
+                motivos.append("provider_sem_streaming")
+            if contexto_necessario > capacidades.max_context_tokens > 0:
+                adequado = False
+                motivos.append("provider_contexto_insuficiente")
+            if exigir_provider_saudavel and not self._manager.obter_healthcheck(provider)["saudavel"]:
+                adequado = False
+                motivos.append("provider_indisponivel")
+
             avaliacao = avaliar_modelo(
                 modelo,
                 perfil,
@@ -49,5 +74,10 @@ class RoteadorInteligente:
                 tarefa=tarefa,
                 contexto_necessario=contexto_necessario,
             )
-            avaliados.append(CandidatoRoteamento(provider, modelo, avaliacao.score, avaliacao.adequado, avaliacao.motivos))
+            if not avaliacao.adequado:
+                adequado = False
+            motivos.extend(avaliacao.motivos)
+            score = avaliacao.score if adequado else -100.0
+            avaliados.append(CandidatoRoteamento(provider, modelo, score, adequado, tuple(motivos)))
+
         return sorted(avaliados, key=lambda item: (-item.adequado, -item.score, item.provider, item.modelo))
