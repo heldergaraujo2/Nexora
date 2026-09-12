@@ -14,9 +14,9 @@
 - Repositório: `heldergaraujo2/Nexora`.
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- CI Run #164 validou o checkpoint anterior `b8b4619...` em Python 3.11–3.14.
-- Desde então: `7bbdebcee7cf0b954b5e01eb1067f5e6b0d439bf` adicionou o teste de governança explícita de ferramenta; `4dabb383fd93e0e9c49d9d23f693049aa7eb8221` adicionou `ExecutionTrace`; `c5be9193086bab190180093351211b2e133c5375` adicionou testes unitários do trace; `55920a19d7f581c8f8007ddc86a76961510e0bd6` integrou o trace ao AgentRuntime; `3d07a437664ca43f2194a33a098787da7830ca64` adicionou teste do trace no runtime.
-- **Não considerar os commits posteriores ao Run #164 validados até o CI do HEAD atual concluir com sucesso.**
+- CI Run #170 validou o HEAD `ec146cb797f35b6d30e98f7d0e8d36b93f344487` com conclusão `success`.
+- Desde então, os commits `5b03990050a795c6c214da83f057cae708c07202` e `60882967bbfe0d6d1f3911206225987cba3ea068` atualizaram o contrato legado e a documentação ADR-013.
+- **Os commits posteriores ao Run #170 ainda precisam de CI próprio antes de serem considerados validados.**
 
 ## 3. Arquitetura canônica atual
 
@@ -57,24 +57,35 @@ Orchestrator
 ### Regra fundamental
 **Não criar um terceiro ciclo de execução.** O Orchestrator coordena; o AgentRuntime executa o ciclo do agente. `core/ciclo.py` permanece legado/compatibilidade até migração segura.
 
-## 4. ADR-012
+## 4. ADRs de execução
+### ADR-012
 Arquivo: `docs/adr/ADR-012-orchestrator-agent-runtime.md`.
 
-Decisões:
+Decisões principais:
 - Orchestrator = coordenador de alto nível.
 - AgentRuntime = limite canônico do ciclo de execução.
 - `core/ciclo.py` não deve ser removido por suposição.
 - Migração incremental e orientada por testes.
 - Uma tarefa não pode ser executada duas vezes por camadas concorrentes.
 - Ferramentas continuam sujeitas a `Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`.
-- Retry de efeitos externos exige idempotência/autorização; a primeira integração não adiciona retry externo implícito.
+- Retry de efeitos externos exige idempotência/autorização.
+
+### ADR-013
+Arquivo: `docs/adr/ADR-013-ciclo-legado-inventario-consumidores.md`.
+
+Resultado da revisão do ciclo legado:
+- `src/nexora/orquestracao/orquestrador.py` usa `AgenteRuntime` no caminho normal e não importa o ciclo legado.
+- `tests/unit/test_ciclo.py` é o consumidor interno explícito que preserva o contrato histórico.
+- A busca atual não encontrou outras referências internas relevantes aos símbolos/caminho do ciclo.
+- `src/nexora/core/ciclo.py` foi explicitamente marcado como legado/compatibilidade.
+- A remoção ainda não está autorizada: consumidores externos não podem ser inferidos apenas pela busca interna.
 
 ## 5. O que foi implementado neste checkpoint
 ### AgentRuntime
 - Exceções de execução agora viram `Observacao` com erro.
 - Exceções de verificação também são controladas como observação.
 - O fluxo de análise/recovery continua `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
-- `ResultadoAgente` agora pode transportar um `trace` estruturado.
+- `ResultadoAgente` transporta `trace` estruturado.
 - `ExecutionTrace` foi introduzido em `src/nexora/runtime/trace.py` com IDs de execução/trace/span, agente/tarefa, provider/model, tokens, latência, custo, retry, falha, policy version/fingerprint, checkpoint, status e timestamps.
 - O runtime gera/atualiza o trace, contabiliza retries e finaliza o status de forma determinística.
 
@@ -86,16 +97,22 @@ Decisões:
 - Retry automático de ferramenta está limitado a uma tentativa nesta primeira integração para não repetir efeitos externos sem idempotência.
 - Resultado do runtime é normalizado para o contrato do Orchestrator e preserva tentativas/histórico.
 
+### Ciclo legado
+- `src/nexora/core/ciclo.py` permanece funcional, mas agora é documentado como contrato legado/compatibilidade.
+- Nenhum novo caminho de produção deve usá-lo para criar outro motor de execução.
+- A migração/aposentadoria será uma etapa posterior, orientada por evidência e testes.
+
 ### Governança
 - O teste `test_orquestrador_ferramenta_passa_uma_vez_pela_governanca` valida Orchestrator → Registry → Permission/Policy → Checkpoint → Tool e confirma uma única execução.
 
 ### Testes
-Arquivos:
+Arquivos principais:
 - `tests/integration/test_orquestrador_agent_runtime.py`
 - `tests/unit/test_execution_trace.py`
 - `tests/unit/test_agente_runtime_trace.py`
+- `tests/unit/test_ciclo.py`
 
-Os testes cobrem recovery do provider, exceção controlada, execução única governada de ferramenta e contrato do ExecutionTrace.
+O CI Run #170 confirmou o checkpoint anterior em sucesso.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -133,10 +150,10 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 `src/nexora/runtime/analise.py` já apresentou SHA inconsistente no tooling. **Não inventar SHA.** Se for necessário alterá-lo, resolver a identidade do blob primeiro.
 
 ## 10. Próximo trabalho
-1. Confirmar CI do HEAD que inclui o ExecutionTrace.
+1. Confirmar CI do HEAD após os commits de classificação do ciclo legado.
 2. Se CI falhar, corrigir antes de avançar.
 3. Integrar `ExecutionTrace` progressivamente no Orchestrator, preenchendo `task_id` e contexto de provider quando disponíveis, sem inventar dados.
-4. Revisar o contrato de `core/ciclo.py` e seus consumidores; somente depois decidir aposentadoria gradual.
+4. Fazer a próxima etapa de migração do ciclo legado somente após nova busca de consumidores e avaliação da superfície pública.
 5. Evoluir `ExecutionTrace` para spans/eventos e persistência somente quando houver necessidade real, mantendo o contrato atual compatível.
 6. Depois: idempotência externa, evidência de pesquisa, economia computacional e evolução do World Model.
 
@@ -151,6 +168,7 @@ Não substituir essa camada para integrar novos componentes. A integração atua
 - Não chamar infraestrutura de autonomia completa antes de fechar o loop real do North Star.
 - Não introduzir retry de efeito externo sem idempotência e governança.
 - Não preencher métricas de trace com valores inventados ou estimados sem evidência.
+- Não remover `core/ciclo.py` apenas porque a busca interna não encontrou consumidores adicionais.
 
 ## 12. Regra operacional
 A cada avanço significativo:
