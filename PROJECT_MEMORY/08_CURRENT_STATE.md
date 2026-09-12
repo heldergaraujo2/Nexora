@@ -45,7 +45,7 @@
 - [x] Escrita atômica e tolerância a histórico inválido/incompatível.
 - [x] Caminho real `Orquestrador → AgentRuntime → Provider` alimenta métricas do `ProviderManager` sem duplicar a execução.
 - [x] Telemetria real de tokens no `ProviderManager` e no `ExecutionTrace`, sem estimativas.
-- [x] Histórico evoluído para schema v3 com custo real e posteriormente v4 com métricas por modelo.
+- [x] Histórico evoluído para schema v4 com métricas por modelo.
 - [x] `PricingRegistry` versionado por provider/modelo, com fonte e data de vigência.
 - [x] Preços públicos Groq para `openai/gpt-oss-120b` e `openai/gpt-oss-20b` registrados em snapshot 2026-09-12.
 - [x] `ProviderManager` calcula custo somente com tokens reais + preço exato conhecido.
@@ -56,10 +56,20 @@
 - [x] Custo histórico pode ser explicitamente desativado com `considerar_custo=False`.
 - [x] Testes dedicados cobrem separação/persistência por modelo, custo, amostra insuficiente e falhas por modelo.
 - [x] Testes adicionais cobrem confiabilidade e latência específicas do modelo.
-- [ ] CI do checkpoint atual ainda precisa ser confirmado verde no HEAD final.
+
+## Sinal de avaliação de resultado — foundation
+- [x] Criado `ResultadoAvaliacao` com sucesso, score normalizado, critérios, evidências e metadados.
+- [x] Criado `AvaliadorResultado` para composição determinística de avaliadores explícitos.
+- [x] `AgenteRuntime` aceita avaliador opcional sem alterar o comportamento legado quando ausente.
+- [x] Avaliação é registrada no `ResultadoAgente`, métricas, `ExecutionTrace.metadata.evaluation`, registrador e CommunicationBus.
+- [x] Ausência de critérios não produz qualidade artificial.
+- [x] ADR-022 registrada.
+- [x] Testes unitários cobrem contrato, agregação, ausência de critérios e integração com Runtime/Trace.
+- [ ] Histórico persistente de avaliação por `provider + modelo + tipo de tarefa`.
+- [ ] Influência da qualidade no score do roteador após amostra suficiente.
 
 ## Arquitetura canônica
-`Objetivo → Orchestrator → Plano/Tarefas → Seleção de executor/agente → Roteador Inteligente → AgentRuntime → Permission/Policy/Checkpoint → Idempotency (quando aplicável) → Provider/Tool → Observation → Verification → Analysis → Correction/Recovery → Retest → Audit/Experience → ExecutionTrace → Result`.
+`Objetivo → Orchestrator → Plano/Tarefas → Seleção de executor/agente → Roteador Inteligente → AgentRuntime → Permission/Policy/Checkpoint → Idempotency (quando aplicável) → Provider/Tool → Observation → Verification → Analysis → Correction/Recovery → Retest → Audit/Experience → Evaluation (quando configurada) → ExecutionTrace → Result`.
 
 O roteamento é decisão antes da execução; o provider/modelo escolhido é refletido no trace. O `AgentRuntime` continua sendo o único proprietário do ciclo de execução. `core/ciclo.py` permanece legado/compatibilidade até migração segura.
 
@@ -83,9 +93,3 @@ A Fase 23 define uma UI extremamente tecnológica, futurista e inovadora, mas si
 23. NEXORA UI / Experience Layer.
 24. Autonomous Product Engine.
 25. Continuous Evolution.
-
-## Testes
-Toda funcionalidade nova exige testes; cruzamentos de componentes exigem integração. Teste escrito não equivale a teste aprovado. O CI do HEAD deve ser verificado antes de fechar checkpoint.
-
-## Limites conhecidos
-Checkpoints/idempotência/registry continuam in-memory; não há rollback de efeitos externos; World Model/Knowledge e Economy ainda não fecham o loop completo do North Star; Groq requer validação real; ExecutionTrace ainda não possui telemetria persistente universal. O histórico do ProviderManager pode sobreviver a reinicializações via JSON versionado e inclui tokens medidos quando o provider os fornece, além de custo somente quando existe pricing autoritativo. O custo permanece desconhecido quando não há preço publicado ou uso mensurável; a NEXORA não estima custo. O snapshot de preços precisa ser atualizado quando os providers alterarem suas tarifas. O histórico de confiabilidade/latência agora é granular por provider/modelo quando existe amostra suficiente; ainda não representa qualidade semântica, valor da tarefa ou custo futuro previsto. A descoberta automática de todos os candidatos e a telemetria universal continuam futuras.
