@@ -11,6 +11,7 @@ from nexora.runtime.analise import AnalisadorFalhas
 from nexora.runtime.correcao import Corrector
 from nexora.runtime.observacao import Observacao
 from nexora.runtime.verificacao import texto_nao_vazio
+from nexora.runtime.verificacao_evidencia import verificar_adequacao
 
 
 @dataclass(frozen=True)
@@ -48,9 +49,13 @@ class AfirmacaoPesquisa:
 
     claim: str
     evidencia: EvidenciaPesquisa
+    adequacao: dict[str, Any] | None = None
 
     def para_dict(self) -> dict[str, Any]:
-        return {"claim": self.claim, "evidence": self.evidencia.para_dict()}
+        adequacao = self.adequacao
+        if adequacao is None:
+            adequacao = verificar_adequacao(self.claim, self.evidencia.trecho).para_dict()
+        return {"claim": self.claim, "evidence": self.evidencia.para_dict(), "adequacao": adequacao}
 
 
 class ResearchAgent:
@@ -123,7 +128,7 @@ class ResearchAgent:
         return saida[inicio_frase:fim_frase + (1 if fim_frase < len(saida) else 0)].strip()
 
     def _estruturar_evidencias(self, saida: str, fontes: list) -> list[dict[str, Any]]:
-        """Liga claims citados a fontes reais; não inventa confiança ausente."""
+        """Liga claims citados a fontes reais e mede adequação lexical auditável."""
         afirmacoes: list[dict[str, Any]] = []
         for match in re.finditer(r"\[fonte:(\d+)\]", saida):
             indice = int(match.group(1))
@@ -140,7 +145,8 @@ class ResearchAgent:
             )
             claim = self._frase_citada(saida, match.start(), match.end())
             if claim:
-                afirmacoes.append(AfirmacaoPesquisa(claim=claim, evidencia=evidencia).para_dict())
+                adequacao = verificar_adequacao(claim, evidencia.trecho).para_dict()
+                afirmacoes.append(AfirmacaoPesquisa(claim=claim, evidencia=evidencia, adequacao=adequacao).para_dict())
         return afirmacoes
 
     def _executar(self, prompt: str) -> str:
@@ -175,6 +181,9 @@ class ResearchAgent:
         evidencias = self._estruturar_evidencias(resultado.saida_final, fontes)
         resultado.evidencias = evidencias
         resultado.metricas["evidencias"] = len(evidencias)
+        resultado.metricas["evidencias_sustentadas"] = sum(e["adequacao"]["status"] == "SUSTENTADA" for e in evidencias)
+        resultado.metricas["evidencias_insuficientes"] = sum(e["adequacao"]["status"] == "INSUFICIENTE" for e in evidencias)
+        resultado.metricas["evidencias_indeterminadas"] = sum(e["adequacao"]["status"] == "INDETERMINADA" for e in evidencias)
         resultado.trace.setdefault("metadata", {})["research_evidence"] = evidencias
         if self._registrar is not None:
             self._registrar("evidencias_pesquisa", {"quantidade": len(evidencias), "evidencias": evidencias})
