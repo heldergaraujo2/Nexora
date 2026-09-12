@@ -8,7 +8,7 @@ from nexora.providers.base import ProviderCapability
 
 
 class ProviderManager:
-    """Envolve providers e registra metricas de uso."""
+    """Envolve providers e registra metricas de uso globais e por provider."""
 
     def __init__(self) -> None:
         self._fabricas: dict[str, Any] = {}
@@ -16,9 +16,15 @@ class ProviderManager:
         self._erros: int = 0
         self._tempo_total: float = 0.0
         self._ultimas_falhas: dict[str, str] = {}
+        self._metricas_provider: dict[str, dict[str, Any]] = {}
 
     def registrar(self, nome: str, fabrica: Any) -> None:
-        self._fabricas[nome.strip().lower()] = fabrica
+        chave = nome.strip().lower()
+        self._fabricas[chave] = fabrica
+        self._metricas_provider.setdefault(
+            chave,
+            {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0},
+        )
 
     def obter(self, nome: str) -> Any:
         chave = nome.strip().lower()
@@ -26,23 +32,33 @@ class ProviderManager:
         return fabrica() if callable(fabrica) else fabrica
 
     def executar(self, nome: str, prompt: str, **kwargs: Any):
-        """Executa generate do provider registrando latencia e erros."""
+        """Executa generate registrando latencia, sucesso e erro do provider."""
         chave = nome.strip().lower()
         provider = self.obter(nome)
         inicio = time.monotonic()
         self._chamadas += 1
+        metricas = self._metricas_provider.setdefault(
+            chave,
+            {"chamadas": 0, "sucessos": 0, "erros": 0, "tempo_total": 0.0},
+        )
+        metricas["chamadas"] += 1
         try:
             resultado = provider.generate(prompt, **kwargs)
         except Exception as erro:
             self._erros += 1
+            metricas["erros"] += 1
             self._ultimas_falhas[chave] = str(erro)
             raise
+        else:
+            metricas["sucessos"] += 1
+            return resultado
         finally:
-            self._tempo_total += time.monotonic() - inicio
-        return resultado
+            decorrido = time.monotonic() - inicio
+            self._tempo_total += decorrido
+            metricas["tempo_total"] += decorrido
 
     def estatisticas(self) -> dict[str, Any]:
-        """Resumo das metricas de uso."""
+        """Resumo das metricas de uso globais."""
         total = self._chamadas
         return {
             "chamadas": total,
@@ -50,6 +66,40 @@ class ProviderManager:
             "latencia_media": (self._tempo_total / total) if total else None,
             "ultimas_falhas": dict(self._ultimas_falhas),
         }
+
+    def estatisticas_provider(self, nome: str) -> dict[str, Any]:
+        """Retorna apenas metricas medidas do provider solicitado.
+
+        Os valores sao historicos do processo atual; nenhuma estimativa e criada.
+        """
+        chave = nome.strip().lower()
+        metricas = self._metricas_provider.get(chave)
+        if metricas is None:
+            return {
+                "chamadas": 0,
+                "sucessos": 0,
+                "erros": 0,
+                "latencia_media": None,
+                "taxa_sucesso": None,
+                "taxa_erro": None,
+                "ultima_falha": self._ultimas_falhas.get(chave),
+            }
+        total = int(metricas["chamadas"])
+        sucessos = int(metricas["sucessos"])
+        erros = int(metricas["erros"])
+        return {
+            "chamadas": total,
+            "sucessos": sucessos,
+            "erros": erros,
+            "latencia_media": (float(metricas["tempo_total"]) / total) if total else None,
+            "taxa_sucesso": (sucessos / total) if total else None,
+            "taxa_erro": (erros / total) if total else None,
+            "ultima_falha": self._ultimas_falhas.get(chave),
+        }
+
+    def estatisticas_providers(self) -> dict[str, dict[str, Any]]:
+        """Retorna metricas medidas de todos os providers registrados."""
+        return {nome: self.estatisticas_provider(nome) for nome in self.nomes()}
 
     def obter_healthcheck(self, nome: str) -> dict[str, Any]:
         """Healthcheck detalhado sem necessariamente instanciar o provider."""
