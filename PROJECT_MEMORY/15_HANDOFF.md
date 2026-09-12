@@ -14,13 +14,11 @@
 - Repositório: `heldergaraujo2/Nexora`.
 - Branch oficial: `main`.
 - Release histórica: `v1.0.0` → `c49d3d2df314bb8c2d849c4466736f15841e8893`.
-- O roadmap pós-v1.0 está formalizado em `PROJECT_MEMORY/07_ROADMAP.md` nas Fases 17–25.
-- Incremento funcional de roteamento/trace: `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
-- Incremento de persistência do histórico: `b78eb29f41491c2437556ff4c6f7af49ff065d96`.
-- Incremento de métricas no caminho real: `4492b53f012fb6cb88b4771f24b11f07effcebe3`.
-- Correção de compatibilidade do Orchestrator: `3ba8cb3f01d0100b6b6969f22b7f0cef6cf21d94`.
-- CI run `34704095484` passou em Python 3.11, 3.12, 3.13 e 3.14.
-- Após o CI verde, o checkpoint de telemetria de tokens foi documentado e o próximo incremento é custo real somente com pricing autoritativo.
+- Roadmap pós-v1.0: `PROJECT_MEMORY/07_ROADMAP.md`, Fases 17–25.
+- Incremento atual de histórico provider/modelo: `3a221d9781fcff2b146deba5968c3e899c96d6de`.
+- Documentação do checkpoint atual: `8a009deb0a305bd8a1f3fe14d0da1a3f0c0fd61c`.
+- CI run #306 (`34712549133`) passou em Python 3.11, 3.12, 3.13 e 3.14.
+- O run anterior #305 (`34710516102`) falhou em um teste que usava 3 sucessos + 2 falhas e esperava limiar de erro de 50%; 2/5 = 40%. O teste foi corrigido para 3 sucessos + 3 falhas e o novo CI ficou verde.
 
 ## 3. Arquitetura canônica atual
 
@@ -85,7 +83,10 @@ Detecção inicial de hardware é conservadora, somente leitura e não presume G
 Roteamento inteligente é provider/modelo agnóstico, determinístico e explicável. Considera adequação do modelo, hardware, capabilities, health opcional e histórico operacional medido. O roteador decide; o AgentRuntime executa.
 
 ### ADR-018
-Histórico do `ProviderManager` possui persistência JSON opcional, versionada, configurável por caminho explícito ou `NEXORA_PROVIDER_HISTORY_PATH`, com escrita atômica e tolerância a dados inválidos. Schema v2 inclui tokens medidos quando fornecidos pelo provider e mantém compatibilidade de leitura com schema v1.
+Histórico do `ProviderManager` possui persistência JSON opcional, versionada, configurável por caminho explícito ou `NEXORA_PROVIDER_HISTORY_PATH`, com escrita atômica e tolerância a dados inválidos. O schema atual é v4 e inclui métricas por provider e por modelo, mantendo compatibilidade de leitura com schemas anteriores.
+
+### ADR-021
+Histórico específico `provider + modelo` é usado pelo roteamento quando há pelo menos 3 chamadas. Confiabilidade e latência não são misturadas entre modelos quando existe amostra específica suficiente. Custo usa somente telemetria real e pricing exato, também com amostra mínima de 3 gerações precificadas. Sem amostra específica suficiente, o roteador pode recorrer ao histórico agregado do provider.
 
 ## 5. Trabalho implementado e preservado
 - AgentRuntime é o proprietário do ciclo `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR`.
@@ -119,7 +120,10 @@ Implementado:
 - Requisitos opcionais de tool-calling, streaming, contexto e health.
 - Métricas reais do `ProviderManager` por provider.
 - Histórico mínimo de três chamadas antes de influenciar score.
-- Ajustes pequenos e explicáveis por sucesso, erro e latência relativa.
+- Histórico específico por `provider + modelo` para confiabilidade e latência.
+- Fallback para histórico agregado do provider quando a amostra específica é insuficiente.
+- Sinais determinísticos e explicáveis de sucesso, erro e latência relativa.
+- Custo histórico específico por modelo somente com custo real medido e pelo menos três gerações precificadas.
 - Ponte `routing_trace.py` para serialização da decisão.
 - `Orquestrador` pode executar a decisão inteligente e instanciar o modelo selecionado via `ProviderManager.obter_com_modelo()`.
 - `ExecutionTrace` recebe `provider`, `model` e `metadata.routing_decision` da execução real.
@@ -127,16 +131,17 @@ Implementado:
 - Histórico do `ProviderManager` pode ser persistido/recarregado por JSON versionado e caminho configurável.
 - `ProviderManager.executar_instancia()` permite medir a instância já selecionada sem duplicar a chamada.
 - `Orquestrador` alimenta as métricas reais do provider durante a execução governada pelo `AgentRuntime`.
-- Telemetria real de tokens é propagada ao trace e persistida no histórico v2 quando fornecida pelo provider.
+- Telemetria real de tokens é propagada ao trace e persistida quando fornecida pelo provider.
 - Compatibilidade com providers legados que retornam objetos com `.text` foi preservada.
-- Teste de integração confirma execução única, chamadas/sucesso/latência, tokens 9/6/15, persistência e trace correto.
-- CI run `34704095484` passou em Python 3.11–3.14.
+- Testes unitários cobrem confiabilidade e latência específicas do modelo.
+- CI run #306 (`34712549133`) passou em Python 3.11–3.14.
 
-Próximo incremento:
-1. não estimar custo;
-2. implementar custo real somente quando existir pricing autoritativo/versionado por provider/modelo;
-3. avaliar descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo;
-4. depois avançar para Fase 18, preservando governança e o ciclo único de execução.
+Próximo incremento recomendado:
+1. definir um sinal de **qualidade/resultado de tarefa baseado em evidência real**, sem inventar métricas;
+2. capturar resultado de verificação, critérios de sucesso e conclusão efetiva da tarefa;
+3. futuramente manter histórico de qualidade por `tipo_de_tarefa + provider + modelo`;
+4. só então incorporar qualidade ao score junto de capacidade, confiabilidade, latência, tokens e custo;
+5. em paralelo, avançar Fase 18 quando a fundação de roteamento estiver suficientemente estável.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -156,7 +161,7 @@ Fluxo canônico:
 2. **Fase 18 — Coding Workspace Agent:** ferramentas governadas para workspace real.
 3. **Fase 19 — Dev Loop + Programming Experience:** código → teste → erro → correção → reteste → experiência.
 4. **Fase 20 — Code Knowledge + RAG:** conhecimento recuperável sobre código e histórico.
-5. **Fase 21 — Intelligent Model Routing:** seleção de modelo/provider por adequação, histórico medido, risco, contexto e futuramente custo real.
+5. **Fase 21 — Intelligent Model Routing:** seleção de modelo/provider por adequação, histórico medido, risco, contexto e custo real.
 6. **Fase 22 — Hardware & NEXORA Setup:** instalação e configuração simples conforme hardware.
 7. **Fase 23 — NEXORA UI / Experience Layer:** UI extremamente tecnológica/futurista/inovadora, mas simples e intuitiva.
 8. **Fase 24 — Autonomous Product Engine:** aproximação do loop econômico completo.
@@ -194,7 +199,7 @@ Para cada funcionalidade nova:
 - Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
 - Não existe estratégia completa de recuperação de operações `IN_PROGRESS` após crash.
 - Registry/capabilities continuam em memória.
-- Histórico do ProviderManager agora pode sobreviver a reinicializações, recebe métricas do caminho real e inclui tokens medidos quando fornecidos, mas ainda não é distribuído.
+- Histórico do ProviderManager agora pode sobreviver a reinicializações, recebe métricas do caminho real e possui métricas específicas por modelo, mas ainda não é distribuído.
 - ExecutorDelegacoes é síncrono/in-memory.
 - YAML de política não existe.
 - World Model/Knowledge ainda são infraestrutura, não inteligência mundial completa.
@@ -204,7 +209,8 @@ Para cada funcionalidade nova:
 - `ExecutionTrace` ainda não possui backend persistente/telemetria distribuída nem preenchimento universal de tokens/custo/policy/checkpoint.
 - Ollama foi integrado por contrato, mas a validação real em máquina com daemon/modelo instalado ainda está pendente.
 - A integração inteligente de roteamento está disponível de forma opt-in no Orchestrator; a configuração automática global de candidatos ainda é futura.
-- Custo permanece ausente quando não há pricing autoritativo/versionado; a NEXORA não estima custo.
+- Qualidade semântica da tarefa ainda não é sinal do roteador.
+- Custo futuro não é previsto; somente custo real medido é considerado.
 
 ## 12. O que NÃO fazer
 - Não criar outra NEXORA.
@@ -228,7 +234,9 @@ A cada avanço significativo:
 O repositório deve permanecer sempre em estado reproduzível e documentado. O North Star é a direção; testes, arquitetura e GitHub são as evidências do estado real.
 
 ## 14. Estado do checkpoint atual
-- **CI do incremento de tokens: OK.** Run `34704095484`, Python 3.11/3.12/3.13/3.14: todos `success`.
-- **HEAD técnico que originou o CI:** `3ba8cb3f01d0100b6b6969f22b7f0cef6cf21d94`.
-- **Documentação de continuidade:** atualizada após validação do CI.
-- **Próxima ação:** fechar/atualizar ADR-018 com schema v2 e iniciar análise de pricing autoritativo para custo real; se não houver fonte confiável, manter custo ausente e avançar para descoberta automática de candidatos ou Fase 18.
+- **CI do histórico provider/modelo: OK.** Run #306 (`34712549133`), Python 3.11/3.12/3.13/3.14: todos `success`.
+- **HEAD funcional validado:** `3a221d9781fcff2b146deba5968c3e899c96d6de`.
+- **HEAD de documentação:** `8a009deb0a305bd8a1f3fe14d0da1a3f0c0fd61c`.
+- **Estado de testes:** CI verde após correção do teste de limiar de taxa de erro.
+- **Checkpoint atual:** histórico específico por provider/modelo para confiabilidade/latência está validado.
+- **Próxima ação:** projetar e implementar, com testes, um sinal de qualidade/resultado de tarefa baseado em evidência real antes de usar qualidade no roteamento.
