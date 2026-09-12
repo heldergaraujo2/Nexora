@@ -64,4 +64,6 @@ def test_orquestrador_seleciona_modelo_por_qualidade_observada_do_tipo(tmp_path)
     assert resultado["sucesso"] is True
     assert alpha.chamadas == 1
     assert beta.chamadas == 0
-    assert "qualidade_tarefa_historica_acima_media" in resultado["etapas"][0]["trace"]["metadata"]["routing"][0]["motivos"]
+    decisao = resultado["etapas"][0]["trace"]["metadata"]["routing_decision"]
+    assert decisao["selected"]["provider"] == "alpha"
+    assert "qualidade_tarefa_historica_acima_media" in decisao["selected"]["motivos"]
