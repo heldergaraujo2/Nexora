@@ -22,7 +22,7 @@ As seções abaixo registram o planejamento e a execução das fases iniciais. E
 - [x] Fase 15 — Portfolio Engine
 - [x] Fase 16 — Long-Term Autonomy
 
-## Reconciliação pós-v1.0.0 — 2026-09-11
+## Reconciliação pós-v1.0.0 — 2026-09-11/12
 
 ### Implementado e verificado no código
 - [x] Context Engine
@@ -39,6 +39,13 @@ As seções abaixo registram o planejamento e a execução das fases iniciais. E
 - [x] Delegação baseada em capacidade
 - [x] Testes unitários correspondentes
 - [x] CI automatizado com matriz Python 3.11–3.14
+- [x] AgentRuntime como proprietário do ciclo avançado
+- [x] ExecutionTrace mínimo integrado ao AgentRuntime e Orchestrator
+- [x] ADR-012 — Orchestrator/AgentRuntime como ciclo canônico
+- [x] ADR-013 — inventário e preservação do ciclo legado
+- [x] Contrato mínimo de idempotência para efeitos externos
+- [x] Testes de duplicidade, conflito de fingerprint, falha, determinismo e concorrência
+- [x] ADR-014 — idempotência como barreira antes de retry de efeitos externos
 
 ### Correção de teste relacionada à reconciliação
 - [x] Alinhar as expectativas dos testes de Runtime/Orchestrator ao contrato real do CommunicationBus (`PENDENTE` sem assinante; `ENTREGUE` quando há callback).
@@ -51,10 +58,18 @@ As seções abaixo registram o planejamento e a execução das fases iniciais. E
 - [x] Identificar limites e lacunas da infraestrutura de agentes.
 - [x] Reconciliar a numeração do roadmap para refletir as Fases 11–16 reais.
 - [x] Atualizar a memória operacional principal.
-- [ ] Confirmar CI verde no HEAD final da reconciliação.
-- [ ] Definir, por comando explícito, se a próxima evolução será uma nova fase ou uma continuação transversal da arquitetura de agentes.
+- [x] Definir a idempotência mínima antes de qualquer retry externo.
+- [ ] Confirmar CI verde no HEAD atual.
+- [ ] Integrar idempotência ao caminho canônico do Registry de ferramentas.
+- [ ] Fazer nova auditoria de superfície pública de `core/ciclo.py` antes de remoção/simplificação.
+- [ ] Evoluir `ExecutionTrace` para spans/eventos/persistência somente quando houver necessidade real.
+- [ ] Depois da integração de idempotência: evidência de pesquisa, economia computacional e evolução do World Model.
 
-## Próximo incremento recomendado — não aprovado
-Transformar registry/capability/delegation em um ciclo de execução multi-agente verificável, cobrindo execução, retorno, verificação, recuperação, auditoria, memória e governança.
+## Regra do próximo incremento
+A integração de idempotência deve ser feita primeiro no contrato de execução de ferramentas e seus testes. **Não habilitar retry de efeitos externos automaticamente.**
 
-**Importante:** esta é uma recomendação técnica da reconciliação. Não é autorização para iniciar uma nova fase.
+A sequência obrigatória é:
+
+`Permission → Policy → Checkpoint → Idempotency → Tool → Observation → Verification → Audit → Result`
+
+Qualquer retry externo futuro deverá depender de identidade de operação, autorização explícita, precondições e estratégia de recuperação verificável.
