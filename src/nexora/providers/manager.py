@@ -59,9 +59,19 @@ class ProviderManager:
         return fabrica(modelo=modelo)
 
     def executar(self, nome: str, prompt: str, **kwargs: Any):
-        """Executa generate registrando latencia, sucesso e erro do provider."""
+        """Executa o provider registrado, delegando a metrica para a instancia."""
         chave = nome.strip().lower()
         provider = self.obter(nome)
+        return self.executar_instancia(chave, provider, prompt, **kwargs)
+
+    def executar_instancia(self, nome: str, provider: Any, prompt: str, **kwargs: Any):
+        """Executa uma instancia ja selecionada e registra as metricas reais.
+
+        Este caminho permite ao Orquestrador executar exatamente a instancia
+        escolhida pelo roteador (inclusive um modelo explicito) sem criar uma
+        segunda chamada apenas para contabilizacao.
+        """
+        chave = nome.strip().lower()
         inicio = time.monotonic()
         self._chamadas += 1
         metricas = self._metricas_provider.setdefault(
