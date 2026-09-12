@@ -56,6 +56,12 @@
 - [x] Custo histórico pode ser explicitamente desativado com `considerar_custo=False`.
 - [x] Testes dedicados cobrem separação/persistência por modelo, custo, amostra insuficiente e falhas por modelo.
 - [x] Testes adicionais cobrem confiabilidade e latência específicas do modelo.
+- [x] Histórico persistente de avaliação por `provider + modelo + tipo de tarefa`.
+- [x] Gate de qualidade com amostra mínima configurável.
+- [x] Qualidade só influencia quando pelo menos dois candidatos possuem evidência suficiente do mesmo tipo de tarefa.
+- [x] Peso de maturidade da amostra: 0,5 no limiar mínimo e até 1,0 em `2 × min_amostra`.
+- [x] Influência da qualidade permanece limitada a ±1,0 e não substitui outros sinais.
+- [x] Testes cobrem gate, isolamento, maturidade da amostra e impacto conservador no ranking.
 
 ## Sinal de avaliação de resultado — foundation
 - [x] Criado `ResultadoAvaliacao` com sucesso, score normalizado, critérios, evidências e metadados.
@@ -65,8 +71,6 @@
 - [x] Ausência de critérios não produz qualidade artificial.
 - [x] ADR-022 registrada.
 - [x] Testes unitários cobrem contrato, agregação, ausência de critérios e integração com Runtime/Trace.
-- [ ] Histórico persistente de avaliação por `provider + modelo + tipo de tarefa`.
-- [ ] Influência da qualidade no score do roteador após amostra suficiente.
 
 ## Arquitetura canônica
 `Objetivo → Orchestrator → Plano/Tarefas → Seleção de executor/agente → Roteador Inteligente → AgentRuntime → Permission/Policy/Checkpoint → Idempotency (quando aplicável) → Provider/Tool → Observation → Verification → Analysis → Correction/Recovery → Retest → Audit/Experience → Evaluation (quando configurada) → ExecutionTrace → Result`.
