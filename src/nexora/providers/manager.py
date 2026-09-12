@@ -55,6 +55,7 @@ class ProviderManager:
         chave = nome.strip().lower()
         modelo = self._modelo_provider(provider)
         inicio = time.monotonic()
+        self._chamadas += 1
         metricas = self._metricas_provider.setdefault(chave, self._metricas_vazias())
         metricas["chamadas"] += 1
         modelo_metricas = None
