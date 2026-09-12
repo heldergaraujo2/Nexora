@@ -24,7 +24,6 @@ def test_router_prefere_modelo_com_custo_real_menor():
     ])
     manager = ProviderManager(pricing_registry=pricing)
     manager.registrar("groq", ProviderFake("model-a"))
-
     for _ in range(3):
         manager.executar_instancia("groq", ProviderFake("model-a"), "x")
         manager.executar_instancia("groq", ProviderFake("model-b"), "x")
@@ -35,8 +34,7 @@ def test_router_prefere_modelo_com_custo_real_menor():
         {"provider": "groq", "modelo": "model-a", "perfil": perfil},
         {"provider": "groq", "modelo": "model-b", "perfil": perfil},
     ]
-
-    resultado = RoteadorInteligente(manager).selecionar(candidatos, hardware, usar_historico=False)
+    resultado = RoteadorInteligente(manager).selecionar(candidatos, hardware, usar_historico=True)
     assert resultado[0].modelo == "model-a"
     assert "historico_custo_modelo_real_mais_baixo" in resultado[0].motivos
     assert "historico_custo_modelo_real_mais_alto" in resultado[1].motivos
@@ -59,5 +57,5 @@ def test_router_nao_aplica_custo_modelo_com_amostra_insuficiente():
         {"provider": "groq", "modelo": "model-a", "perfil": perfil},
         {"provider": "groq", "modelo": "model-b", "perfil": perfil},
     ]
-    resultado = RoteadorInteligente(manager).selecionar(candidatos, hardware, usar_historico=False)
+    resultado = RoteadorInteligente(manager).selecionar(candidatos, hardware, usar_historico=True)
     assert all("historico_custo_modelo_real_" not in " ".join(item.motivos) for item in resultado)
