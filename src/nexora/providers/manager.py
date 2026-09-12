@@ -1,8 +1,10 @@
-"""ProviderManager: monitora chamadas, latencia e erros dos providers."""
+"""ProviderManager: monitora chamadas, latencia, erros e capacidades."""
 from __future__ import annotations
 
 import time
 from typing import Any
+
+from nexora.providers.base import ProviderCapability
 
 
 class ProviderManager:
@@ -10,9 +12,9 @@ class ProviderManager:
 
     def __init__(self) -> None:
         self._fabricas: dict[str, Any] = {}
-        self._chamadas: int =  0
-        self._erros: int =  0
-        self._tempo_total: float =  0.0
+        self._chamadas: int = 0
+        self._erros: int = 0
+        self._tempo_total: float = 0.0
         self._ultimas_falhas: dict[str, str] = {}
 
     def registrar(self, nome: str, fabrica: Any) -> None:
@@ -59,6 +61,14 @@ class ProviderManager:
         except Exception as erro:
             self._ultimas_falhas[chave] = str(erro)
             return {"saudavel": False, "motivo": str(erro), "ultima_falha": str(erro)}
+
+    def obter_capacidades(self, nome: str) -> ProviderCapability:
+        """Retorna capacidades declaradas, sem inventar suporte ausente."""
+        provider = self.obter(nome)
+        capacidades = getattr(provider, "capabilities", None)
+        if isinstance(capacidades, ProviderCapability):
+            return capacidades
+        return ProviderCapability()
 
     def nomes(self) -> list[str]:
         return list(self._fabricas.keys())
