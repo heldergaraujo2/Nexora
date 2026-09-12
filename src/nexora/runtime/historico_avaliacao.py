@@ -53,17 +53,19 @@ class HistoricoAvaliacao:
         return self._estatisticas_metricas(metricas)
 
     def qualidade_para_roteamento(self, provider: str, modelo: str, tipo_tarefa: str, *, min_amostra: int) -> dict[str, Any]:
-        """Retorna qualidade observada e informa explicitamente se a amostra e suficiente."""
+        """Retorna qualidade observada e um peso conservador baseado no tamanho da amostra."""
         if min_amostra < 1:
             raise ValueError("min_amostra deve ser >= 1")
         estatisticas = self.estatisticas(provider, modelo, tipo_tarefa)
         avaliacoes = int(estatisticas["avaliacoes"])
         score = estatisticas["score_medio"]
         suficiente = avaliacoes >= min_amostra and isinstance(score, (int, float))
+        peso_amostra = min(1.0, avaliacoes / (2.0 * min_amostra)) if suficiente else 0.0
         return {
             "amostra_suficiente": suficiente,
             "min_amostra": min_amostra,
             "avaliacoes": avaliacoes,
+            "peso_amostra": peso_amostra,
             "score_medio": float(score) if suficiente else None,
             "taxa_sucesso": estatisticas["taxa_sucesso"] if suficiente else None,
         }
