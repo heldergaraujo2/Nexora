@@ -16,12 +16,14 @@ class Tarefa:
         ferramenta: str | None = None,
         parametros: dict[str, Any] | None = None,
         depende_de: list[str] | None = None,
+        idempotencia_chave: str | None = None,
     ) -> None:
         self.id = uuid.uuid4().hex
         self.descricao = descricao.strip()
         self.ferramenta = ferramenta
         self.parametros = parametros if parametros is not None else {}
         self.depende_de = depende_de if depende_de is not None else []
+        self.idempotencia_chave = idempotencia_chave.strip() if idempotencia_chave else None
         self.status: str = "pendente"
         self.resultado: dict[str, Any] | None = None
         self.erro: str | None = None
@@ -36,6 +38,7 @@ class Tarefa:
             "ferramenta": self.ferramenta,
             "parametros": self.parametros,
             "depende_de": self.depende_de,
+            "idempotencia_chave": self.idempotencia_chave,
             "status": self.status,
             "resultado": self.resultado,
             "erro": self.erro,
