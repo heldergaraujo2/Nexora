@@ -102,13 +102,13 @@ def test_qualidade_tem_influencia_limitada_e_nao_reordena_capacidade_forte(tmp_p
     manager.registrar("forte", ProviderTeste())
     manager.registrar("fraco", ProviderTeste())
     historico = HistoricoAvaliacao(tmp_path / "evaluation.json")
-    registrar_qualidade(historico, "forte", "coder-32b", 0.0)
+    registrar_qualidade(historico, "forte", "coder-7b", 0.0)
     registrar_qualidade(historico, "fraco", "general-1b", 1.0)
 
     resultado = RoteadorInteligente(manager, historico_avaliacao=historico).selecionar(
         [
             candidato("fraco", "general-1b", parametros="1B"),
-            candidato("forte", "coder-32b", parametros="32B"),
+            candidato("forte", "coder-7b", parametros="7B"),
         ],
         hw(),
         tarefa="coding",
