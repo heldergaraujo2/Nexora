@@ -1,127 +1,85 @@
 # 13 — CHANGELOG
 
+## Reconciliação Orchestrator ↔ AgentRuntime — 2026-09-12
+
+A NEXORA avançou na reconciliação do ciclo de execução sem criar nova fase.
+
+### Arquitetura
+- [x] ADR-012 registrada: Orchestrator é coordenador de alto nível; AgentRuntime é o limite canônico do ciclo de execução do agente.
+- [x] `Orquestrador` deixou de depender de `ExecutorCiclo`/`VerificadorCiclo` para o caminho normal.
+- [x] Cada tarefa agora possui um único ciclo de execução via `AgenteRuntime`.
+- [x] `core/ciclo.py` permanece preservado como compatibilidade durante a migração.
+- [x] Resultado do `AgenteRuntime` é normalizado no contrato de resultado do Orchestrator.
+
+### Runtime / resiliência
+- [x] Exceções de execução no `AgenteRuntime` são convertidas em `Observacao` com erro, permitindo análise controlada.
+- [x] Exceções de verificação também são convertidas em observação controlada.
+- [x] O ciclo avançado `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR` foi preservado.
+
+### Ferramentas / governança
+- [x] Tarefas com ferramenta continuam usando `RegistryFerramentas` como executor governado.
+- [x] A primeira integração não introduz retry automático de ferramentas, evitando repetir efeitos externos sem idempotência explícita.
+- [x] Permission/Policy/Checkpoint continuam pertencendo à fronteira de governança existente.
+
+### Testes
+- [x] Adicionado `tests/integration/test_orquestrador_agent_runtime.py`.
+- [x] Teste cobre recuperação de falha de provider através do runtime.
+- [x] Teste cobre exceção de provider sem propagação indevida pelo Orchestrator.
+- [ ] CI do novo HEAD ainda precisa ser confirmado antes de marcar o checkpoint como validado.
+
 ## Fechamento da reconciliação do Runtime — 2026-09-12
 
-O `main` continua evoluindo após `v1.0.0`, sem criar nova fase. Este checkpoint fecha a etapa de consistência interna do runtime e registra a validação do estado atual.
+O `main` continua evoluindo após `v1.0.0`, sem criar nova fase. Este checkpoint fechou a etapa de consistência interna do runtime antes da integração Orchestrator ↔ AgentRuntime.
 
 ### Runtime / agentes
 - [x] `AgenteRuntime` usa `Observacao` estruturada no caminho de análise de falhas.
-- [x] Coding Agent passou a transportar o último erro de validação para `Observacao.erro` antes de chamar `AnalisadorFalhas`.
-- [x] Research Agent passou a transportar o último erro de validação para `Observacao.erro` antes de chamar `AnalisadorFalhas`.
-- [x] Falhas de validação de saída nos agentes especializados são mantidas como retentáveis, evitando aborto prematuro de problemas corrigíveis.
-- [x] O ciclo generalista existente `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR` foi preservado.
+- [x] Coding Agent transporta erros de validação para `Observacao.erro`.
+- [x] Research Agent transporta erros de validação para `Observacao.erro`.
+- [x] Falhas de validação corrigíveis permanecem retentáveis nos agentes especializados.
+- [x] O ciclo generalista `EXECUTAR → VERIFICAR → ANALISAR → CORRIGIR → RETESTAR` foi preservado.
 - [x] Não foi introduzida uma terceira camada de execução.
-
-### Qualidade do CI
-- [x] Run #147 (`34659962617`) do HEAD `d69e7c9947dfc79fdd51f28dae66e97a0d3e75f4` concluiu com SUCCESS em Python 3.11, 3.12, 3.13 e 3.14.
-- [x] A suíte completa executou **232 testes passando** em Python 3.14.
-- [x] Foram corrigidos os dois `SyntaxWarning` de regex em `tests/unit/test_policy_loader.py` usando expressões regulares raw.
-- [x] As atualizações posteriores desta etapa são apenas de documentação/continuidade.
-
-### Decisão arquitetural registrada
-- [x] O próximo trabalho não deve criar nova fase.
-- [x] O limite aberto é a reconciliação `Orquestrador → AgenteRuntime`, evitando que `ExecutorCiclo`/`VerificadorCiclo` dupliquem o ciclo avançado do Runtime.
-- [x] O Registry continua sendo a fronteira de execução governada de ferramentas.
-- [x] `Policy → Permission → Checkpoint` continua ocorrendo antes da ação.
 
 ## Correção de warnings do Policy Loader — 2026-09-12
 
 - [x] Corrigidos os escapes inválidos nas regex de `tests/unit/test_policy_loader.py`.
 - [x] Commit: `a608056d700519f2f62447f23c1148bd621c4be2`.
-- [x] Nenhuma regra de negócio ou contrato de produção foi alterado.
 
 ## Orchestrator → Tool Registry — 2026-09-11
 
-O `main` continuou evoluindo após `v1.0.0`, sem criar nova fase.
-
-### Integração
 - [x] `Orquestrador` aceita `RegistryFerramentas` opcional.
-- [x] Tarefas com `ferramenta` configurada são encaminhadas ao Registry existente.
-- [x] Tarefas sem ferramenta preservam o caminho existente de Provider.
-- [x] O fluxo integrado mantém `Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`.
-- [x] Foi criado teste de integração cobrindo o caminho Orchestrator → Registry e confirmando que o Provider não é chamado para a tarefa com ferramenta.
-- [x] Correção do teste integrado: `origem=` é o argumento correto do `PolicyEngine`.
-
-### Validação
-- [x] HEAD validado naquele checkpoint: `f67f270c25609559264c19ef7a2561cc359873b8`.
-- [x] CI Run #138 (`34658836451`) concluído com SUCCESS em Python 3.11, 3.12, 3.13 e 3.14.
+- [x] Tarefas com ferramenta são encaminhadas ao Registry existente.
+- [x] Tarefas sem ferramenta preservam Provider.
+- [x] O fluxo mantém `Permission → Policy → Checkpoint → Tool → Observation → Verification → Audit → Result`.
 
 ## Fechamento do fluxo de ferramenta — 2026-09-11
 
-### Tool → Observation → Verification → Audit → Result
-- [x] `RegistryFerramentas` mantém a autorização antes da ação.
-- [x] Checkpoint permanece imediatamente antes da execução da ferramenta.
-- [x] `ResultadoFerramenta` consolida resultado, observação e verificação quando esses estágios estão configurados.
-- [x] `RegistryFerramentas` aceita `RegistroAuditoria` opcional.
-- [x] Execução bem-sucedida gera `ferramenta.resultado`, sem registrar parâmetros potencialmente sensíveis.
-- [x] Falha do executor gera `ferramenta.falhou` com tipo/mensagem da exceção e propaga a exceção original.
-- [x] Auditoria de resultado registra ferramenta, solicitante, sucesso, observação e verificação sem copiar o resultado bruto.
-- [x] Testes cobrem resultado bruto legado, resultado observado/verificado e falha auditada.
-
-### Limites deliberados
-- [ ] Persistência durável de checkpoints ainda não implementada.
-- [ ] Rollback de efeitos externos ainda não implementado.
-- [ ] Observação/verificação e auditoria são opcionais no Registry para preservar compatibilidade.
+- [x] Registry mantém autorização antes da ação.
+- [x] Checkpoint permanece imediatamente antes da ferramenta.
+- [x] `ResultadoFerramenta` consolida resultado, observação e verificação.
+- [x] Auditoria evita copiar resultado bruto potencialmente sensível.
 
 ## Checkpoint Engine — 2026-09-11
 
-### Checkpoint
-- [x] Criado `src/nexora/runtime/checkpoint.py` com `Checkpoint` imutável e `CheckpointEngine`.
-- [x] Captura de estado com cópia profunda, evitando que alterações posteriores no estado original contaminem o snapshot.
-- [x] Recuperação devolve nova cópia e não executa ferramentas nem tenta desfazer efeitos externos.
-- [x] Checkpoints podem ser filtrados por `execucao_id`.
-- [x] Criação e recuperação podem ser registradas no `RegistroAuditoria`.
-- [x] Validações cobrem identificadores, motivo, tipo de estado e checkpoint inexistente.
-- [x] Testes em `tests/unit/test_checkpoint.py`.
-
-### Limites deliberados
-- [ ] Persistência durável de checkpoints ainda não implementada.
+- [x] `Checkpoint` imutável e `CheckpointEngine` criados.
+- [x] Snapshot com cópia profunda.
+- [x] Recuperação devolve cópia isolada.
+- [x] Criação/recuperação podem ser auditadas.
+- [ ] Persistência durável ainda não implementada.
 - [ ] Rollback de efeitos externos ainda não implementado.
-- [x] Integração Tool/Sandbox com governança/checkpoint foi feita de forma explícita e mínima, sem transformar o CheckpointEngine em executor.
 
-## Evolução multiagente e governança de execução — 2026-09-11
+## Evolução multiagente e governança — 2026-09-11
 
-A tag `v1.0.0` permanece ancorada em `c49d3d2df314bb8c2d849c4466736f15841e8893`. O `main` continuou evoluindo sem criar uma nova fase.
-
-### Execução delegada
-- [x] `ExecutorDelegacoes` introduz a camada explícita de execução das delegações recebidas pelo CommunicationBus.
-- [x] Integração opcional com `AgenteRuntime`, preservando execução, verificação, análise, correção e reteste.
-- [x] Recovery no nível da delegação com `max_tentativas`.
-
-### Experiência e auditoria
-- [x] Resultados terminais podem ser registrados no `RegistroExperiencias`.
-- [x] `RegistroAuditoria` fornece log append-only em JSONL.
-- [x] Executor registra aceite, conclusão e falha.
-
-### Policy / Governança
-- [x] `PolicyEngine` mínimo com ALLOW/DENY, filtros, ordem determinística e default DENY.
-- [x] Executor consulta a política antes da execução.
-- [x] Decisão auditada com efeito, permitido, motivo, versão, origem e fingerprint.
-- [x] Loader declarativo TOML versão 2 com schema estrito e IDs únicos.
-- [x] Fingerprint canônico SHA-256 da semântica da política.
-- [x] `DENEGADA` separa negação de governança de falha de execução.
-- [x] `GerenciadorPermissoes` / `PedidoPermissao` estabelecem uma fronteira explícita de autorização sem executar a ação.
-- [x] `GerenciadorPolitica` implementa reload validado e troca atômica, preservando a política anterior quando a nova é rejeitada.
-- [x] Registry de ferramentas pode exigir permissão antes do executor, preservando compatibilidade sem governança configurada.
-- [x] Sandbox mantém allowlist e pode exigir Policy antes de `subprocess.run`; DENY impede a execução.
-- [x] Contexto de auditoria do Sandbox registra somente o comando-base, evitando copiar argumentos potencialmente sensíveis.
-- [ ] YAML ainda não implementado.
-
-### Correção de empacotamento
-- [x] Criado/exportado `src/nexora/experiencia/__init__.py`, corrigindo importação no CI.
-
-### Validação
-- [x] CI verde para Python 3.11–3.14 nos checkpoints validados.
-- [x] Testes adicionados para permission boundary, policy lifecycle, tool governance, Sandbox governance, Checkpoint Engine, auditoria de resultados e integração Orchestrator → Tool Registry.
-
-## Reconciliação pós-v1.0.0 — 2026-09-11
-
-Foram identificados e reconciliados os componentes arquiteturais pós-release anteriores a esta etapa: Context, Knowledge, World Model, Goal, Strategy, Communication Bus, Runtime/Orchestrator, Delegation, Agent Registry, capability delegation e testes correspondentes.
+- [x] ExecutorDelegacoes com integração opcional ao AgentRuntime.
+- [x] Recovery de delegação com `max_tentativas`.
+- [x] Registro de experiências e auditoria JSONL.
+- [x] PolicyEngine ALLOW/DENY, default DENY e fingerprint SHA-256.
+- [x] Loader TOML v2 estrito.
+- [x] Permission boundary explícita.
+- [x] Policy Manager com reload validado e troca atômica.
+- [x] Sandbox com allowlist e Policy opcional.
 
 ## v1.0.0 — Release — 2026-09-11
 
 - Fase 16 — Long-Term Autonomy concluída no commit `c49d3d2...`.
 - `MetaLongoPrazo` e `RegistroAutonomia` com persistência JSONL determinística.
 - CLI `nexora autonomia definir|atualizar|listar|resumir`.
-- Suite documentada naquele ponto: 128 testes passando.
-- Tag `v1.0.0` criada em `c49d3d2...`.
