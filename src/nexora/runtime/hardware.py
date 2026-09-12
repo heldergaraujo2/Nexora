@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 import platform
-import shutil
 from dataclasses import dataclass
 
 
@@ -34,7 +33,16 @@ class DetectorHardware:
             import psutil  # type: ignore
             return int(psutil.virtual_memory().total)
         except ImportError:
-            return 0
+            pass
+        try:
+            if platform.system() == "Linux":
+                with open("/proc/meminfo", "r", encoding="utf-8") as arquivo:
+                    for linha in arquivo:
+                        if linha.startswith("MemTotal:"):
+                            return int(linha.split()[1]) * 1024
+        except (OSError, ValueError, IndexError):
+            pass
+        return 0
 
 
 def classificar_hardware(perfil: PerfilHardware) -> str:
