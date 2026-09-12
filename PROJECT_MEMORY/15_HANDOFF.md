@@ -17,8 +17,9 @@
 - O roadmap pós-v1.0 está formalizado em `PROJECT_MEMORY/07_ROADMAP.md` nas Fases 17–25.
 - Incremento funcional de roteamento/trace: `386e810af8502a03a2bdc66d2d9c3d3360813e62`.
 - Incremento de persistência do histórico: `b78eb29f41491c2437556ff4c6f7af49ff065d96`.
-- CI run `34702844025` passou em Python 3.11, 3.12, 3.13 e 3.14 para o incremento de persistência.
-- Documentação de continuidade posterior foi atualizada em commits separados; confirmar sempre o HEAD atual antes do próximo checkpoint.
+- Incremento de métricas no caminho real: `4492b53f012fb6cb88b4771f24b11f07effcebe3`.
+- CI run `34703807547` passou em Python 3.11, 3.12, 3.13 e 3.14 para o incremento funcional de métricas.
+- Os arquivos de continuidade foram atualizados depois desse CI; confirmar sempre o HEAD atual e o CI mais recente antes de fechar o próximo checkpoint.
 
 ## 3. Arquitetura canônica atual
 
@@ -123,14 +124,16 @@ Implementado:
 - `ExecutionTrace` recebe `provider`, `model` e `metadata.routing_decision` da execução real.
 - Teste de integração cobre `RoteadorInteligente → Orquestrador → AgentRuntime → ExecutionTrace`.
 - Histórico do `ProviderManager` pode ser persistido/recarregado por JSON versionado e caminho configurável.
-- CI run `34702844025` passou em Python 3.11–3.14 no incremento de persistência.
+- `ProviderManager.executar_instancia()` permite medir a instância já selecionada sem duplicar a chamada.
+- `Orquestrador` alimenta as métricas reais do provider durante a execução governada pelo `AgentRuntime`.
+- Teste de integração confirma execução única, chamadas/sucesso/latência, persistência e trace correto.
+- CI run `34703807547` passou em Python 3.11–3.14 para esse incremento.
 
 Próximo incremento:
-1. fazer a execução real de provider no `Orquestrador → AgentRuntime` alimentar as métricas do `ProviderManager` sem duplicar chamadas;
-2. criar teste de integração que prove execução única + métricas atualizadas + trace correto;
-3. confirmar CI verde antes de fechar o checkpoint;
-4. depois adicionar tokens/custo somente quando houver telemetria real e confiável;
-5. avançar a descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo.
+1. manter tokens/custo bloqueados até existir telemetria real e confiável;
+2. avaliar como incorporar telemetria real de tokens/custo por provider sem estimativas;
+3. avançar descoberta automática de candidatos/modelos, sem hard-binding de provider/modelo;
+4. depois avançar para Fase 18, preservando governança e o ciclo único de execução.
 
 ## 6. Governança — NÃO QUEBRAR
 Fluxo canônico:
@@ -188,7 +191,7 @@ Para cada funcionalidade nova:
 - Store de idempotência atual é em memória; não protege reinício de processo ou múltiplas instâncias.
 - Não existe estratégia completa de recuperação de operações `IN_PROGRESS` após crash.
 - Registry/capabilities continuam em memória.
-- Histórico do ProviderManager agora pode sobreviver a reinicializações, mas ainda não é distribuído e depende do caminho real de execução alimentar as métricas.
+- Histórico do ProviderManager agora pode sobreviver a reinicializações e recebe métricas do caminho real, mas ainda não é distribuído.
 - ExecutorDelegacoes é síncrono/in-memory.
 - YAML de política não existe.
 - World Model/Knowledge ainda são infraestrutura, não inteligência mundial completa.
