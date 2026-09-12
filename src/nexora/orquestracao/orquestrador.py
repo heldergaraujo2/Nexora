@@ -5,16 +5,18 @@ from datetime import datetime, timezone
 from typing import Any
 
 from nexora.comunicacao import CommunicationBus
-from nexora.core.ciclo import Executor as ExecutorCiclo, Verificador as VerificadorCiclo
 from nexora.core.objetivo import Objetivo
 from nexora.core.plano import Plano, Tarefa
+from nexora.runtime.agente import AgenteRuntime, ResultadoAgente
+from nexora.runtime.analise import AnalisadorFalhas
+from nexora.runtime.correcao import Corrector
 from nexora.runtime.eventos import EventStore
 from nexora.runtime.verificacao import texto_nao_vazio
 from nexora.tools.registry import RegistryFerramentas
 
 
 class Orquestrador:
-    """Recebe um objetivo, coordena tarefas e publica seu ciclo no barramento."""
+    """Coordena objetivos e tarefas; o AgenteRuntime possui o ciclo de execucao."""
 
     def __init__(
         self,
@@ -26,6 +28,7 @@ class Orquestrador:
         communication_bus=None,
         agent_id="orchestrator",
         ferramentas: RegistryFerramentas | None = None,
+        max_tentativas: int = 3,
     ):
         self.rotador = rotador
         self.provider = provider
@@ -35,6 +38,7 @@ class Orquestrador:
         self.communication_bus = communication_bus
         self.agent_id = agent_id
         self.ferramentas = ferramentas
+        self.max_tentativas = max_tentativas
 
     @staticmethod
     def _planejar(objetivo):
@@ -55,7 +59,7 @@ class Orquestrador:
                 payload=payload,
             )
 
-    def _executar_tarefa(self, tarefa):
+    def _executar_tarefa(self, tarefa, provider):
         descricao = tarefa.get("descricao", "")
         ferramenta = tarefa.get("ferramenta")
         if ferramenta is not None:
@@ -75,10 +79,38 @@ class Orquestrador:
             if hasattr(resultado, "resultado"):
                 return resultado.resultado
             return resultado
-        return self.provider.generate(descricao).text
+        return provider.generate(descricao).text
 
-    def _verificar(self, contexto):
-        return texto_nao_vazio(contexto)
+    @staticmethod
+    def _verificar(saida):
+        return texto_nao_vazio({"saida": saida})
+
+    @staticmethod
+    def _analisar(observacao):
+        return AnalisadorFalhas().analisar(observacao)
+
+    def _executar_runtime(self, tarefa_dict, provider):
+        def executar(_prompt):
+            return self._executar_tarefa(tarefa_dict, provider)
+
+        def verificar(saida):
+            return self._verificar(saida)
+
+        corrector = Corrector(executar=executar, registrar=self._registrar)
+        # Retentativas de ferramentas/efeitos externos sao deliberadamente desabilitadas
+        # nesta primeira integracao; providers sem efeitos externos podem usar recovery.
+        tentativas = 1 if tarefa_dict.get("ferramenta") is not None else self.max_tentativas
+        runtime = AgenteRuntime(
+            executar=executar,
+            verificar=verificar,
+            analisar=self._analisar,
+            corregir=corrector.corregir,
+            registrar=self._registrar,
+            max_tentativas=tentativas,
+            communication_bus=self.communication_bus,
+            agent_id=f"{self.agent_id}:runtime",
+        )
+        return runtime.executar(tarefa_dict.get("descricao", ""))
 
     def executar(self, objetivo_texto, alias=None):
         objetivo = Objetivo(objetivo_texto)
@@ -104,39 +136,41 @@ class Orquestrador:
         self._registrar("plano", plano.para_dict())
         self._publicar("orquestracao.plano", {"objetivo_id": objetivo.id, "plano_id": plano.id, "tarefas": len(plano.tarefas)})
 
-        executor = ExecutorCiclo(self._executar_tarefa)
-        verificador = VerificadorCiclo(self._verificar)
-
         etapas = []
         ok_geral = True
         for tarefa in plano.tarefas:
             tarefa_dict = tarefa.para_dict()
             tarefa_dict["objetivo_id"] = objetivo.id
             self._publicar("orquestracao.tarefa.inicio", {"objetivo_id": objetivo.id, "tarefa_id": tarefa_dict.get("id")})
-            try:
-                saida = executor.executar(tarefa_dict)
-                ok = verificador.verificar(tarefa_dict, saida)
-            except Exception as exc:
-                saida = ""
-                ok = False
-                erro = str(exc)
-            else:
-                erro = None
-            etapa: dict[str, Any] = {"tarefa_id": tarefa_dict.get("id"), "ok": ok, "saida": saida, "erro": erro}
+            resultado_runtime: ResultadoAgente = self._executar_runtime(tarefa_dict, provider)
+            etapa: dict[str, Any] = {
+                "tarefa_id": tarefa_dict.get("id"),
+                "ok": resultado_runtime.sucesso,
+                "saida": resultado_runtime.saida_final,
+                "erro": resultado_runtime.etapas[-1].get("erro") if resultado_runtime.etapas else None,
+                "tentativas": resultado_runtime.tentativas,
+                "historico_runtime": resultado_runtime.historico,
+            }
             if tarefa_dict.get("ferramenta") is not None:
                 etapa["ferramenta"] = tarefa_dict["ferramenta"]
                 etapa["parametros"] = tarefa_dict.get("parametros", {})
             etapas.append(etapa)
             self._publicar("orquestracao.tarefa.resultado", {"objetivo_id": objetivo.id, **etapa})
-            if not ok:
+            if not resultado_runtime.sucesso:
                 ok_geral = False
 
         objetivo.concluido_em = datetime.now(timezone.utc).isoformat()
         objetivo.sucesso = ok_geral
         objetivo.metricas = {"total": len(etapas), "ok": sum(1 for e in etapas if e["ok"]), "falhas": sum(1 for e in etapas if not e["ok"])}
         self._registrar("resultado", objetivo.para_dict())
-        resultado = {"objetivo_id": objetivo.id, "texto": objetivo.texto, "sucesso": ok_geral,
-                     "saida": etapas[-1]["saida"] if etapas else "", "etapas": etapas,
-                     "metricas": objetivo.metricas, "historico": self.historico}
+        resultado = {
+            "objetivo_id": objetivo.id,
+            "texto": objetivo.texto,
+            "sucesso": ok_geral,
+            "saida": etapas[-1]["saida"] if etapas else "",
+            "etapas": etapas,
+            "metricas": objetivo.metricas,
+            "historico": self.historico,
+        }
         self._publicar("orquestracao.resultado", {"objetivo_id": objetivo.id, "sucesso": ok_geral, "metricas": objetivo.metricas})
         return resultado
