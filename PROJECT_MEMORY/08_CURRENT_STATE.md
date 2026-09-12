@@ -43,8 +43,11 @@
 - [x] Escrita atômica e tolerância a histórico inválido/incompatível.
 - [x] Caminho real `Orquestrador → AgentRuntime → Provider` alimenta métricas do `ProviderManager` sem duplicar a execução.
 - [x] Teste de integração confirma execução única, métricas atualizadas, persistência e trace correto.
-- [x] CI run `34703807547` passou em Python 3.11, 3.12, 3.13 e 3.14.
-- [ ] Incorporar custo/tokens somente quando houver telemetria real e confiável.
+- [x] Telemetria real de tokens no `ProviderManager` e no `ExecutionTrace`, sem estimativas.
+- [x] Uso de tokens persistido no schema v2 do histórico do provider.
+- [x] Teste de integração confirma tokens, métricas do manager, persistência e trace sem duplicar execução.
+- [x] CI run `34704095484` passou em Python 3.11, 3.12, 3.13 e 3.14.
+- [ ] Telemetria de custo real, somente quando houver pricing autoritativo/versionado por provider/modelo.
 
 ## Arquitetura canônica
 `Objetivo → Orchestrator → Plano/Tarefas → Seleção de executor/agente → Roteador Inteligente → AgentRuntime → Permission/Policy/Checkpoint → Idempotency (quando aplicável) → Provider/Tool → Observation → Verification → Analysis → Correction/Recovery → Retest → Audit/Experience → ExecutionTrace → Result`.
@@ -76,4 +79,4 @@ A Fase 23 define uma UI extremamente tecnológica, futurista e inovadora, mas si
 Toda funcionalidade nova exige testes; cruzamentos de componentes exigem integração. Teste escrito não equivale a teste aprovado. O CI do HEAD deve ser verificado antes de fechar checkpoint.
 
 ## Limites conhecidos
-Checkpoints/idempotência/registry continuam em-memory; não há rollback de efeitos externos; World Model/Knowledge e Economy ainda não fecham o loop completo do North Star; Groq requer validação real; ExecutionTrace ainda não possui telemetria persistente universal. O histórico do ProviderManager agora pode sobreviver a reinicializações via JSON versionado, mas ainda não é um backend distribuído. O roteamento inteligente está integrado ao caminho real, mas a descoberta automática de todos os candidatos e a telemetria universal de tokens/custo continuam futuras.
+Checkpoints/idempotência/registry continuam em-memory; não há rollback de efeitos externos; World Model/Knowledge e Economy ainda não fecham o loop completo do North Star; Groq requer validação real; ExecutionTrace ainda não possui telemetria persistente universal. O histórico do ProviderManager agora pode sobreviver a reinicializações via JSON versionado e inclui tokens medidos quando o provider os fornece, mas ainda não é um backend distribuído. O custo permanece ausente quando não há pricing autoritativo; a NEXORA não estima custo. O roteamento inteligente está integrado ao caminho real, mas a descoberta automática de todos os candidatos e a telemetria universal continuam futuras.
