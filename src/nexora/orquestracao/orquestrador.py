@@ -66,16 +66,26 @@ class Orquestrador:
         if ferramenta is not None:
             if self.ferramentas is None:
                 raise RuntimeError("Registry de ferramentas nao configurado")
-            resultado = self.ferramentas.executar(
-                ferramenta,
-                tarefa.get("parametros", {}),
-                solicitante=self.agent_id,
-                contexto={
+            argumentos = {
+                "ferramenta": ferramenta,
+                "parametros": tarefa.get("parametros", {}),
+                "solicitante": self.agent_id,
+                "contexto": {
                     "objetivo_id": tarefa.get("objetivo_id"),
                     "tarefa_id": tarefa.get("id"),
                     "descricao": descricao,
                 },
+            }
+            idempotencia_chave = tarefa.get("idempotencia_chave")
+            if idempotencia_chave is None and self.ferramentas.idempotencia_habilitada:
+                idempotencia_chave = f"{tarefa.get('objetivo_id', '')}:{tarefa.get('id', '')}:{ferramenta}"
+            resultado = self.ferramentas.executar(
+                ferramenta,
+                argumentos["parametros"],
+                solicitante=argumentos["solicitante"],
+                contexto=argumentos["contexto"],
                 execucao_id=tarefa.get("execucao_id"),
+                idempotencia_chave=idempotencia_chave,
             )
             if hasattr(resultado, "resultado"):
                 return resultado.resultado
@@ -154,6 +164,9 @@ class Orquestrador:
         for tarefa in plano.tarefas:
             tarefa_dict = tarefa.para_dict()
             tarefa_dict["objetivo_id"] = objetivo.id
+            # O planner pode declarar uma chave explicita, mas a Tarefa atual nao a
+            # persiste no seu contrato; o caminho automatico usa a identidade estavel
+            # objetivo+tarefa+ferramenta quando o Registry possui idempotencia.
             self._publicar("orquestracao.tarefa.inicio", {"objetivo_id": objetivo.id, "tarefa_id": tarefa_dict.get("id")})
             resultado_runtime: ResultadoAgente = self._executar_runtime(tarefa_dict, provider)
             etapa: dict[str, Any] = {
