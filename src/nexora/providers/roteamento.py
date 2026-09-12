@@ -65,6 +65,44 @@ class RoteadorInteligente:
 
         return ajuste, motivos
 
+    def _custo_historico_por_milhao(self, provider: str) -> float | None:
+        """Retorna custo real observado por milhao de tokens, quando confiavel.
+
+        O valor e calculado somente a partir de custo e tokens medidos pelo
+        ProviderManager. Uma amostra de menos de tres geracoes precificadas
+        nao influencia o roteamento.
+        """
+        historico = self._manager.estatisticas_provider(provider)
+        geracoes = int(historico.get("geracoes_com_custo", 0))
+        tokens = int(historico.get("total_tokens", 0))
+        custo = float(historico.get("custo_total", 0.0))
+        if geracoes < 3 or tokens <= 0 or custo < 0:
+            return None
+        return (custo / tokens) * 1_000_000
+
+    def _ajuste_custo_historico(self, provider: str, provedores_candidatos: list[str]) -> tuple[float, list[str]]:
+        """Favorece custo historico menor com influencia pequena e limitada."""
+        custo = self._custo_historico_por_milhao(provider)
+        if custo is None:
+            return 0.0, []
+        custos = [
+            valor
+            for nome in provedores_candidatos
+            if (valor := self._custo_historico_por_milhao(nome)) is not None
+        ]
+        if len(custos) < 2:
+            return 0.0, []
+        media = sum(custos) / len(custos)
+        if media <= 0:
+            return 0.0, []
+        # Limite deliberado: custo nunca vence uma diferenca funcional grande.
+        diferenca_relativa = (custo - media) / media
+        if diferenca_relativa <= -0.10:
+            return 0.75, ["historico_custo_real_mais_baixo"]
+        if diferenca_relativa >= 0.10:
+            return -0.75, ["historico_custo_real_mais_alto"]
+        return 0.0, []
+
     def selecionar(
         self,
         candidatos: list[dict[str, Any]],
@@ -76,14 +114,21 @@ class RoteadorInteligente:
         exigir_streaming: bool = False,
         exigir_provider_saudavel: bool = False,
         usar_historico: bool = True,
+        considerar_custo: bool = True,
     ) -> list[CandidatoRoteamento]:
         """Ordena candidatos por adequacao, capacidades e historico medido.
 
         A funcao somente decide. Ela nao executa o provider nem a tarefa.
         Capacidades nao declaradas sao tratadas como ausentes.
         O historico e opcional e tem influencia deliberadamente limitada.
+        Custo somente participa quando ha custo e tokens reais suficientes.
         """
         avaliados: list[CandidatoRoteamento] = []
+        provedores_candidatos = [
+            str(candidato.get("provider", "")).strip().lower()
+            for candidato in candidatos
+            if str(candidato.get("provider", "")).strip()
+        ]
         for candidato in candidatos:
             provider = str(candidato.get("provider", "")).strip().lower()
             modelo = str(candidato.get("modelo", "")).strip()
@@ -125,6 +170,10 @@ class RoteadorInteligente:
                 ajuste, motivos_historico = self._ajuste_historico(provider)
                 score += ajuste
                 motivos.extend(motivos_historico)
+                if considerar_custo:
+                    ajuste_custo, motivos_custo = self._ajuste_custo_historico(provider, provedores_candidatos)
+                    score += ajuste_custo
+                    motivos.extend(motivos_custo)
             avaliados.append(CandidatoRoteamento(provider, modelo, score, adequado, tuple(motivos)))
 
         return sorted(avaliados, key=lambda item: (-item.adequado, -item.score, item.provider, item.modelo))
