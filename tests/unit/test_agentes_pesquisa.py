@@ -71,9 +71,9 @@ def test_pesquisar_sintetiza_com_citacoes():
     assert "[fonte:1]" in r.saida_final
 
 
-def test_pesquisar_produz_claim_evidencia_e_proveniencia():
+def test_pesquisar_produz_claim_evidencia_proveniencia_e_adequacao():
     prov = FakePesquisa(["NEXORA possui pesquisa estruturada [fonte:1]."])
-    buscas = FakeBusca([_fonte("documento de referencia", "https://fonte.dev/ref")])
+    buscas = FakeBusca([_fonte("NEXORA possui pesquisa estruturada e fontes verificáveis.", "https://fonte.dev/ref")])
     ag = ResearchAgent(prov, buscas)
 
     r = ag.pesquisar("o que e a nexora", quantidade=1)
@@ -82,14 +82,44 @@ def test_pesquisar_produz_claim_evidencia_e_proveniencia():
     claim = r.evidencias[0]
     assert claim["claim"] == "NEXORA possui pesquisa estruturada [fonte:1]."
     assert claim["evidence"]["source_id"] == 1
-    assert claim["evidence"]["titulo"] == "documento de referencia"
+    assert claim["evidence"]["titulo"] == "NEXORA possui pesquisa estruturada e fontes verificáveis."
     assert claim["evidence"]["url"] == "https://fonte.dev/ref"
-    assert claim["evidence"]["trecho"] == "documento de referencia"
+    assert claim["evidence"]["trecho"] == "NEXORA possui pesquisa estruturada e fontes verificáveis."
     assert claim["evidence"]["consulta"] == "o que e a nexora"
     assert claim["evidence"]["confianca"] is None
     assert len(claim["evidence"]["source_ref"]) == 64
+    assert claim["adequacao"]["status"] == "SUSTENTADA"
+    assert claim["adequacao"]["cobertura"] >= 0.6
     assert r.metricas["evidencias"] == 1
+    assert r.metricas["evidencias_sustentadas"] == 1
     assert r.trace["metadata"]["research_evidence"] == r.evidencias
+
+
+def test_pesquisar_fonte_existente_mas_nao_sustenta_claim():
+    prov = FakePesquisa(["NEXORA possui pesquisa estruturada [fonte:1]."])
+    buscas = FakeBusca([_fonte("A fonte descreve exclusivamente preços e faturamento.")])
+    ag = ResearchAgent(prov, buscas)
+
+    r = ag.pesquisar("o que e a nexora", quantidade=1)
+
+    assert r.evidencias[0]["adequacao"]["status"] == "INSUFICIENTE"
+    assert r.metricas["evidencias_insuficientes"] == 1
+    assert r.evidencias[0]["evidence"]["confianca"] is None
+
+
+def test_pesquisar_multiplas_fontes_avalia_cada_claim():
+    prov = FakePesquisa(["NEXORA possui pesquisa estruturada [fonte:1]. O sistema trata preços [fonte:2]."])
+    buscas = FakeBusca([
+        [{"titulo": "Pesquisa estruturada da NEXORA", "url": "https://a.dev", "trecho": "NEXORA possui pesquisa estruturada."}],
+        [{"titulo": "Preços", "url": "https://b.dev", "trecho": "O sistema trata preços e faturamento."}],
+    ])
+    ag = ResearchAgent(prov, buscas)
+
+    r = ag.pesquisar("o que e a nexora", quantidade=2)
+
+    assert len(r.evidencias) == 2
+    assert [e["adequacao"]["status"] for e in r.evidencias] == ["SUSTENTADA", "SUSTENTADA"]
+    assert r.metricas["evidencias_sustentadas"] == 2
 
 
 def test_source_ref_e_deterministico_e_independente_do_indice():
