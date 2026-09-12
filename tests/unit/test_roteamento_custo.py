@@ -12,14 +12,10 @@ def hw():
 
 class ProviderComCusto(Provider):
     def __init__(self, name: str, model: str):
-        super().__init__(name, ProviderCapability(max_context_tokens=32768))
-        self.modelo = model
-
+        super().__init__(name, ProviderCapability(max_context_tokens=32768)); self.modelo = model
     def generate(self, prompt: str, **kwargs):
         return GenerationResult(text=prompt, usage={"prompt_tokens": 100, "completion_tokens": 100, "total_tokens": 200})
-
-    def saudavel(self):
-        return True
+    def saudavel(self): return True
 
 
 def registry_custo():
@@ -37,37 +33,28 @@ def candidatos():
 
 
 def preparar_manager():
-    manager = ProviderManager(pricing_registry=registry_custo())
-    manager.registrar("alpha", ProviderComCusto("alpha", "model-a"))
-    manager.registrar("beta", ProviderComCusto("beta", "model-b"))
-    return manager
+    manager = ProviderManager(pricing_registry=registry_custo()); manager.registrar("alpha", ProviderComCusto("alpha", "model-a")); manager.registrar("beta", ProviderComCusto("beta", "model-b")); return manager
 
 
 def test_roteamento_considera_custo_real_historico_sem_estimativa():
     manager = preparar_manager()
-    for _ in range(3):
-        manager.executar("alpha", "ping")
-        manager.executar("beta", "ping")
+    for _ in range(3): manager.executar("alpha", "ping"); manager.executar("beta", "ping")
     resultado = RoteadorInteligente(manager).selecionar(candidatos(), hw())
     assert resultado[0].provider == "alpha"
-    assert "historico_custo_real_mais_baixo" in resultado[0].motivos
+    assert "historico_custo_modelo_real_mais_baixo" in resultado[0].motivos
     beta = next(item for item in resultado if item.provider == "beta")
-    assert "historico_custo_real_mais_alto" in beta.motivos
+    assert "historico_custo_modelo_real_mais_alto" in beta.motivos
 
 
 def test_roteamento_nao_considera_custo_com_amostra_insuficiente():
     manager = preparar_manager()
-    for _ in range(2):
-        manager.executar("alpha", "ping")
-        manager.executar("beta", "ping")
+    for _ in range(2): manager.executar("alpha", "ping"); manager.executar("beta", "ping")
     resultado = RoteadorInteligente(manager).selecionar(candidatos(), hw())
-    assert not any("historico_custo_real" in motivo for item in resultado for motivo in item.motivos)
+    assert not any("historico_custo_modelo_real" in motivo for item in resultado for motivo in item.motivos)
 
 
 def test_roteamento_pode_desativar_consideracao_de_custo():
     manager = preparar_manager()
-    for _ in range(3):
-        manager.executar("alpha", "ping")
-        manager.executar("beta", "ping")
+    for _ in range(3): manager.executar("alpha", "ping"); manager.executar("beta", "ping")
     resultado = RoteadorInteligente(manager).selecionar(candidatos(), hw(), considerar_custo=False)
-    assert not any("historico_custo_real" in motivo for item in resultado for motivo in item.motivos)
+    assert not any("historico_custo_modelo_real" in motivo for item in resultado for motivo in item.motivos)
