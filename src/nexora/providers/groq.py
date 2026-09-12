@@ -1,4 +1,4 @@
-"""Provider Groq (API compatible OpenAI) via stdlib (ADR-006/007.."""
+"""Provider Groq (API compatible OpenAI) via stdlib (ADR-006/007)."""
 from __future__ import annotations
 
 import json
@@ -9,7 +9,6 @@ from typing import Any
 
 from nexora.providers.base import (
     GenerationResult,
-
     Provider, ProviderCapability, ProviderIndisponivel, ProviderSemCredencial,
 )
 
@@ -29,6 +28,11 @@ class ProviderGroq(Provider):
         self._timeout = timeout
         super().__init__("groq", ProviderCapability(tool_calling=True, streaming=True, max_context_tokens=128000))
 
+    @property
+    def modelo(self) -> str:
+        """Modelo efetivamente selecionado para a instancia."""
+        return self._modelo
+
     def generate(self, prompt: str, **kwargs: Any) -> GenerationResult:
         payload = {
             "model": self._modelo,
@@ -38,10 +42,18 @@ class ProviderGroq(Provider):
         if kwargs.get("tool_calls"):
             payload["tools"] = kwargs["tools"]
         dados = self._post(payload)
+        uso = dados.get("usage") if isinstance(dados, dict) else None
+        usage = {}
+        if isinstance(uso, dict):
+            for chave in ("prompt_tokens", "completion_tokens", "total_tokens"):
+                valor = uso.get(chave)
+                if isinstance(valor, int) and valor >= 0:
+                    usage[chave] = valor
         return GenerationResult(
             text=dados["choices"][0]["message"]["content"] or "",
             tool_calls=dados["choices"][0]["message"].get("tool_calls", []),
             raw=dados,
+            usage=usage,
         )
 
     def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -54,13 +66,13 @@ class ProviderGroq(Provider):
             self.URL, data=corpo, headers=cabecalhos, method="POST"
         )
         try:
-            with urllib.request.urlopen(pedido, timeout=self._timeout)as resp:
-                return json.loads(resp.read(decoding="utf-8") or {})
+            with urllib.request.urlopen(pedido, timeout=self._timeout) as resp:
+                return json.loads(resp.read().decode("utf-8") or {})
         except urllib.error.HTTPError as exc:
             if exc.code == 401:
                 raise ProviderSemCredencial("Chave da Groq invalida") from exc
             raise ProviderIndisponivel(f"Groq HTTP {exc.code}") from exc
-        except (urllib.error.URLError, TimeoutError, OSError)as exc:
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise ProviderIndisponivel(f"Groq indisponivel: {exc}") from exc
 
     def fechar(self) -> None:
