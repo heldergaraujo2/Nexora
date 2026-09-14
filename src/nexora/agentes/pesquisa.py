@@ -10,6 +10,7 @@ from nexora.runtime.agente import AgenteRuntime
 from nexora.runtime.analise import AnalisadorFalhas
 from nexora.runtime.correcao import Corrector
 from nexora.runtime.observacao import Observacao
+from nexora.runtime.reconciliacao_evidencia import ReconciliadorEvidencias
 from nexora.runtime.verificacao import texto_nao_vazio
 from nexora.runtime.verificacao_evidencia import verificar_adequacao
 
@@ -50,12 +51,18 @@ class AfirmacaoPesquisa:
     claim: str
     evidencia: EvidenciaPesquisa
     adequacao: dict[str, Any] | None = None
+    reconciliacao: dict[str, Any] | None = None
 
     def para_dict(self) -> dict[str, Any]:
         adequacao = self.adequacao
         if adequacao is None:
             adequacao = verificar_adequacao(self.claim, self.evidencia.trecho).para_dict()
-        return {"claim": self.claim, "evidence": self.evidencia.para_dict(), "adequacao": adequacao}
+        return {
+            "claim": self.claim,
+            "evidence": self.evidencia.para_dict(),
+            "adequacao": adequacao,
+            "reconciliacao": self.reconciliacao,
+        }
 
 
 class ResearchAgent:
@@ -73,6 +80,7 @@ class ResearchAgent:
         self._ferramentas = ferramentas
         self._registrar = registrar
         self._ultimo_erro = None
+        self._reconciliador = ReconciliadorEvidencias()
         self._corrector = Corrector(executar=self._executar, registrar=registrar)
         self._runtime = AgenteRuntime(
             executar=self._executar,
@@ -149,6 +157,25 @@ class ResearchAgent:
                 afirmacoes.append(AfirmacaoPesquisa(claim=claim, evidencia=evidencia, adequacao=adequacao).para_dict())
         return afirmacoes
 
+    def _reconciliar_afirmacoes(self, afirmacoes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Reconciliam claims repetidos usando apenas evidências adequadas."""
+        grupos: dict[str, list[dict[str, Any]]] = {}
+        for afirmacao in afirmacoes:
+            claim = str(afirmacao.get("claim", "")).strip().casefold()
+            grupos.setdefault(claim, []).append(afirmacao)
+
+        for grupo in grupos.values():
+            claim = str(grupo[0].get("claim", ""))
+            evidencias = []
+            for afirmacao in grupo:
+                evidencia = dict(afirmacao.get("evidence", {}))
+                evidencia["adequacao"] = afirmacao.get("adequacao")
+                evidencias.append(evidencia)
+            resultado = self._reconciliador.reconciliar(claim, evidencias).para_dict()
+            for afirmacao in grupo:
+                afirmacao["reconciliacao"] = resultado
+        return afirmacoes
+
     def _executar(self, prompt: str) -> str:
         res = self._provider.generate(prompt)
         return res.text
@@ -179,12 +206,17 @@ class ResearchAgent:
         prompt = self._montar_prompt(pergunta, fontes)
         resultado = self._runtime.executar(prompt)
         evidencias = self._estruturar_evidencias(resultado.saida_final, fontes)
+        evidencias = self._reconciliar_afirmacoes(evidencias)
         resultado.evidencias = evidencias
         resultado.metricas["evidencias"] = len(evidencias)
         resultado.metricas["evidencias_sustentadas"] = sum(e["adequacao"]["status"] == "SUSTENTADA" for e in evidencias)
         resultado.metricas["evidencias_insuficientes"] = sum(e["adequacao"]["status"] == "INSUFICIENTE" for e in evidencias)
         resultado.metricas["evidencias_indeterminadas"] = sum(e["adequacao"]["status"] == "INDETERMINADA" for e in evidencias)
+        resultado.metricas["reconciliacoes"] = len({e["reconciliacao"]["status"] for e in evidencias if e.get("reconciliacao")})
         resultado.trace.setdefault("metadata", {})["research_evidence"] = evidencias
+        resultado.trace["metadata"]["research_evidence_reconciliation"] = [
+            e["reconciliacao"] for e in evidencias if e.get("reconciliacao")
+        ]
         if self._registrar is not None:
             self._registrar("evidencias_pesquisa", {"quantidade": len(evidencias), "evidencias": evidencias})
         return resultado
