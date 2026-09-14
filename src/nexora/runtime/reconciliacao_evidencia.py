@@ -59,8 +59,7 @@ class ReconciliadorEvidencias:
         "a o e de do da dos das em no na nos nas um uma por para com sem que se".split()
     )
     _NEGACOES = frozenset(
-        "nao não nunca nenhum nenhuma jamais inexiste inexistente impossível"
-        .split()
+        "nao não nunca nenhum nenhuma jamais inexiste inexistente impossível".split()
     )
 
     def __init__(self, *, min_termos: int = 2) -> None:
@@ -82,10 +81,14 @@ class ReconciliadorEvidencias:
         tokens = cls._tokens(texto)
         return False if tokens & cls._NEGACOES else None
 
+    @staticmethod
+    def _campo(evidencia: Any, nome: str, padrao: Any = "") -> Any:
+        if isinstance(evidencia, dict):
+            return evidencia.get(nome, padrao)
+        return getattr(evidencia, nome, padrao)
+
     def _adequada(self, evidencia: Any) -> bool:
-        adequacao = getattr(evidencia, "adequacao", None)
-        if adequacao is None and isinstance(evidencia, dict):
-            adequacao = evidencia.get("adequacao")
+        adequacao = self._campo(evidencia, "adequacao", None)
         if isinstance(adequacao, dict):
             status = adequacao.get("status")
         else:
@@ -93,10 +96,14 @@ class ReconciliadorEvidencias:
         return status == "SUSTENTADA"
 
     def _sinal(self, evidencia: Any) -> _Sinal:
-        ref = str(getattr(evidencia, "source_ref", "") or "")
-        titulo = str(getattr(evidencia, "titulo", "") or "")
-        trecho = str(getattr(evidencia, "trecho", "") or "")
-        return _Sinal(ref or f"anonimo:{id(evidencia)}", self._tokens(f"{titulo} {trecho}"), self._polaridade(trecho))
+        ref = str(self._campo(evidencia, "source_ref", "") or "")
+        titulo = str(self._campo(evidencia, "titulo", "") or "")
+        trecho = str(self._campo(evidencia, "trecho", "") or "")
+        return _Sinal(
+            ref or f"anonimo:{id(evidencia)}",
+            self._tokens(f"{titulo} {trecho}"),
+            self._polaridade(trecho),
+        )
 
     def reconciliar(self, claim: str, evidencias: Iterable[Any]) -> ResultadoReconciliacao:
         if not isinstance(claim, str) or not claim.strip():
@@ -139,7 +146,7 @@ class ReconciliadorEvidencias:
                 StatusReconciliacao.CONFLITANTE,
                 len(sinais),
                 len({s.ref for s in sinais}),
-                tuple(conflictos),
+                tuple(conflitos),
                 ("sinais_de_polaridade_incompatíveis",),
             )
 
