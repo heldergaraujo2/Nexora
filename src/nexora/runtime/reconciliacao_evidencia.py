@@ -97,11 +97,11 @@ class ReconciliadorEvidencias:
 
     def _sinal(self, evidencia: Any) -> _Sinal:
         ref = str(self._campo(evidencia, "source_ref", "") or "")
-        titulo = str(self._campo(evidencia, "titulo", "") or "")
         trecho = str(self._campo(evidencia, "trecho", "") or "")
+        # O título é proveniência/metadado, não evidência do claim.
         return _Sinal(
             ref or f"anonimo:{id(evidencia)}",
-            self._tokens(f"{titulo} {trecho}"),
+            self._tokens(trecho),
             self._polaridade(trecho),
         )
 
