@@ -90,6 +90,7 @@ def test_pesquisar_produz_claim_evidencia_proveniencia_e_adequacao():
     assert len(claim["evidence"]["source_ref"]) == 64
     assert claim["adequacao"]["status"] == "SUSTENTADA"
     assert claim["adequacao"]["cobertura"] >= 0.6
+    assert claim["reconciliacao"]["status"] == "NAO_CORROBORADA"
     assert r.metricas["evidencias"] == 1
     assert r.metricas["evidencias_sustentadas"] == 1
     assert r.trace["metadata"]["research_evidence"] == r.evidencias
@@ -105,6 +106,7 @@ def test_pesquisar_fonte_existente_mas_nao_sustenta_claim():
     assert r.evidencias[0]["adequacao"]["status"] == "INSUFICIENTE"
     assert r.metricas["evidencias_insuficientes"] == 1
     assert r.evidencias[0]["evidence"]["confianca"] is None
+    assert r.evidencias[0]["reconciliacao"]["status"] == "NAO_CORROBORADA"
 
 
 def test_pesquisar_multiplas_fontes_avalia_cada_claim():
@@ -120,6 +122,25 @@ def test_pesquisar_multiplas_fontes_avalia_cada_claim():
     assert len(r.evidencias) == 2
     assert [e["adequacao"]["status"] for e in r.evidencias] == ["SUSTENTADA", "SUSTENTADA"]
     assert r.metricas["evidencias_sustentadas"] == 2
+    assert all(e["reconciliacao"]["status"] == "NAO_CORROBORADA" for e in r.evidencias)
+
+
+def test_pesquisar_reconcilia_mesmo_claim_em_duas_fontes_independentes():
+    prov = FakePesquisa(["NEXORA possui pesquisa estruturada [fonte:1]. NEXORA possui pesquisa estruturada [fonte:2]."])
+    buscas = FakeBusca([
+        [{"titulo": "NEXORA pesquisa estruturada", "url": "https://a.dev", "trecho": "NEXORA possui pesquisa estruturada e fontes verificáveis."}],
+        [{"titulo": "Pesquisa estruturada NEXORA", "url": "https://b.dev", "trecho": "NEXORA possui pesquisa estruturada e documentação."}],
+    ])
+    ag = ResearchAgent(prov, buscas)
+
+    r = ag.pesquisar("o que e a nexora", quantidade=2)
+
+    assert len(r.evidencias) == 2
+    assert all(e["reconciliacao"]["status"] == "CORROBORADA" for e in r.evidencias)
+    assert all(e["reconciliacao"]["fontes_independentes"] == 2 for e in r.evidencias)
+    assert r.metricas["reconciliacoes"] == 1
+    assert len(r.trace["metadata"]["research_evidence_reconciliation"]) == 2
+    assert all(item["status"] == "CORROBORADA" for item in r.trace["metadata"]["research_evidence_reconciliation"])
 
 
 def test_source_ref_e_deterministico_e_independente_do_indice():
