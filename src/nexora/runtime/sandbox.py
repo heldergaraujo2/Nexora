@@ -1,6 +1,8 @@
 """Sandbox de execucao controlada (ADR-005)."""
 from __future__ import annotations
 
+import subprocess
+
 import shlex
 from typing import Any, Sequence
 
