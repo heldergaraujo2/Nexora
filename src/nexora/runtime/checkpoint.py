@@ -7,6 +7,9 @@ nao substitui a camada de verificacao.
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+from pathlib import Path
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -29,9 +32,11 @@ class Checkpoint:
 class CheckpointEngine:
     """Cria e recupera snapshots logicos sem executar efeitos externos."""
 
-    def __init__(self, *, auditoria: RegistroAuditoria | None = None) -> None:
+    def __init__(self, *, auditoria: RegistroAuditoria | None = None, persistencia_path: Path | None = None) -> None:
         self._checkpoints: dict[str, Checkpoint] = {}
         self._auditoria = auditoria
+        self._persistencia_path = persistencia_path
+        self._carregar()
 
     def criar(
         self,
@@ -55,6 +60,7 @@ class CheckpointEngine:
             carimbo=datetime.now(timezone.utc).isoformat(),
         )
         self._checkpoints[checkpoint.id] = checkpoint
+        self._salvar()
         self._auditar(
             "checkpoint.criado",
             checkpoint,
@@ -90,6 +96,52 @@ class CheckpointEngine:
                 item for item in checkpoints if item.execucao_id == execucao_id.strip()
             )
         return [self._copia(item) for item in checkpoints]
+
+    def _carregar(self) -> None:
+        if self._persistencia_path is None or not self._persistencia_path.exists():
+            return
+        try:
+            dados = json.loads(self._persistencia_path.read_text(encoding="utf-8"))
+            if not isinstance(dados, dict) or dados.get("schema_version") != 1:
+                return
+            for item in dados.get("checkpoints", []):
+                if not isinstance(item, dict):
+                    continue
+                cp = Checkpoint(
+                    id=str(item["id"]),
+                    execucao_id=str(item["execucao_id"]),
+                    estado=dict(item["estado"]),
+                    motivo=str(item["motivo"]),
+                    carimbo=str(item["carimbo"]),
+                )
+                self._checkpoints[cp.id] = cp
+        except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
+            return
+
+    def _salvar(self) -> None:
+        if self._persistencia_path is None:
+            return
+        destino = self._persistencia_path
+        payload = {
+            "schema_version": 1,
+            "checkpoints": [
+                {
+                    "id": cp.id,
+                    "execucao_id": cp.execucao_id,
+                    "estado": cp.estado,
+                    "motivo": cp.motivo,
+                    "carimbo": cp.carimbo,
+                }
+                for cp in self._checkpoints.values()
+            ],
+        }
+        try:
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            temporario = destino.with_name(f".{destino.name}.tmp")
+            temporario.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+            os.replace(temporario, destino)
+        except (OSError, TypeError, ValueError):
+            return
 
     @staticmethod
     def _copia(checkpoint: Checkpoint) -> Checkpoint:
