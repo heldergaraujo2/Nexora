@@ -12,6 +12,7 @@ from nexora.runtime.correcao import Corrector
 from nexora.runtime.observacao import Observacao
 from nexora.runtime.reconciliacao_evidencia import ReconciliadorEvidencias
 from nexora.runtime.verificacao import texto_nao_vazio
+from nexora.agentes.pesquisa_guardrails import GuardiaoPesquisa, OrcamentoPesquisa
 from nexora.runtime.verificacao_evidencia import verificar_adequacao
 
 
@@ -75,12 +76,14 @@ class ResearchAgent:
         *,
         registrar: Callable = None,
         max_tentativas: int = 3,
+        orcamento: OrcamentoPesquisa | None = None,
     ) -> None:
         self._provider = provider
         self._ferramentas = ferramentas
         self._registrar = registrar
         self._ultimo_erro = None
         self._reconciliador = ReconciliadorEvidencias()
+        self._guardiao_pesquisa = GuardiaoPesquisa(orcamento)
         self._corrector = Corrector(executar=self._executar, registrar=registrar)
         self._runtime = AgenteRuntime(
             executar=self._executar,
@@ -201,8 +204,9 @@ class ResearchAgent:
         return falha
 
     def pesquisar(self, pergunta: str, *, quantidade: int = 3) -> Any:
+        quantidade = min(quantidade, self._guardiao_pesquisa.orcamento.max_consultas)
         consultas = self._planejar_consultas(pergunta, quantidade)
-        fontes = self._coletar_fontes(consultas)
+        fontes = self._guardiao_pesquisa.filtrar_fontes(self._coletar_fontes(consultas))
         prompt = self._montar_prompt(pergunta, fontes)
         resultado = self._runtime.executar(prompt)
         evidencias = self._estruturar_evidencias(resultado.saida_final, fontes)
