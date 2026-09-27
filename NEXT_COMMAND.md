@@ -19,3 +19,8 @@ Integrar os novos fundamentos aos módulos canônicos existentes, começando por
 - Retry de efeitos externos exige idempotência, autorização, precondições e verificação.
 - Adapters externos devem falhar fechado quando indisponíveis.
 - Antes de editar qualquer arquivo, buscar conteúdo e SHA atuais.
+
+## Checkpoint documental final — 2026-09-27
+- HEAD mais recente no momento deste registro: `6e09c1b4096947a028bfe94ad981947df1295e1a`.
+- Run #421 (`36345499730`) confirmado GREEN em Python 3.11/3.12/3.13/3.14.
+- Os 392 testes continuam passando no checkpoint de código imediatamente anterior; as alterações posteriores deste checkpoint são apenas documentação de continuidade.
