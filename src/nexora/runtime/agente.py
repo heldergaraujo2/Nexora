@@ -8,6 +8,7 @@ from nexora.comunicacao import CommunicationBus
 from nexora.runtime.avaliacao import AvaliadorResultado, ResultadoAvaliacao
 from nexora.runtime.observacao import Observacao
 from nexora.runtime.retry import RetryContexto, RetryPolicy, TipoRetry
+from nexora.observabilidade.genai import TracerGenAI
 from nexora.runtime.trace import ExecutionTrace
 
 
@@ -28,7 +29,7 @@ class ResultadoAgente:
 class AgenteRuntime:
     """Executa um agente e pode publicar seu ciclo no barramento de comunicacao."""
 
-    def __init__(self, executar: Callable[[str], str], verificar: Callable[[str], bool], analisar: Callable[[Any], Any], corregir: Callable[[str, Any], str], *, registrar: Callable[[str, dict[str, Any]], None] | None = None, max_tentativas: int = 3, communication_bus: CommunicationBus | None = None, agent_id: str = "agent", trace: ExecutionTrace | None = None, avaliador: AvaliadorResultado | None = None, retry_policy: RetryPolicy | None = None) -> None:
+    def __init__(self, executar: Callable[[str], str], verificar: Callable[[str], bool], analisar: Callable[[Any], Any], corregir: Callable[[str, Any], str], *, registrar: Callable[[str, dict[str, Any]], None] | None = None, max_tentativas: int = 3, communication_bus: CommunicationBus | None = None, agent_id: str = "agent", trace: ExecutionTrace | None = None, avaliador: AvaliadorResultado | None = None, retry_policy: RetryPolicy | None = None, tracer: TracerGenAI | None = None) -> None:
         if max_tentativas < 1:
             raise ValueError("max_tentativas deve ser >= 1")
         if not agent_id.strip():
@@ -44,6 +45,7 @@ class AgenteRuntime:
         self._trace = trace
         self._avaliador = avaliador
         self._retry_policy = retry_policy or RetryPolicy(max_tentativas=max_tentativas)
+        self._tracer = tracer
 
     def _publicar(self, tipo: str, payload: dict[str, Any], *, destinatario: str = "*") -> None:
         if self._communication_bus is not None:
@@ -62,6 +64,7 @@ class AgenteRuntime:
             if tentativas > 1:
                 trace.incrementar_retry()
             erro_execucao: str | None = None
+            span = self._tracer.iniciar("nexora.agent.attempt", "agent", agent_id=self._agent_id, execution_id=trace.execution_id, attempt=tentativas) if self._tracer is not None else None
             try:
                 saida = self._executar(objetivo)
             except Exception as exc:
@@ -77,6 +80,9 @@ class AgenteRuntime:
                     ok = False
                     ultimo_erro = str(exc)
                     erro_execucao = str(exc)
+            if span is not None:
+                span.atributos.update({"success": ok, "output_length": len(saida)})
+                self._tracer.encerrar(span, erro=erro_execucao)
             observacao = Observacao(etapa_id=f"{self._agent_id}:{tentativas}", ok=ok, saida=saida, erro=erro_execucao, metadados={"tentativa": tentativas, "execution_id": trace.execution_id, "trace_id": trace.trace_id})
             observacao_dict = {"tentativa": tentativas, "saida": observacao.saida, "erro": observacao.erro, "ok": observacao.ok, "etapa_id": observacao.etapa_id}
             historico.append(observacao_dict)
