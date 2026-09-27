@@ -7,6 +7,7 @@ from typing import Any, Callable
 from nexora.comunicacao import CommunicationBus
 from nexora.runtime.avaliacao import AvaliadorResultado, ResultadoAvaliacao
 from nexora.runtime.observacao import Observacao
+from nexora.runtime.retry import RetryContexto, RetryPolicy, TipoRetry
 from nexora.runtime.trace import ExecutionTrace
 
 
@@ -27,7 +28,7 @@ class ResultadoAgente:
 class AgenteRuntime:
     """Executa um agente e pode publicar seu ciclo no barramento de comunicacao."""
 
-    def __init__(self, executar: Callable[[str], str], verificar: Callable[[str], bool], analisar: Callable[[Any], Any], corregir: Callable[[str, Any], str], *, registrar: Callable[[str, dict[str, Any]], None] | None = None, max_tentativas: int = 3, communication_bus: CommunicationBus | None = None, agent_id: str = "agent", trace: ExecutionTrace | None = None, avaliador: AvaliadorResultado | None = None) -> None:
+    def __init__(self, executar: Callable[[str], str], verificar: Callable[[str], bool], analisar: Callable[[Any], Any], corregir: Callable[[str, Any], str], *, registrar: Callable[[str, dict[str, Any]], None] | None = None, max_tentativas: int = 3, communication_bus: CommunicationBus | None = None, agent_id: str = "agent", trace: ExecutionTrace | None = None, avaliador: AvaliadorResultado | None = None, retry_policy: RetryPolicy | None = None) -> None:
         if max_tentativas < 1:
             raise ValueError("max_tentativas deve ser >= 1")
         if not agent_id.strip():
@@ -42,6 +43,7 @@ class AgenteRuntime:
         self._agent_id = agent_id
         self._trace = trace
         self._avaliador = avaliador
+        self._retry_policy = retry_policy or RetryPolicy(max_tentativas=max_tentativas)
 
     def _publicar(self, tipo: str, payload: dict[str, Any], *, destinatario: str = "*") -> None:
         if self._communication_bus is not None:
@@ -89,6 +91,16 @@ class AgenteRuntime:
                 self._publicar("agente.falha", {"tentativa": tentativas, **falha_dict})
                 ultimo_erro = falha.motivo if hasattr(falha, "motivo") and falha.motivo else ultimo_erro
                 if falha.plano in {"abort", "troca_provider"}:
+                    break
+                retry_decisao = self._retry_policy.decidir(RetryContexto(
+                    tipo=TipoRetry.PROVIDER if erro_execucao is not None else TipoRetry.VERIFICACAO,
+                    tentativa=tentativas,
+                    max_tentativas=self._max_tentativas,
+                    efeito_externo=False,
+                    idempotente=True,
+                ))
+                if not retry_decisao.permitido:
+                    ultimo_erro = retry_decisao.motivo
                     break
                 if falha.plano == "ajuste_prompt":
                     saida = self._corregir(objetivo, falha)
