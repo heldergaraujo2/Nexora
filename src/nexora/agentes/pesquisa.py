@@ -164,7 +164,7 @@ class ResearchAgent:
         """Reconciliam claims repetidos usando apenas evidências adequadas."""
         grupos: dict[str, list[dict[str, Any]]] = {}
         for afirmacao in afirmacoes:
-            claim = str(afirmacao.get("claim", "")).strip().casefold()
+            claim = re.sub(r"\\[fonte:\\d+\\]", "", str(afirmacao.get("claim", ""))).strip().casefold()
             grupos.setdefault(claim, []).append(afirmacao)
 
         for grupo in grupos.values():
