@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import shlex
-import subprocess
 from typing import Any, Sequence
+
+from .sandbox_backend import SandboxBackend, SubprocessSandboxBackend
 
 from ..governanca.permissoes import GerenciadorPermissoes, PedidoPermissao
 
@@ -15,15 +16,18 @@ class AcaoNegada(PermissionError):
 class Sandbox:
     """Executa comandos por allowlist e, opcionalmente, por politica."""
 
-    def __init__(self, permitidos: Sequence[str] = (), *, permissoes: GerenciadorPermissoes | None = None, solicitante: str = "sandbox") -> None:
+    def __init__(self, permitidos: Sequence[str] = (), *, permissoes: GerenciadorPermissoes | None = None, solicitante: str = "sandbox", backend: SandboxBackend | None = None) -> None:
         if not solicitante.strip():
             raise ValueError("solicitante deve ser uma string nao vazia")
         self._permitidos = set(permitidos)
         self._permissoes = permissoes
         self._solicitante = solicitante.strip()
+        self._backend = backend or SubprocessSandboxBackend(permitidos)
 
     def permitir(self, comando: str) -> None:
         self._permitidos.add(comando.strip())
+        if hasattr(self._backend, "permitir"):
+            self._backend.permitir(comando)
 
     def executar(self, comando: str, *, solicitante: str | None = None) -> dict[str, Any]:
         partes = shlex.split(comando)
@@ -39,10 +43,5 @@ class Sandbox:
                 contexto={"comando_base": base},
             ))
 
-        try:
-            resultado = subprocess.run(partes, capture_output=True, text=True, timeout=30)
-            return {"retorno": resultado.returncode, "saida": resultado.stdout, "erro": resultado.stderr}
-        except subprocess.TimeoutExpired:
-            return {"retorno": -1, "saida": "", "erro": "timeout"}
-        except FileNotFoundError:
-            return {"retorno": 127, "saida": "", "erro": "comando inexistente"}
+        resultado = self._backend.executar(partes, timeout=30)
+        return {"retorno": resultado.retorno, "saida": resultado.saida, "erro": resultado.erro, "backend": resultado.backend}
